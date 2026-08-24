@@ -66,3 +66,5 @@ The wordmark is **EduPulse** in Instrument Serif with a small superscript local-
 - The welcome headline remains a single ivory Instrument Serif statement; muted gray is reserved for metadata and supporting copy.
 - Public navigation and calls to action name specific local-record and workspace actions rather than generic marketing actions.
 - The welcome layer includes compact record and task metadata with slim rules to assert EduPulse as a private operational console while preserving the supplied video-first composition.
+- Arabic display language uses Amiri as the editorial counterpart to Instrument Serif; operational labels retain the neutral Inter-style sans hierarchy.
+- Below the hero, role, subject, and privacy content is treated as a slim-rule register rather than a repeated rounded-card feature grid.

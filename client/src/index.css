@@ -99,6 +99,55 @@
   .nav-link:hover, .nav-link[data-active="true"] { color: white; }
 }
 
+html[lang="ar"] .text-display {
+  font-family: "Amiri", "Instrument Serif", serif;
+  letter-spacing: 0;
+  line-height: 0.94;
+}
+
+/* The product narrative below the cinematic threshold behaves like an editorial
+ * console: long rails, fine rules, and dominant operational surfaces instead
+ * of a repeated rounded-card marketing grid. */
+#roles .grid,
+#local .grid {
+  gap: 0;
+  border-block: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+#roles .surface-panel,
+#local .surface-panel {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+#roles .surface-panel {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#subjects .grid {
+  gap: 0;
+  border-block: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#subjects .grid > div {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0;
+}
+
+@media (min-width: 768px) {
+  #roles .surface-panel:not(:last-child),
+  #local .surface-panel:not(:last-child),
+  #subjects .grid > div:not(:nth-child(4n)) {
+    border-inline-start: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  #roles .surface-panel { border-bottom: 0; }
+}
+
 @keyframes fade-rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (min-width: 640px) { .container { padding-inline: 1.5rem; } }
