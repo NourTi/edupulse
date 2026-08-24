@@ -1,0 +1,31 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "EduPulse",
+  "version": "0.2.0",
+  "identifier": "com.edupulse.desktop",
+  "build": {
+    "beforeDevCommand": "pnpm desktop:web-dev",
+    "beforeBuildCommand": "pnpm desktop:web-build",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../desktop-dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [{
+      "label": "main",
+      "title": "EduPulse",
+      "width": 1440,
+      "height": 920,
+      "minWidth": 1024,
+      "minHeight": 720,
+      "resizable": true
+    }],
+    "security": { "csp": null }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "windows": { "webviewInstallMode": { "type": "downloadBootstrapper" } },
+    "icon": ["icons/icon.png"]
+  }
+}

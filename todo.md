@@ -21,3 +21,19 @@
 - [x] Add a grounded parent/student agent that refuses unsupported claims and redirects personal student-record questions to authenticated areas.
 - [x] Add the administrator knowledge-base interface and the parent/student question interface.
 - [x] Verify policy, retrieval, source status, access rules, unsupported-question behavior, type checking, and production build.
+
+## Desktop Application Conversion
+
+- [x] Define the first supported desktop targets, offline behavior, and local data boundaries.
+- [x] Add the Tauri desktop scaffold and desktop permission configuration.
+- [x] Add local application-data storage, export paths, and user-selected desktop backups.
+- [x] Add clear desktop connection boundaries for online grounded answers and offline education workflows.
+- [x] Verify the desktop web build path and write Windows installation guidance; a native installer must be built on Windows because this environment lacks Rust and Windows tooling.
+
+## Windows Desktop and Search Repair
+
+- [x] Replace the decorative search control with a clickable local-record search, keyboard shortcut, results, and direct navigation.
+- [x] Add the Windows-focused Tauri application scaffold and package configuration.
+- [x] Define desktop local-data, backup, and online AI-agent connection states.
+- [x] Add the explicit Crawl4AI gateway contract and transition criteria from lightweight ingestion to the full worker.
+- [x] Verify the updated search flow, app build, and Windows desktop build path.

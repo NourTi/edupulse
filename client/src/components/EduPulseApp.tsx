@@ -43,6 +43,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { KnowledgeAdministration, PublicKnowledgeAgent } from "@/components/KnowledgePanels";
+import { LocalSearchOverlay } from "@/components/LocalSearchOverlay";
+import { isDesktopRuntime, saveDesktopBackup } from "@/lib/desktopRuntime";
+import { loadDesktopWorkspace, saveDesktopWorkspace } from "@/lib/desktopRecords";
 
 type Screen = "landing" | "access" | "workspace";
 type Role = "admin" | "teacher" | "student";
@@ -120,6 +123,7 @@ function openDatabase(): Promise<IDBDatabase> {
 }
 
 async function loadData(): Promise<LocalData> {
+  if (isDesktopRuntime()) return { ...initialData, ...(await loadDesktopWorkspace<Partial<LocalData>>() ?? {}) };
   const db = await openDatabase();
   return new Promise((resolve, reject) => {
     const request = db.transaction(STORE_NAME, "readonly").objectStore(STORE_NAME).get(DATA_KEY);
@@ -129,6 +133,7 @@ async function loadData(): Promise<LocalData> {
 }
 
 async function persistData(data: LocalData) {
+  if (isDesktopRuntime()) { await saveDesktopWorkspace(data); return; }
   const db = await openDatabase();
   return new Promise<void>((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, "readwrite");
@@ -165,6 +170,8 @@ export default function EduPulseApp() {
   const [loading, setLoading] = useState(true);
   const [registrationOpen, setRegistrationOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [mobileMenu, setMobileMenu] = useState(false);
   const [registration, setRegistration] = useState({ nameAr: "", name: "", guardian: "", phone: "", grade: "Year 7", subjects: ["arabic", "english", "mathematics"] });
   const [paymentForm, setPaymentForm] = useState({ studentId: "s-001", amount: "", method: "Cash" });
@@ -173,9 +180,21 @@ export default function EduPulseApp() {
   const isArabic = language === "ar";
   const direction = isArabic ? "rtl" : "ltr";
   const currentStudent = data.students[0];
+  const desktopRuntime = isDesktopRuntime();
   const selectedAssessment = data.assessments.find((assessment) => assessment.studentId === currentStudent.id) ?? data.assessments[0];
   const activeStudents = data.students.filter((student) => student.status === "Active").length;
   const balanceDue = data.payments.filter((payment) => payment.state === "Balance due").reduce((sum, payment) => sum + payment.amount, 0);
+  const searchResults = useMemo(() => {
+    const query = searchQuery.trim().toLocaleLowerCase();
+    if (!query) return [];
+    const learners = data.students.map(student => {
+      const subjects = student.subjects.map(id => `${subjectName(id, "ar")} ${subjectName(id, "en")}`).join(" ");
+      const haystack = `${student.nameAr} ${student.name} ${student.guardian} ${student.phone} ${student.grade} ${student.level} ${subjects}`.toLocaleLowerCase();
+      return { student, found: haystack.includes(query) };
+    }).filter(item => item.found).map(item => ({ type: "student" as const, id: item.student.id, title: item.student.nameAr, meta: `${item.student.grade} · ${item.student.guardian} · CEFR ${item.student.level}`, destination: role === "student" ? "subjects" : "learners" }));
+    const receipts = data.payments.filter(payment => `${payment.id} ${payment.learner} ${payment.method} ${payment.amount}`.toLocaleLowerCase().includes(query)).map(payment => ({ type: "payment" as const, id: payment.id, title: payment.learner, meta: `${payment.amount.toLocaleString("ar-DZ")} د.ج · ${payment.paidAt}`, destination: "payments" }));
+    return [...learners, ...receipts].slice(0, 8);
+  }, [data.payments, data.students, role, searchQuery]);
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -185,6 +204,36 @@ export default function EduPulseApp() {
   useEffect(() => {
     loadData().then(setData).catch(() => toast.error("تعذر فتح السجل المحلي.")).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (screen !== "workspace") return;
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setSearchOpen(true);
+      }
+      if (event.key === "Escape") setSearchOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [screen]);
+
+  useEffect(() => {
+    if (screen !== "workspace") return;
+    const trigger = Array.from(document.querySelectorAll<HTMLDivElement>("header div")).find(element => element.textContent?.includes("بحث في السجل المحلي"));
+    if (!trigger) return;
+    const open = () => setSearchOpen(true);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(); }
+    };
+    trigger.setAttribute("role", "button");
+    trigger.setAttribute("tabindex", "0");
+    trigger.setAttribute("aria-label", "بحث في السجل المحلي");
+    trigger.style.cursor = "pointer";
+    trigger.addEventListener("click", open);
+    trigger.addEventListener("keydown", onKey);
+    return () => { trigger.removeEventListener("click", open); trigger.removeEventListener("keydown", onKey); };
+  }, [screen]);
 
   const updateData = async (next: LocalData) => {
     setData(next);
@@ -253,8 +302,11 @@ export default function EduPulseApp() {
     report.document.close();
   };
 
-  const downloadBackup = () => {
-    const blob = new Blob([JSON.stringify({ format: "edupulse-local-export", exportedAt: new Date().toISOString(), data }, null, 2)], { type: "application/json" });
+  const downloadBackup = async () => {
+    const payload = { format: "edupulse-local-export", exportedAt: new Date().toISOString(), data };
+    const filename = `edupulse-local-${new Date().toISOString().slice(0, 10)}.json`;
+    if (await saveDesktopBackup(filename, payload)) { toast.success("تم حفظ النسخة الاحتياطية في جهازك."); return; }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `edupulse-local-${new Date().toISOString().slice(0, 10)}.json`; link.click(); URL.revokeObjectURL(url); toast.success("تم تصدير السجل المحلي.");
   };
 
@@ -268,6 +320,7 @@ export default function EduPulseApp() {
     { id: "guardians", label: "التواصل مع الأولياء", icon: MessageCircle, roles: ["admin", "teacher"] },
     { id: "payments", label: "المدفوعات والإيصالات", icon: WalletCards, roles: ["admin"] },
     { id: "reports", label: "تقارير التقدم", icon: FileText, roles: ["admin", "teacher", "student"] },
+    { id: "search", label: "بحث في السجل", icon: Search, roles: ["admin", "teacher", "student"] },
     { id: "knowledge", label: "مصادر المؤسسة", icon: BookOpen, roles: ["admin"] },
     { id: "ask", label: "اسأل المؤسسة", icon: MessageCircleQuestion, roles: ["admin", "teacher", "student"] },
   ];
@@ -305,7 +358,7 @@ export default function EduPulseApp() {
   }
 
   const visibleNav = navItems.filter((item) => item.roles.includes(role));
-  const navigate = (id: string) => { setActiveView(id); setMobileMenu(false); };
+  const navigate = (id: string) => { if (id === "search") { setSearchOpen(true); setMobileMenu(false); return; } setActiveView(id); setMobileMenu(false); };
   const dashboardTitle = ({ overview: "صباح واضح.", registration: "تسجيل طالب جديد.", learners: "سجل الطلاب.", subjects: "مكتبة المواد الدراسية.", attendance: "حضور اليوم.", cefr: "تقدم اللغة الإنجليزية.", guardians: "تواصل إنساني واضح.", payments: "مدفوعات وإيصالات.", reports: "تقارير التقدم.", knowledge: "دليل المؤسسة.", ask: "اسأل المؤسسة." } as Record<string, string>)[activeView] ?? "EduPulse";
 
   const renderView = () => {
@@ -333,7 +386,9 @@ export default function EduPulseApp() {
     return null;
   };
 
-  return <main className="min-h-screen bg-[hsl(201_100%_13%)] text-white" dir={direction}><div className="mx-auto flex min-h-screen max-w-[1600px]"><aside className={`fixed inset-y-0 z-40 w-72 border-l border-white/10 bg-[#00364A] px-5 py-6 transition-transform lg:static lg:translate-x-0 ${mobileMenu ? "translate-x-0" : "translate-x-full"} ${direction === "ltr" ? "right-auto left-0 lg:border-r lg:border-l-0" : "right-0"}`}><button onClick={() => setScreen("landing")} className="mb-12 flex items-center gap-3 text-right"><img src={MARK_URL} alt="" className="h-9 w-9 object-contain" /><span className="text-display text-3xl">EduPulse<sup className="text-xs align-top">•</sup></span></button><div className="mb-7 flex items-center justify-between"><div><p className="text-xs text-white/45">الدور الحالي</p><p className="mt-1 text-sm">{roleInfo[role].arabic}</p></div><button onClick={() => setScreen("access")} className="rounded-full p-2 text-white/55 hover:bg-white/7 hover:text-white" title="Change role"><ChevronRight className="h-4 w-4" /></button></div><nav className="space-y-1">{visibleNav.map((item) => { const Icon = item.icon; return <button key={item.id} onClick={() => navigate(item.id)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${activeView === item.id ? "bg-white text-[#00364A]" : "text-white/55 hover:bg-white/6 hover:text-white"}`}><Icon className="h-4 w-4" />{item.label}</button>; })}</nav><div className="mt-auto absolute inset-x-5 bottom-6 surface-panel rounded-2xl p-4"><div className="flex items-center gap-2 text-sm"><ShieldCheck className="h-4 w-4 text-emerald-200" />سجل محلي</div><p className="mt-2 text-xs leading-5 text-white/55">واجهة دور محلي للتجربة. تصدير ونسخ احتياطي جاهزان للمراجعة.</p><button onClick={downloadBackup} className="mt-4 flex w-full items-center justify-between border-t border-white/10 pt-3 text-xs text-white/75 hover:text-white">تصدير السجل <Download className="h-3.5 w-3.5" /></button></div></aside>{mobileMenu && <button onClick={() => setMobileMenu(false)} className="fixed inset-0 z-30 bg-black/55 lg:hidden" aria-label="Close navigation" />}<section className="min-w-0 flex-1 px-5 py-5 lg:px-8 lg:py-7"><header className="mb-10 flex items-center justify-between gap-4"><div className="flex items-center gap-3 lg:hidden"><button onClick={() => setMobileMenu(true)} className="liquid-glass rounded-full p-2.5"><Menu className="h-4 w-4" /></button><img src={MARK_URL} alt="" className="h-8 w-8" /></div><div className="hidden max-w-md flex-1 items-center gap-2 rounded-full border border-white/10 bg-white/4 px-4 py-2 text-sm text-white/45 md:flex"><Search className="h-4 w-4" />بحث في السجل المحلي <span className="mr-auto rounded border border-white/10 px-1.5 py-0.5 text-[10px]">⌘ K</span></div><div className="mr-auto flex items-center gap-2"><button onClick={() => setLanguage(isArabic ? "en" : "ar")} className="rounded-full px-3 py-2 text-xs text-white/60 hover:text-white">{isArabic ? "EN" : "العربية"}</button><button onClick={() => toast.info("التنبيهات ستظهر عند تفعيل قائمة المهام في نسخة سطح المكتب.")} className="relative rounded-full p-2.5 text-white/70 hover:bg-white/6 hover:text-white"><Bell className="h-5 w-5" /><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-amber-200" /></button><button onClick={() => { setScreen("landing"); toast.info("تم إنهاء جلسة الدور المحلي."); }} className="rounded-full p-2.5 text-white/60 hover:bg-white/6 hover:text-white" title="Logout"><LogOut className="h-5 w-5" /></button></div></header>{loading ? <div className="flex min-h-[60vh] items-center justify-center text-white/60"><span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" /> <span className="mr-3">فتح السجل المحلي</span></div> : renderView()}</section></div>{registrationOpen && <Modal title="تسجيل طالب جديد" onClose={() => setRegistrationOpen(false)}><RegistrationPanel registration={registration} setRegistration={setRegistration} toggleSubject={toggleSubject} submitRegistration={submitRegistration} compact /></Modal>}{paymentOpen && <Modal title="تسجيل دفعة" onClose={() => setPaymentOpen(false)}><form onSubmit={savePayment} className="space-y-5"><label className="block text-xs text-white/50">الطالب<select value={paymentForm.studentId} onChange={(event) => setPaymentForm({ ...paymentForm, studentId: event.target.value })} className="mt-2 w-full rounded-xl border border-white/12 bg-[#00364A] px-3 py-3 text-sm text-white outline-none">{data.students.map((student) => <option key={student.id} value={student.id}>{student.nameAr}</option>)}</select></label><label className="block text-xs text-white/50">المبلغ (د.ج)<input value={paymentForm.amount} inputMode="numeric" onChange={(event) => setPaymentForm({ ...paymentForm, amount: event.target.value })} className="mt-2 w-full rounded-xl border border-white/12 bg-white/5 px-3 py-3 text-sm text-white outline-none" placeholder="مثال: 6000" /></label><label className="block text-xs text-white/50">طريقة الدفع<select value={paymentForm.method} onChange={(event) => setPaymentForm({ ...paymentForm, method: event.target.value })} className="mt-2 w-full rounded-xl border border-white/12 bg-[#00364A] px-3 py-3 text-sm text-white outline-none"><option>Cash</option><option>Bank transfer</option><option>Cheque</option></select></label><button className="liquid-glass w-full rounded-full px-5 py-3 text-sm">حفظ الدفعة وإنشاء إيصال</button></form></Modal>}</main>;
+  if (searchOpen) return <LocalSearchOverlay query={searchQuery} results={searchResults} onQueryChange={setSearchQuery} onClose={() => setSearchOpen(false)} onSelect={(destination) => { navigate(destination); setSearchOpen(false); setSearchQuery(""); }} />;
+
+  return <main className="min-h-screen bg-[hsl(201_100%_13%)] text-white" dir={direction}><div className="mx-auto flex min-h-screen max-w-[1600px]"><aside className={`fixed inset-y-0 z-40 w-72 border-l border-white/10 bg-[#00364A] px-5 py-6 transition-transform lg:static lg:translate-x-0 ${mobileMenu ? "translate-x-0" : "translate-x-full"} ${direction === "ltr" ? "right-auto left-0 lg:border-r lg:border-l-0" : "right-0"}`}><button onClick={() => setScreen("landing")} className="mb-12 flex items-center gap-3 text-right"><img src={MARK_URL} alt="" className="h-9 w-9 object-contain" /><span className="text-display text-3xl">EduPulse<sup className="text-xs align-top">•</sup></span></button><div className="mb-7 flex items-center justify-between"><div><p className="text-xs text-white/45">الدور الحالي</p><p className="mt-1 text-sm">{roleInfo[role].arabic}</p></div><button onClick={() => setScreen("access")} className="rounded-full p-2 text-white/55 hover:bg-white/7 hover:text-white" title="Change role"><ChevronRight className="h-4 w-4" /></button></div><nav className="space-y-1">{visibleNav.map((item) => { const Icon = item.icon; return <button key={item.id} onClick={() => navigate(item.id)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${activeView === item.id ? "bg-white text-[#00364A]" : "text-white/55 hover:bg-white/6 hover:text-white"}`}><Icon className="h-4 w-4" />{item.label}</button>; })}</nav><div className="mt-auto absolute inset-x-5 bottom-6 surface-panel rounded-2xl p-4"><div className="flex items-center gap-2 text-sm"><ShieldCheck className="h-4 w-4 text-emerald-200" />{desktopRuntime ? "تطبيق سطح المكتب" : "سجل محلي"}</div><p className="mt-2 text-xs leading-5 text-white/55">{desktopRuntime ? "تُحفظ النسخ الاحتياطية في موقع تختاره على جهازك." : "واجهة دور محلي للتجربة. تصدير ونسخ احتياطي جاهزان للمراجعة."}</p><button onClick={downloadBackup} className="mt-4 flex w-full items-center justify-between border-t border-white/10 pt-3 text-xs text-white/75 hover:text-white">تصدير السجل <Download className="h-3.5 w-3.5" /></button></div></aside>{mobileMenu && <button onClick={() => setMobileMenu(false)} className="fixed inset-0 z-30 bg-black/55 lg:hidden" aria-label="Close navigation" />}<section className="min-w-0 flex-1 px-5 py-5 lg:px-8 lg:py-7"><header className="mb-10 flex items-center justify-between gap-4"><div className="flex items-center gap-3 lg:hidden"><button onClick={() => setMobileMenu(true)} className="liquid-glass rounded-full p-2.5"><Menu className="h-4 w-4" /></button><img src={MARK_URL} alt="" className="h-8 w-8" /></div><div className="hidden max-w-md flex-1 items-center gap-2 rounded-full border border-white/10 bg-white/4 px-4 py-2 text-sm text-white/45 md:flex"><Search className="h-4 w-4" />بحث في السجل المحلي <span className="mr-auto rounded border border-white/10 px-1.5 py-0.5 text-[10px]">⌘ K</span></div><div className="mr-auto flex items-center gap-2"><button onClick={() => setLanguage(isArabic ? "en" : "ar")} className="rounded-full px-3 py-2 text-xs text-white/60 hover:text-white">{isArabic ? "EN" : "العربية"}</button><button onClick={() => toast.info("التنبيهات ستظهر عند تفعيل قائمة المهام في نسخة سطح المكتب.")} className="relative rounded-full p-2.5 text-white/70 hover:bg-white/6 hover:text-white"><Bell className="h-5 w-5" /><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-amber-200" /></button><button onClick={() => { setScreen("landing"); toast.info("تم إنهاء جلسة الدور المحلي."); }} className="rounded-full p-2.5 text-white/60 hover:bg-white/6 hover:text-white" title="Logout"><LogOut className="h-5 w-5" /></button></div></header>{loading ? <div className="flex min-h-[60vh] items-center justify-center text-white/60"><span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" /> <span className="mr-3">فتح السجل المحلي</span></div> : renderView()}</section></div>{registrationOpen && <Modal title="تسجيل طالب جديد" onClose={() => setRegistrationOpen(false)}><RegistrationPanel registration={registration} setRegistration={setRegistration} toggleSubject={toggleSubject} submitRegistration={submitRegistration} compact /></Modal>}{paymentOpen && <Modal title="تسجيل دفعة" onClose={() => setPaymentOpen(false)}><form onSubmit={savePayment} className="space-y-5"><label className="block text-xs text-white/50">الطالب<select value={paymentForm.studentId} onChange={(event) => setPaymentForm({ ...paymentForm, studentId: event.target.value })} className="mt-2 w-full rounded-xl border border-white/12 bg-[#00364A] px-3 py-3 text-sm text-white outline-none">{data.students.map((student) => <option key={student.id} value={student.id}>{student.nameAr}</option>)}</select></label><label className="block text-xs text-white/50">المبلغ (د.ج)<input value={paymentForm.amount} inputMode="numeric" onChange={(event) => setPaymentForm({ ...paymentForm, amount: event.target.value })} className="mt-2 w-full rounded-xl border border-white/12 bg-white/5 px-3 py-3 text-sm text-white outline-none" placeholder="مثال: 6000" /></label><label className="block text-xs text-white/50">طريقة الدفع<select value={paymentForm.method} onChange={(event) => setPaymentForm({ ...paymentForm, method: event.target.value })} className="mt-2 w-full rounded-xl border border-white/12 bg-[#00364A] px-3 py-3 text-sm text-white outline-none"><option>Cash</option><option>Bank transfer</option><option>Cheque</option></select></label><button className="liquid-glass w-full rounded-full px-5 py-3 text-sm">حفظ الدفعة وإنشاء إيصال</button></form></Modal>}</main>;
 }
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {

@@ -1,0 +1,16 @@
+[package]
+name = "edupulse-desktop"
+version = "0.2.0"
+description = "EduPulse local-first education management for Windows"
+authors = ["EduPulse"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-store = "2"
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
