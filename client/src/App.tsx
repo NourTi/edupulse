@@ -6,6 +6,11 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 
+/**
+ * EduPulse design reminder: the app uses the supplied deep-navy, cinematic,
+ * liquid-glass reference and keeps the global interface in dark mode.
+ */
+
 
 function Router() {
   return (
@@ -27,7 +32,7 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider
-        defaultTheme="light"
+        defaultTheme="dark"
         // switchable
       >
         <TooltipProvider>
