@@ -11,8 +11,8 @@ import Home from "./pages/Home";
  * liquid-glass reference and keeps the global interface in dark mode.
  */
 
-
 function Router() {
+  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path={"/"} component={Home} />
