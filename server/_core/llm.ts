@@ -212,15 +212,19 @@ const normalizeToolChoice = (
   return toolChoice;
 };
 
-const resolveApiUrl = () =>
-  ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
-    : "https://forge.manus.im/v1/chat/completions";
+const externalApiBaseUrl = () => process.env.LLM_API_BASE_URL?.trim().replace(/\/$/, "");
+const externalApiKey = () => process.env.LLM_API_KEY?.trim();
+const externalModel = () => process.env.LLM_MODEL?.trim();
+
+const resolveApiUrl = () => {
+  const baseUrl = externalApiBaseUrl() || ENV.forgeApiUrl?.trim().replace(/\/$/, "") || "https://forge.manus.im";
+  return `${baseUrl}/v1/chat/completions`;
+};
+
+const resolveApiKey = () => externalApiKey() || ENV.forgeApiKey;
 
 const assertApiKey = () => {
-  if (!ENV.forgeApiKey) {
-    throw new Error("OPENAI_API_KEY is not configured");
-  }
+  if (!resolveApiKey()) throw new Error("No LLM provider is configured. Set LLM_API_KEY or the legacy built-in gateway key.");
 };
 
 const normalizeResponseFormat = ({
@@ -362,9 +366,8 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     messages: messages.map(normalizeMessage),
   };
 
-  if (model) {
-    payload.model = model;
-  }
+  const resolvedModel = model || externalModel();
+  if (resolvedModel) payload.model = resolvedModel;
 
   if (tools && tools.length > 0) {
     payload.tools = tools;
@@ -405,7 +408,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
+      authorization: `Bearer ${resolveApiKey()}`,
     },
     body: JSON.stringify(payload),
   });
@@ -435,12 +438,11 @@ export type ModelsResponse = {
 export async function listLLMModels(): Promise<ModelsResponse> {
   assertApiKey();
 
-  const url = ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/models`
-    : "https://forge.manus.im/v1/models";
+  const baseUrl = externalApiBaseUrl() || ENV.forgeApiUrl?.trim().replace(/\/$/, "") || "https://forge.manus.im";
+  const url = `${baseUrl}/v1/models`;
 
   const response = await fetchWithBackoff(url, {
-    headers: { authorization: `Bearer ${ENV.forgeApiKey}` },
+    headers: { authorization: `Bearer ${resolveApiKey()}` },
   });
 
   if (!response.ok) {

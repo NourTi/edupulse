@@ -17,7 +17,7 @@ The host must pass its assigned port through `PORT`; the server must not be conf
 
 `DATABASE_URL` points to the managed MySQL/TiDB-compatible database. `JWT_SECRET` is a long random value used to sign application sessions. `APP_BASE_URL` is the public HTTPS URL used in password-reset links. `RESEND_API_KEY` and `RESEND_FROM_EMAIL` enable recovery email delivery; the sender must belong to a domain verified in Resend.
 
-The current source still contains Manus-compatible adapters for object storage and the built-in LLM gateway. A non-Manus production deployment must provide replacement adapters before enabling those routes: an S3-compatible endpoint through `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, and `S3_SECRET_ACCESS_KEY`, plus an OpenAI-compatible LLM endpoint through `LLM_API_BASE_URL`, `LLM_API_KEY`, and `LLM_MODEL`. Do not copy the legacy `BUILT_IN_FORGE_*` values into an external host as a portability solution.
+Portable adapter paths are now available for object storage and the LLM gateway. Configure an S3-compatible endpoint through `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, and `S3_SECRET_ACCESS_KEY`; the storage adapter uses signed URLs for private objects. Configure an OpenAI-compatible LLM endpoint through `LLM_API_BASE_URL`, `LLM_API_KEY`, and `LLM_MODEL`. If these portable variables are absent, the legacy Manus adapters remain available for compatibility; do not copy legacy `BUILT_IN_FORGE_*` values into an external host unless you intentionally want that dependency.
 
 ## GitHub Actions and host connection
 
