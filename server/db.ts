@@ -9,6 +9,11 @@ import {
   knowledgeChunks,
   knowledgeSources,
   memberships,
+  learners,
+  learnerGuardians,
+  attendanceRecords,
+  cefrAssessments,
+  paymentRecords,
   passwordResetTokens,
   schoolSettings,
   users,
@@ -270,4 +275,72 @@ export async function activateMembership(userId: number, institutionId: string) 
   const db = await getDb();
   if (!db) throw new Error("Membership storage is unavailable.");
   await db.update(memberships).set({ status: "active", updatedAt: new Date() }).where(and(eq(memberships.userId, userId), eq(memberships.institutionId, institutionId)));
+}
+
+export async function createLearner(input: typeof learners.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  await db.insert(learners).values(input);
+  return db.select().from(learners).where(eq(learners.id, input.id)).limit(1).then(rows => rows[0]);
+}
+
+export async function listLearners(institutionId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(learners).where(eq(learners.institutionId, institutionId)).orderBy(desc(learners.createdAt));
+}
+
+export async function getLearner(institutionId: string, learnerId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  return db.select().from(learners).where(and(eq(learners.institutionId, institutionId), eq(learners.id, learnerId))).limit(1).then(rows => rows[0]);
+}
+
+export async function linkLearnerGuardian(input: typeof learnerGuardians.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  await db.insert(learnerGuardians).values(input);
+}
+
+export async function listGuardianLearners(institutionId: string, guardianUserId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ learner: learners, link: learnerGuardians }).from(learnerGuardians).innerJoin(learners, eq(learners.id, learnerGuardians.learnerId)).where(and(eq(learnerGuardians.institutionId, institutionId), eq(learnerGuardians.guardianUserId, guardianUserId), eq(learners.institutionId, institutionId)));
+}
+
+export async function createAttendance(input: typeof attendanceRecords.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  await db.insert(attendanceRecords).values(input);
+}
+
+export async function listAttendance(institutionId: string, learnerId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(attendanceRecords).where(and(eq(attendanceRecords.institutionId, institutionId), eq(attendanceRecords.learnerId, learnerId))).orderBy(desc(attendanceRecords.date));
+}
+
+export async function createCefrAssessment(input: typeof cefrAssessments.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  await db.insert(cefrAssessments).values(input);
+}
+
+export async function listCefrAssessments(institutionId: string, learnerId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(cefrAssessments).where(and(eq(cefrAssessments.institutionId, institutionId), eq(cefrAssessments.learnerId, learnerId))).orderBy(desc(cefrAssessments.assessedAt));
+}
+
+export async function createPaymentRecord(input: typeof paymentRecords.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  await db.insert(paymentRecords).values(input);
+}
+
+export async function listPaymentRecords(institutionId: string, learnerId?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const where = learnerId ? and(eq(paymentRecords.institutionId, institutionId), eq(paymentRecords.learnerId, learnerId)) : eq(paymentRecords.institutionId, institutionId);
+  return db.select().from(paymentRecords).where(where).orderBy(desc(paymentRecords.paidAt));
 }

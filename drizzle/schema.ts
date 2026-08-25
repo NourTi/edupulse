@@ -138,6 +138,75 @@ export const auditLogs = mysqlTable(
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = typeof auditLogs.$inferInsert;
 
+/** Institution-owned learner records replace the former browser-only demo records. */
+export const learners = mysqlTable("learners", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  institutionId: varchar("institutionId", { length: 64 }).notNull(),
+  name: varchar("name", { length: 160 }).notNull(),
+  nameAr: varchar("nameAr", { length: 160 }).notNull(),
+  grade: varchar("grade", { length: 80 }).notNull(),
+  phone: varchar("phone", { length: 40 }),
+  status: mysqlEnum("status", ["active", "new", "review", "archived"]).default("active").notNull(),
+  createdById: int("createdById").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({ institutionIdx: index("learners_institution_idx").on(table.institutionId) }));
+
+export const learnerGuardians = mysqlTable("learnerGuardians", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  institutionId: varchar("institutionId", { length: 64 }).notNull(),
+  learnerId: varchar("learnerId", { length: 64 }).notNull(),
+  guardianUserId: int("guardianUserId").notNull(),
+  relationship: varchar("relationship", { length: 80 }).notNull().default("guardian"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({ institutionIdx: index("learner_guardians_institution_idx").on(table.institutionId), learnerIdx: index("learner_guardians_learner_idx").on(table.learnerId), guardianIdx: index("learner_guardians_guardian_idx").on(table.guardianUserId) }));
+
+export const attendanceRecords = mysqlTable("attendanceRecords", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  institutionId: varchar("institutionId", { length: 64 }).notNull(),
+  learnerId: varchar("learnerId", { length: 64 }).notNull(),
+  date: timestamp("date").notNull(),
+  status: mysqlEnum("status", ["present", "late", "excused", "absent"]).notNull(),
+  note: text("note"),
+  recordedById: int("recordedById").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({ institutionDateIdx: index("attendance_institution_date_idx").on(table.institutionId, table.date), learnerIdx: index("attendance_learner_idx").on(table.learnerId) }));
+
+export const cefrAssessments = mysqlTable("cefrAssessments", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  institutionId: varchar("institutionId", { length: 64 }).notNull(),
+  learnerId: varchar("learnerId", { length: 64 }).notNull(),
+  level: varchar("level", { length: 8 }).notNull(),
+  speaking: int("speaking").notNull(),
+  listening: int("listening").notNull(),
+  reading: int("reading").notNull(),
+  writing: int("writing").notNull(),
+  note: text("note"),
+  status: mysqlEnum("status", ["draft", "approved"]).default("draft").notNull(),
+  assessedById: int("assessedById").notNull(),
+  assessedAt: timestamp("assessedAt").defaultNow().notNull(),
+}, table => ({ institutionIdx: index("cefr_institution_idx").on(table.institutionId), learnerIdx: index("cefr_learner_idx").on(table.learnerId) }));
+
+export const paymentRecords = mysqlTable("paymentRecords", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  institutionId: varchar("institutionId", { length: 64 }).notNull(),
+  learnerId: varchar("learnerId", { length: 64 }).notNull(),
+  amountMinor: int("amountMinor").notNull(),
+  currency: varchar("currency", { length: 8 }).notNull().default("DZD"),
+  method: varchar("method", { length: 60 }).notNull(),
+  status: mysqlEnum("status", ["paid", "balance_due", "void"]).default("paid").notNull(),
+  paidAt: timestamp("paidAt").notNull(),
+  recordedById: int("recordedById").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({ institutionIdx: index("payments_institution_idx").on(table.institutionId), learnerIdx: index("payments_learner_idx").on(table.learnerId) }));
+
+export type Learner = typeof learners.$inferSelect;
+export type InsertLearner = typeof learners.$inferInsert;
+export type LearnerGuardian = typeof learnerGuardians.$inferSelect;
+export type AttendanceRecord = typeof attendanceRecords.$inferSelect;
+export type CefrAssessment = typeof cefrAssessments.$inferSelect;
+export type PaymentRecord = typeof paymentRecords.$inferSelect;
+
 /** Approved, institution-owned information available to the education assistant. */
 export const knowledgeSources = mysqlTable(
   "knowledgeSources",

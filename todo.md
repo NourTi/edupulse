@@ -86,3 +86,10 @@
 - [ ] Harden the Tauri Windows build with encrypted local credential storage and signed release artifacts.
 - [x] Verify TypeScript, production build, unit suite, migration generation, and public landing-page rendering.
 - [ ] Resolve the already-applied database migration marker in the managed migration journal before the next schema change.
+
+## Server Records Foundation
+
+- [x] Add institution-owned learner, guardian-link, attendance, CEFR assessment, and payment tables through a reviewed non-destructive migration.
+- [x] Add tenant-scoped tRPC procedures for learner listing/creation, attendance, CEFR assessment, payments, and guardian-linked learners.
+- [x] Enforce staff role gates and institution membership checks before server record access or mutation.
+- [x] Validate the records schema and API integration with TypeScript, unit tests, and a production build.

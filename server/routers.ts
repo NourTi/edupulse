@@ -21,6 +21,17 @@ import {
   listAuditLogs,
   listInstitutionMembers,
   listKnowledgeSources,
+  listLearners,
+  createLearner,
+  getLearner,
+  linkLearnerGuardian,
+  listGuardianLearners,
+  createAttendance,
+  listAttendance,
+  createCefrAssessment,
+  listCefrAssessments,
+  createPaymentRecord,
+  listPaymentRecords,
   updateUserPassword,
   upsertSchoolSettings,
   writeAuditLog,
@@ -143,6 +154,60 @@ export const appRouter = router({
       await acceptInvitation(invitation.id);
       const token = await establishPasswordSession(invitedUser.id, ctx.req);
       setPasswordSessionCookie(ctx.res, ctx.req, token);
+      return { success: true } as const;
+    }),
+  }),
+  records: router({
+    learners: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional() }).optional()).query(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input?.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "registrar", "finance_admin", "teacher", "counsellor", "student", "guardian"]);
+      return listLearners(institutionId);
+    }),
+    createLearner: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), name: z.string().trim().min(2).max(160), nameAr: z.string().trim().min(2).max(160), grade: z.string().trim().min(1).max(80), phone: z.string().trim().max(40).optional(), status: z.enum(["active", "new", "review", "archived"]).default("new") })).mutation(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "registrar"]);
+      const learner = await createLearner({ id: `learner_${nanoid(16)}`, institutionId, name: input.name, nameAr: input.nameAr, grade: input.grade, phone: input.phone, status: input.status, createdById: ctx.user.id });
+      await writeAuditLog({ id: `audit_${nanoid(16)}`, institutionId, actorUserId: ctx.user.id, action: "learner.created", entityType: "learner", entityId: learner?.id, metadata: JSON.stringify({ name: input.name }) });
+      return learner;
+    }),
+    guardianLearners: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional() }).optional()).query(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input?.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["guardian"]);
+      return listGuardianLearners(institutionId, ctx.user.id);
+    }),
+    attendance: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), learnerId: z.string().min(3).max(64) })).query(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "teacher", "counsellor"]);
+      if (!(await getLearner(institutionId, input.learnerId))) throw new TRPCError({ code: "NOT_FOUND", message: "Learner not found." });
+      return listAttendance(institutionId, input.learnerId);
+    }),
+    recordAttendance: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), learnerId: z.string().max(64), date: z.coerce.date(), status: z.enum(["present", "late", "excused", "absent"]), note: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "teacher", "counsellor"]);
+      if (!(await getLearner(institutionId, input.learnerId))) throw new TRPCError({ code: "NOT_FOUND", message: "Learner not found." });
+      await createAttendance({ id: `attendance_${nanoid(16)}`, institutionId, learnerId: input.learnerId, date: input.date, status: input.status, note: input.note, recordedById: ctx.user.id });
+      return { success: true } as const;
+    }),
+    cefr: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), learnerId: z.string().max(64) })).query(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "teacher", "counsellor"]);
+      return listCefrAssessments(institutionId, input.learnerId);
+    }),
+    recordCefr: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), learnerId: z.string().max(64), level: z.string().regex(/^[ABC][12]$/), speaking: z.number().int().min(0).max(100), listening: z.number().int().min(0).max(100), reading: z.number().int().min(0).max(100), writing: z.number().int().min(0).max(100), note: z.string().max(4000).optional(), status: z.enum(["draft", "approved"]).default("draft") })).mutation(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "teacher", "counsellor"]);
+      await createCefrAssessment({ id: `cefr_${nanoid(16)}`, institutionId, learnerId: input.learnerId, level: input.level, speaking: input.speaking, listening: input.listening, reading: input.reading, writing: input.writing, note: input.note, status: input.status, assessedById: ctx.user.id });
+      return { success: true } as const;
+    }),
+    payments: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), learnerId: z.string().max(64).optional() }).optional()).query(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input?.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "finance_admin"]);
+      return listPaymentRecords(institutionId, input?.learnerId);
+    }),
+    recordPayment: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), learnerId: z.string().max(64), amountMinor: z.number().int().positive(), currency: z.string().max(8).default("DZD"), method: z.string().trim().min(2).max(60), status: z.enum(["paid", "balance_due", "void"]).default("paid"), paidAt: z.coerce.date() })).mutation(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "finance_admin"]);
+      await createPaymentRecord({ id: `payment_${nanoid(16)}`, institutionId, learnerId: input.learnerId, amountMinor: input.amountMinor, currency: input.currency, method: input.method, status: input.status, paidAt: input.paidAt, recordedById: ctx.user.id });
       return { success: true } as const;
     }),
   }),
