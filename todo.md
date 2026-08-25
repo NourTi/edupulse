@@ -159,3 +159,9 @@
 - [x] Remove the obsolete OAuth startup requirement from the password-only Render deployment.
 - [ ] Verify Render startup logs and the live password-authenticated route after the fix.
 - [x] Update portable deployment documentation so `OAUTH_SERVER_URL` is not presented as required for password authentication.
+
+## Login Screen Clarity
+
+- [x] Simplify the login screen into clear Arabic-first labels and user-friendly password guidance.
+- [x] Keep English available through the language switch without mixing technical copy into the Arabic view.
+- [x] Validate the login screen at desktop and mobile sizes, then push the Render-ready update.
