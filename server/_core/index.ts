@@ -41,13 +41,9 @@ async function startServer() {
   } else {
     console.log("[Auth] Password sessions enabled; legacy OAuth routes disabled.");
   }
-  if (process.env.GOOGLE_CLIENT_ID?.trim() && process.env.GOOGLE_CLIENT_SECRET?.trim()) {
-    const { registerGoogleRoutes } = await import("../auth/google");
-    registerGoogleRoutes(app);
-    console.log("[Auth] Google sign-in enabled.");
-  } else {
-    console.log("[Auth] Google sign-in not configured.");
-  }
+  const { registerGoogleRoutes } = await import("../auth/google");
+  registerGoogleRoutes(app);
+  console.log(process.env.GOOGLE_CLIENT_ID?.trim() && process.env.GOOGLE_CLIENT_SECRET?.trim() ? "[Auth] Google sign-in enabled." : "[Auth] Google sign-in route registered; provider variables are missing.");
   // tRPC API
   app.use(
     "/api/trpc",

@@ -187,3 +187,4 @@
 - [x] Add optional Google sign-in alongside password login with secure callback and account linking.
 - [x] Preserve institution membership roles and prevent cross-institution account takeover during Google linking.
 - [ ] Validate the bilingual Google login flow locally; configure and verify the Render callback after redeployment.
+- [ ] Diagnose and fix the live Render Google sign-in 404 reported after provider configuration.
