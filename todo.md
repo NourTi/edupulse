@@ -37,3 +37,17 @@
 - [x] Define desktop local-data, backup, and online AI-agent connection states.
 - [x] Add the explicit Crawl4AI gateway contract and transition criteria from lightweight ingestion to the full worker.
 - [x] Verify the updated search flow, app build, and Windows desktop build path.
+
+## Parent AI Chat and Branded RTL Receipts
+
+- [x] Add a parent-friendly Arabic-first AI policy chat surface with suggested questions, conversation history, loading, empty, and refusal states.
+- [x] Wire the chat to the existing grounded knowledge endpoint with citations and privacy-safe boundaries.
+- [x] Add administrator school identity settings and customizable logo handling through the authenticated storage backend, with a local-first fallback.
+- [x] Improve payment receipt generation with school logo, bilingual metadata, Arabic RTL layout, and print/download controls using browser-shaped rendering.
+- [x] Add tests for chat grounding/refusal behavior and receipt data formatting.
+- [x] Verify chat entry and PDF download in the browser, responsive product layout at the mobile breakpoint, type checks, and production build; authenticated logo-upload persistence remains ready for a signed-in administrator.
+- [x] Save and deliver the updated checkpoint.
+
+## Desktop Runtime Follow-up
+
+- [ ] Package and test the Tauri application on Windows with Rust and WebView2 tooling.

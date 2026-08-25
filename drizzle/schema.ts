@@ -51,3 +51,15 @@ export const knowledgeChunks = mysqlTable("knowledgeChunks", {
 
 export type KnowledgeSource = typeof knowledgeSources.$inferSelect;
 export type KnowledgeChunk = typeof knowledgeChunks.$inferSelect;
+
+/** Singleton institution identity used by branded receipts and public-facing documents. */
+export const schoolSettings = mysqlTable("schoolSettings", {
+  id: int("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull().default("EduPulse"),
+  logoKey: varchar("logoKey", { length: 512 }),
+  logoUrl: text("logoUrl"),
+  updatedById: int("updatedById").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SchoolSettings = typeof schoolSettings.$inferSelect;

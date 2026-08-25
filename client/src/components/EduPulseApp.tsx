@@ -3,6 +3,7 @@
  * Inter body font, deep midnight navy and thin liquid-glass signature. This
  * component extends that system into an Arabic-first local education product.
  */
+import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import {
@@ -43,7 +44,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { KnowledgeAdministration, PublicKnowledgeAgent } from "@/components/KnowledgePanels";
+import { ParentPolicyChat } from "@/components/ParentPolicyChat";
+import { SchoolBrandPanel, readSchoolBrand } from "@/components/SchoolBrandPanel";
 import { LocalSearchOverlay } from "@/components/LocalSearchOverlay";
+import { escapeReceiptHtml, formatReceiptContent } from "@/lib/receiptFormatting";
 import { isDesktopRuntime, saveDesktopBackup } from "@/lib/desktopRuntime";
 import { loadDesktopWorkspace, saveDesktopWorkspace } from "@/lib/desktopRecords";
 
@@ -161,6 +165,23 @@ function StatusPill({ children, tone = "neutral" }: { children: ReactNode; tone?
   return <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] ${classes[tone]}`}>{children}</span>;
 }
 
+function buildReceiptMarkup(payment: Payment, student: Student | undefined, brand: ReturnType<typeof readSchoolBrand>) {
+  const receipt = formatReceiptContent({
+    schoolName: brand.name,
+    receiptId: payment.id,
+    studentName: student?.nameAr ?? payment.learner,
+    guardianName: student?.guardian ?? "—",
+    amount: payment.amount,
+    method: payment.method,
+    paidAt: payment.paidAt,
+    logoDataUrl: brand.logoDataUrl,
+  });
+  const safeLogo = receipt.logoDataUrl && (/^data:image\/(png|jpeg|webp);base64,/i.test(receipt.logoDataUrl) || receipt.logoDataUrl.startsWith("/manus-storage/")) ? `<img src="${escapeReceiptHtml(receipt.logoDataUrl)}" alt="شعار المؤسسة" style="max-width:132px;max-height:72px;object-fit:contain" />` : "";
+  const englishLabels: Record<string, string> = { "اسم الطالب": "Student", "ولي الأمر": "Guardian", "طريقة الدفع": "Payment method", "الحالة": "Status" };
+  const rows = receipt.rows.map(([label, value]) => `<tr><td class="label"><span>${escapeReceiptHtml(label)}</span><small style="display:block;margin-top:3px;direction:ltr;text-align:right;color:#8a9ba0;font-size:11px">${englishLabels[label] ?? ""}</small></td><td>${escapeReceiptHtml(value)}</td></tr>`).join("");
+  return `<main dir="rtl" lang="ar" style="box-sizing:border-box;width:100%;min-height:100%;padding:48px;background:#ffffff;color:#00364A;font-family:Arial,'Tahoma',sans-serif;text-align:right"><section style="display:flex;direction:rtl;justify-content:space-between;align-items:flex-start;gap:32px;border-bottom:2px solid #00364A;padding-bottom:24px"><div><div style="font:42px Georgia,serif;letter-spacing:-1px">${escapeReceiptHtml(receipt.schoolName)}</div><div style="font-size:13px;line-height:1.8;color:#58727c">سجل تعليمي محلي · PAYMENT RECEIPT · إيصال دفع</div>${safeLogo ? `<div style="margin-top:16px">${safeLogo}</div>` : ""}</div><div style="font-size:13px;line-height:2;color:#4a5e65;text-align:left;direction:rtl">رقم الإيصال / Receipt: ${escapeReceiptHtml(receipt.receiptNumber)}<br>تاريخ الدفع / Paid on: ${escapeReceiptHtml(receipt.paidAt)}<br>نوع العملية / Method: ${escapeReceiptHtml(receipt.rows[2]?.[1] ?? payment.method)}</div></section><div style="font:38px Georgia,serif;margin:36px 0;direction:rtl">${escapeReceiptHtml(receipt.amountLabel)}</div><table style="width:100%;border-collapse:collapse;direction:rtl;font-size:15px"><tbody>${rows}</tbody></table><p style="margin-top:40px;padding-top:20px;border-top:1px solid #e5edf0;font-size:12px;line-height:1.9;color:#60747c">تم إنشاء هذا الإيصال من مساحة EduPulse المحلية. / Generated locally by EduPulse. احتفظ بنسخة للرجوع إليها.</p></main>`;
+}
+
 export default function EduPulseApp() {
   const [screen, setScreen] = useState<Screen>("landing");
   const [language, setLanguage] = useState<Language>("ar");
@@ -260,20 +281,33 @@ export default function EduPulseApp() {
     const student = data.students.find((item) => item.id === payment.studentId);
     const receiptWindow = window.open("", "edupulse-receipt", "width=760,height=920");
     if (!receiptWindow) return toast.error("اسمح بالنوافذ المنبثقة لطباعة الإيصال.");
-    receiptWindow.document.write(`<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>إيصال EduPulse</title><style>body{font-family:Arial,sans-serif;margin:0;color:#00364A;background:#fff}.sheet{margin:42px;border:1px solid #d8e4e8;padding:36px}.top{display:flex;justify-content:space-between;align-items:start;border-bottom:2px solid #00364A;padding-bottom:24px}.brand{font:42px Georgia,serif}.mark{font-size:13px;letter-spacing:2px;color:#58727c}.meta{font-size:13px;line-height:1.9;color:#4a5e65}.amount{font:38px Georgia,serif;margin:36px 0}.table{width:100%;border-collapse:collapse}.table td{padding:14px 0;border-bottom:1px solid #e5edf0}.label{color:#60747c;width:36%}.footer{margin-top:34px;padding-top:20px;border-top:1px solid #e5edf0;font-size:12px;color:#60747c}@media print{.sheet{border:none;margin:0}}</style></head><body><main class="sheet"><section class="top"><div><div class="brand">EduPulse</div><div class="mark">سجل تعليمي محلي</div></div><div class="meta">إيصال رقم: ${payment.id.slice(-6).toUpperCase()}<br>تاريخ الدفع: ${payment.paidAt}<br>طريقة الدفع: ${payment.method}</div></section><div class="amount">${payment.amount.toLocaleString("ar-DZ")} د.ج</div><table class="table"><tr><td class="label">اسم الطالب</td><td>${student?.nameAr ?? payment.learner}</td></tr><tr><td class="label">ولي الأمر</td><td>${student?.guardian ?? "—"}</td></tr><tr><td class="label">الحالة</td><td>مدفوع</td></tr></table><p class="footer">تم إنشاء هذا الإيصال من مساحة EduPulse المحلية. احتفظ بنسخة للرجوع إليها.</p></main><script>window.onload=()=>window.print()</script></body></html>`);
+    const brand = readSchoolBrand();
+    receiptWindow.document.write(`<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>إيصال ${escapeReceiptHtml(brand.name)}</title><style>*{box-sizing:border-box}body{margin:0;background:#eef3f4}.sheet{max-width:760px;margin:42px auto;border:1px solid #d8e4e8;padding:36px;background:#fff}td{padding:14px 0;border-bottom:1px solid #e5edf0}.label{color:#60747c;width:36%}@media print{body{background:#fff}.sheet{border:none;margin:0;max-width:none}}</style></head><body>${buildReceiptMarkup(payment, student, brand)}<script>window.onload=()=>window.print()</script></body></html>`);
     receiptWindow.document.close();
   };
 
-  const downloadPdfReceipt = (payment: Payment) => {
+  const downloadPdfReceipt = async (payment: Payment) => {
     const student = data.students.find((item) => item.id === payment.studentId);
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-    doc.setFillColor(0, 54, 74); doc.rect(0, 0, 595, 116, "F");
-    doc.setTextColor(255, 255, 255); doc.setFont("times", "normal"); doc.setFontSize(32); doc.text("EduPulse", 48, 66);
-    doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.text("LOCAL EDUCATION RECORD", 50, 88);
-    doc.setTextColor(0, 54, 74); doc.setFontSize(13); doc.text("PAYMENT RECEIPT", 48, 162);
-    doc.setFont("times", "normal"); doc.setFontSize(30); doc.text(`${payment.amount.toLocaleString("en-US")} DZD`, 48, 212);
-    doc.setFont("helvetica", "normal"); doc.setFontSize(11); const rows = [["Receipt", payment.id.slice(-6).toUpperCase()], ["Student", student?.name ?? payment.learner], ["Guardian", student?.guardian ?? "—"], ["Paid on", payment.paidAt], ["Method", payment.method], ["Status", "PAID"]]; rows.forEach(([label, value], index) => { const y = 264 + index * 43; doc.setDrawColor(220, 230, 234); doc.line(48, y + 15, 547, y + 15); doc.setTextColor(92, 113, 120); doc.text(label, 48, y); doc.setTextColor(0, 54, 74); doc.text(value, 210, y); }); doc.setTextColor(92, 113, 120); doc.setFontSize(9); doc.text("Generated locally by EduPulse", 48, 548); doc.save(`edupulse-receipt-${payment.id}.pdf`);
-    toast.success("تم تنزيل نسخة PDF من الإيصال.");
+    const brand = readSchoolBrand();
+    const renderTarget = document.createElement("div");
+    renderTarget.style.cssText = "position:fixed;left:-10000px;top:0;width:794px;min-height:1123px;background:#fff;z-index:-1";
+    renderTarget.innerHTML = buildReceiptMarkup(payment, student, brand);
+    document.body.appendChild(renderTarget);
+    try {
+      await document.fonts?.ready;
+      const canvas = await html2canvas(renderTarget, { backgroundColor: "#ffffff", scale: 2, useCORS: true, logging: false });
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const imageHeight = canvas.height * pageWidth / canvas.width;
+      doc.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, pageWidth, Math.min(pageHeight, imageHeight), undefined, "FAST");
+      doc.save(`edupulse-receipt-${payment.id}.pdf`);
+      toast.success("تم تنزيل إيصال PDF عربي منسق.");
+    } catch {
+      toast.error("تعذر إنشاء PDF الآن. استخدم الطباعة ثم اختر حفظ بصيغة PDF.");
+    } finally {
+      renderTarget.remove();
+    }
   };
 
   const savePayment = async (event: FormEvent) => {
@@ -376,7 +410,7 @@ export default function EduPulseApp() {
 
     if (activeView === "guardians") return <><SectionHeader eyebrow="Human-approved communication" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">رسالة واضحة قبل أن تغادر المساحة.</em></>} copy="لا تُرسل EduPulse الرسائل تلقائياً. يصوغ المعلم المسودة ويراجعها ثم ينسخها أو يشاركها عبر قناة المؤسسة المعتمدة." /><div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]"><article className="surface-panel rounded-2xl p-6"><div className="flex items-center justify-between"><div><p className="text-display text-3xl">مسودة لولي الأمر</p><p className="mt-1 text-xs text-white/45">{currentStudent.nameAr} · {currentStudent.guardian}</p></div><MessageCircle className="h-5 w-5 text-white/45" /></div><textarea value={message} onChange={(event) => setMessage(event.target.value)} className="mt-6 min-h-44 w-full rounded-xl border border-white/12 bg-white/5 p-4 text-sm leading-7 text-white outline-none focus:border-white/35" /><div className="mt-4 flex flex-wrap justify-between gap-3"><span className="text-xs text-white/45">مراجعة بشرية مطلوبة قبل المشاركة.</span><button onClick={saveGuardianMessage} className="liquid-glass rounded-full px-5 py-3 text-sm"><Copy className="ml-2 inline h-4 w-4" />حفظ ونسخ المسودة</button></div></article><article className="surface-panel rounded-2xl p-6"><p className="text-display text-3xl">سجل الرسائل</p><p className="mt-2 text-sm text-white/55">كل مسودة محفوظة ضمن سجل الطالب المحلي.</p><div className="mt-7 space-y-3">{data.messages.length ? data.messages.map((item) => <div key={item.id} className="rounded-xl border border-white/10 p-4"><p className="text-sm">{item.subject}</p><p className="mt-2 line-clamp-3 text-xs leading-5 text-white/50">{item.body}</p></div>) : <div className="rounded-xl border border-dashed border-white/15 p-5 text-sm text-white/45">لا توجد رسائل محفوظة بعد.</div>}</div></article></div></>;
 
-    if (activeView === "payments") return <><SectionHeader eyebrow="Local payment ledger" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">دفعة موثقة. إيصال قابل للطباعة.</em></>} copy="سجل الدفعات في هذه التجربة محلي. يمكنك تنزيل نسخة PDF أو فتح إيصال عربي جاهز للطباعة والحفظ كـ PDF." action={<button onClick={() => setPaymentOpen(true)} className="liquid-glass rounded-full px-5 py-3 text-sm"><CirclePlus className="ml-2 inline h-4 w-4" />تسجيل دفعة</button>} /><section className="grid gap-4 md:grid-cols-3"><Metric label="إجمالي المدفوع" value={`${data.payments.filter((payment) => payment.state === "Paid").reduce((sum, payment) => sum + payment.amount, 0).toLocaleString("ar-DZ")} د.ج`} detail="ضمن السجل الحالي" icon={WalletCards} /><Metric label="رصيد مستحق" value={`${balanceDue.toLocaleString("ar-DZ")} د.ج`} detail="يتطلب متابعة بشرية" icon={Bell} /><Metric label="إيصالات" value={data.payments.filter((payment) => payment.state === "Paid").length} detail="قابلة للطباعة أو التنزيل" icon={ReceiptText} /></section><div className="surface-panel mt-7 overflow-hidden rounded-2xl"><div className="divide-y divide-white/8">{data.payments.map((payment) => <div key={payment.id} className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">{payment.learner}</p><p className="mt-1 text-xs text-white/45">{payment.paidAt} · {payment.method}</p></div><div className="flex items-center gap-3"><div className="text-left"><p className="text-display text-2xl">{payment.amount.toLocaleString("ar-DZ")} د.ج</p><div className="mt-1"><StatusPill tone={payment.state === "Paid" ? "good" : "alert"}>{payment.state === "Paid" ? "مدفوع" : "مستحق"}</StatusPill></div></div>{payment.state === "Paid" && <div className="flex gap-2"><button onClick={() => downloadPdfReceipt(payment)} className="rounded-full border border-white/15 p-2.5 text-white/65 hover:text-white" title="Download PDF"><Download className="h-4 w-4" /></button><button onClick={() => printArabicReceipt(payment)} className="rounded-full border border-white/15 p-2.5 text-white/65 hover:text-white" title="Print Arabic receipt"><ReceiptText className="h-4 w-4" /></button></div>}</div></div>)}</div></div></>;
+    if (activeView === "payments") return <><SectionHeader eyebrow="Local payment ledger" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">دفعة موثقة. إيصال قابل للطباعة.</em></>} copy="سجل الدفعات في هذه التجربة محلي. يمكنك تنزيل نسخة PDF أو فتح إيصال عربي جاهز للطباعة والحفظ كـ PDF." action={<button onClick={() => setPaymentOpen(true)} className="liquid-glass rounded-full px-5 py-3 text-sm"><CirclePlus className="ml-2 inline h-4 w-4" />تسجيل دفعة</button>} /><div className="mb-7"><SchoolBrandPanel /></div><section className="grid gap-4 md:grid-cols-3"><Metric label="إجمالي المدفوع" value={`${data.payments.filter((payment) => payment.state === "Paid").reduce((sum, payment) => sum + payment.amount, 0).toLocaleString("ar-DZ")} د.ج`} detail="ضمن السجل الحالي" icon={WalletCards} /><Metric label="رصيد مستحق" value={`${balanceDue.toLocaleString("ar-DZ")} د.ج`} detail="يتطلب متابعة بشرية" icon={Bell} /><Metric label="إيصالات" value={data.payments.filter((payment) => payment.state === "Paid").length} detail="قابلة للطباعة أو التنزيل" icon={ReceiptText} /></section><div className="surface-panel mt-7 overflow-hidden rounded-2xl"><div className="divide-y divide-white/8">{data.payments.map((payment) => <div key={payment.id} className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">{payment.learner}</p><p className="mt-1 text-xs text-white/45">{payment.paidAt} · {payment.method}</p></div><div className="flex items-center gap-3"><div className="text-left"><p className="text-display text-2xl">{payment.amount.toLocaleString("ar-DZ")} د.ج</p><div className="mt-1"><StatusPill tone={payment.state === "Paid" ? "good" : "alert"}>{payment.state === "Paid" ? "مدفوع" : "مستحق"}</StatusPill></div></div>{payment.state === "Paid" && <div className="flex gap-2"><button onClick={() => downloadPdfReceipt(payment)} className="rounded-full border border-white/15 p-2.5 text-white/65 hover:text-white" title="Download PDF"><Download className="h-4 w-4" /></button><button onClick={() => printArabicReceipt(payment)} className="rounded-full border border-white/15 p-2.5 text-white/65 hover:text-white" title="Print Arabic receipt"><ReceiptText className="h-4 w-4" /></button></div>}</div></div>)}</div></div></>;
 
     if (activeView === "reports") return <><SectionHeader eyebrow="Approved progress report" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">جهّز نسخة واضحة للطالب وولي الأمر.</em></>} copy="يمكن للمعلم أو المدير طباعة تقرير التقدم بعد مراجعة الدليل. لا ينشئ النظام نتيجة أكاديمية تلقائية." action={<button onClick={printProgressReport} className="liquid-glass rounded-full px-5 py-3 text-sm"><FileText className="ml-2 inline h-4 w-4" />طباعة / حفظ PDF</button>} /><div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]"><article className="surface-panel rounded-2xl p-6"><p className="text-display text-4xl">{currentStudent.nameAr}</p><p className="mt-2 text-sm text-white/55">{currentStudent.grade} · {currentStudent.guardian}</p><div className="my-8 border-t border-white/10" /><p className="text-xs uppercase tracking-[0.15em] text-white/45">الحضور</p><p className="text-display mt-3 text-5xl">{currentStudent.attendance}%</p><p className="mt-5 text-xs text-white/45">مواد مسجلة</p><div className="mt-3 flex flex-wrap gap-2">{currentStudent.subjects.slice(0, 6).map((id) => <StatusPill key={id}>{subjectName(id, "ar")}</StatusPill>)}</div></article><article className="surface-panel rounded-2xl p-6"><div className="flex items-center justify-between"><div><p className="text-display text-3xl">تقدم اللغة الإنجليزية</p><p className="mt-1 text-xs text-white/45">تقييم معتمد في {selectedAssessment.date}</p></div><p className="text-display text-5xl">{selectedAssessment.level}</p></div><div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">{[["التحدث", selectedAssessment.speaking], ["الاستماع", selectedAssessment.listening], ["القراءة", selectedAssessment.reading], ["الكتابة", selectedAssessment.writing]].map(([label, value]) => <div key={String(label)} className="rounded-xl border border-white/10 p-4"><p className="text-xs text-white/45">{label}</p><p className="text-display mt-4 text-3xl">{value}%</p></div>)}</div><div className="mt-5 rounded-xl bg-white/5 p-5 text-sm leading-7 text-white/70">{selectedAssessment.note}</div></article></div></>;
 

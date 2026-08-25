@@ -1,5 +1,6 @@
 import { startLogin } from "@/const";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { ParentPolicyChat } from "@/components/ParentPolicyChat";
 import { trpc } from "@/lib/trpc";
 import { AlertTriangle, BookOpenCheck, ExternalLink, FileUp, Globe2, Loader2, LockKeyhole, MessageCircleQuestion, Send, ShieldCheck, Sparkles } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
@@ -12,38 +13,7 @@ function PanelTitle({ eyebrow, title, copy }: { eyebrow: string; title: string; 
 }
 
 export function PublicKnowledgeAgent() {
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [sources, setSources] = useState<SourceRef[]>([]);
-  const ask = trpc.knowledge.askPublic.useMutation({
-    onSuccess: result => { setAnswer(result.answer); setSources(result.sources); },
-    onError: () => toast.error("تعذر الوصول إلى دليل المؤسسة الآن."),
-  });
-
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    if (question.trim().length < 3) return toast.error("اكتب سؤالاً واضحاً.");
-    ask.mutate({ question: question.trim() });
-  };
-
-  return <div className="mx-auto max-w-4xl">
-    <PanelTitle eyebrow="EduPulse · دليل المؤسسة" title="اسأل من المصادر المعتمدة." copy="هذه المساحة تساعد أولياء الأمور والطلاب الجدد في الأسئلة العامة عن برامج المؤسسة ولوائحها ومواعيدها. كل إجابة تُبنى من مصادر وافق عليها مدير المؤسسة." />
-    <div className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
-      <section className="surface-panel rounded-2xl p-6">
-        <div className="flex items-start justify-between gap-4"><div><p className="text-display text-3xl">مساعد EduPulse</p><p className="mt-1 text-xs text-white/45">إجابة موثقة، لا تخمين فيها.</p></div><Sparkles className="h-5 w-5 text-amber-100" /></div>
-        <form onSubmit={submit} className="mt-7">
-          <label className="text-xs text-white/50">سؤالك<input value={question} onChange={event => setQuestion(event.target.value)} placeholder="مثال: متى يبدأ برنامج الإنجليزية B2؟" className="mt-2 w-full rounded-xl border border-white/12 bg-white/5 px-4 py-3.5 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/35" /></label>
-          <div className="mt-3 flex flex-wrap gap-2">{["ما هي برامج اللغة المتاحة؟", "كيف أتواصل مع المؤسسة؟", "هل توجد سياسة للحضور؟"].map(prompt => <button key={prompt} type="button" onClick={() => setQuestion(prompt)} className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-white/60 transition hover:border-white/30 hover:text-white">{prompt}</button>)}</div>
-          <button disabled={ask.isPending} className="liquid-glass mt-5 inline-flex items-center rounded-full px-5 py-3 text-sm disabled:opacity-50">{ask.isPending ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Send className="ml-2 h-4 w-4" />}{ask.isPending ? "يبحث في المصادر المعتمدة" : "اطلب إجابة موثقة"}</button>
-        </form>
-        {answer && <article className="mt-7 border-t border-white/10 pt-6"><p className="text-xs uppercase tracking-[0.15em] text-white/45">الإجابة</p><p className="mt-3 whitespace-pre-line text-sm leading-8 text-white/80">{answer}</p>{sources.length > 0 && <div className="mt-6"><p className="text-xs text-white/45">المصادر المعتمدة</p><div className="mt-3 flex flex-wrap gap-2">{sources.map((source, index) => <a key={`${source.id}-${index}`} href={source.url ?? undefined} target={source.url ? "_blank" : undefined} rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full border border-white/12 px-3 py-1.5 text-xs text-white/70 hover:border-white/30 hover:text-white">[S{index + 1}] {source.title}{source.url && <ExternalLink className="h-3 w-3" />}</a>)}</div></div>}</article>}
-      </section>
-      <aside className="space-y-5">
-        <article className="border border-emerald-100/15 bg-emerald-100/[0.05] p-5"><ShieldCheck className="h-5 w-5 text-emerald-100" /><p className="text-display mt-7 text-3xl">حدود واضحة.</p><p className="mt-3 text-sm leading-6 text-white/60">لا يعرض المساعد درجات أو حضورًا أو رسومًا أو بيانات طالب فردية. لهذه الأمور استخدم بوابة ولي الأمر أو تواصل مع الإدارة.</p></article>
-        <article className="border border-white/10 p-5"><BookOpenCheck className="h-5 w-5 text-white/60" /><p className="mt-6 text-sm text-white/80">لا توجد إجابة في المصدر؟</p><p className="mt-2 text-sm leading-6 text-white/50">سيقول ذلك بوضوح بدلاً من اختراع سياسة أو معلومة. يستطيع المدير إضافة المصدر المعتمد لاحقاً.</p></article>
-      </aside>
-    </div>
-  </div>;
+  return <ParentPolicyChat />;
 }
 
 export function KnowledgeAdministration() {

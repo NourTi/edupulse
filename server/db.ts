@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, knowledgeChunks, knowledgeSources, users } from "../drizzle/schema";
+import { InsertUser, knowledgeChunks, knowledgeSources, schoolSettings, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -121,4 +121,26 @@ export async function getPublicKnowledgeChunks() {
     .from(knowledgeChunks)
     .innerJoin(knowledgeSources, eq(knowledgeChunks.sourceId, knowledgeSources.id))
     .where(and(eq(knowledgeSources.status, "ready"), eq(knowledgeSources.visibility, "public")));
+}
+
+export async function getSchoolSettings() {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(schoolSettings).where(eq(schoolSettings.id, 1)).limit(1);
+  return rows[0];
+}
+
+export async function upsertSchoolSettings(input: Omit<typeof schoolSettings.$inferInsert, "id">) {
+  const db = await getDb();
+  if (!db) throw new Error("School settings storage is unavailable.");
+  await db.insert(schoolSettings).values({ ...input, id: 1 }).onDuplicateKeyUpdate({
+    set: {
+      name: input.name,
+      logoKey: input.logoKey ?? null,
+      logoUrl: input.logoUrl ?? null,
+      updatedById: input.updatedById,
+      updatedAt: new Date(),
+    },
+  });
+  return getSchoolSettings();
 }

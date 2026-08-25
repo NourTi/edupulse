@@ -1,7 +1,7 @@
 import { COOKIE_NAME } from "@shared/const";
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import { createKnowledgeSource, getPublicKnowledgeChunks, listKnowledgeSources } from "./db";
+import { createKnowledgeSource, getPublicKnowledgeChunks, getSchoolSettings, listKnowledgeSources, upsertSchoolSettings } from "./db";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { invokeLLM } from "./_core/llm";
 import { systemRouter } from "./_core/systemRouter";
@@ -57,6 +57,20 @@ export const appRouter = router({
       return {
         success: true,
       } as const;
+    }),
+  }),
+  school: router({
+    brand: publicProcedure.query(() => getSchoolSettings()),
+    saveBrand: adminProcedure.input(z.object({
+      name: z.string().trim().min(2).max(255),
+      logoDataUrl: z.string().regex(/^data:image\/(png|jpeg|webp);base64,/i).max(2_000_000),
+    })).mutation(async ({ ctx, input }) => {
+      const match = input.logoDataUrl.match(/^data:(image\/(?:png|jpeg|webp));base64,(.+)$/i);
+      if (!match) throw new Error("Unsupported school logo format.");
+      const mimeType = match[1].toLowerCase();
+      const extension = mimeType === "image/jpeg" ? "jpg" : mimeType.split("/")[1];
+      const stored = await storagePut(`school-brand/${ctx.user.id}/logo.${extension}`, Buffer.from(match[2], "base64"), mimeType);
+      return upsertSchoolSettings({ name: input.name, logoKey: stored.key, logoUrl: stored.url, updatedById: ctx.user.id });
     }),
   }),
   knowledge: router({
