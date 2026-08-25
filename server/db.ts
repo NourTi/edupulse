@@ -1,11 +1,22 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, knowledgeChunks, knowledgeSources, schoolSettings, users } from "../drizzle/schema";
-import { ENV } from './_core/env';
+import {
+  auditLogs,
+  authSessions,
+  InsertUser,
+  institutions,
+  invitations,
+  knowledgeChunks,
+  knowledgeSources,
+  memberships,
+  passwordResetTokens,
+  schoolSettings,
+  users,
+} from "../drizzle/schema";
+import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -19,80 +30,189 @@ export async function getDb() {
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
-  }
-
+  if (!user.openId) throw new Error("OAuth user openId is required for upsert");
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
+  if (!db) return;
+  const values: InsertUser = { openId: user.openId };
+  const updateSet: Record<string, unknown> = {};
+  const textFields = ["name", "email", "loginMethod"] as const;
+  for (const field of textFields) {
+    if (user[field] !== undefined) {
+      const value = user[field] ?? null;
+      values[field] = value;
+      updateSet[field] = value;
+    }
   }
-
-  try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
-    const updateSet: Record<string, unknown> = {};
-
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
-
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-
-    textFields.forEach(assignNullable);
-
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
-    }
-    if (user.role !== undefined) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = 'admin';
-      updateSet.role = 'admin';
-    }
-
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
-  } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
-    throw error;
+  if (user.lastSignedIn !== undefined) {
+    values.lastSignedIn = user.lastSignedIn;
+    updateSet.lastSignedIn = user.lastSignedIn;
   }
+  if (user.role !== undefined) {
+    values.role = user.role;
+    updateSet.role = user.role;
+  } else if (user.openId === ENV.ownerOpenId) {
+    values.role = "admin";
+    updateSet.role = "admin";
+  }
+  if (!values.lastSignedIn) values.lastSignedIn = new Date();
+  if (!Object.keys(updateSet).length) updateSet.lastSignedIn = new Date();
+  await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
 }
 
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
-  }
-
+  if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
+  return result[0];
 }
 
-export async function createKnowledgeSource(
-  source: typeof knowledgeSources.$inferInsert,
-  chunks: Array<typeof knowledgeChunks.$inferInsert>,
-) {
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result[0];
+}
+
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result[0];
+}
+
+export async function createPasswordUser(input: { name: string; email: string; passwordHash: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  const result = await db.insert(users).values({
+    name: input.name,
+    email: input.email,
+    passwordHash: input.passwordHash,
+    loginMethod: "password",
+    role: "user",
+    status: "active",
+    mustChangePassword: false,
+    passwordChangedAt: new Date(),
+  });
+  return getUserById(Number(result[0].insertId));
+}
+
+export async function updateUserPassword(userId: number, passwordHash: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  await db.update(users).set({ passwordHash, passwordChangedAt: new Date(), mustChangePassword: false, updatedAt: new Date() }).where(eq(users.id, userId));
+}
+
+export async function createAuthSession(input: typeof authSessions.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Session storage is unavailable.");
+  await db.insert(authSessions).values(input);
+}
+
+export async function getUserBySessionHash(tokenHash: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db
+    .select({ user: users })
+    .from(authSessions)
+    .innerJoin(users, eq(authSessions.userId, users.id))
+    .where(and(eq(authSessions.tokenHash, tokenHash), isNull(authSessions.revokedAt), gt(authSessions.expiresAt, new Date()), eq(users.status, "active")))
+    .limit(1);
+  return rows[0]?.user;
+}
+
+export async function revokeAuthSession(tokenHash: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(authSessions).set({ revokedAt: new Date() }).where(eq(authSessions.tokenHash, tokenHash));
+}
+
+export async function createPasswordResetToken(input: typeof passwordResetTokens.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Reset storage is unavailable.");
+  await db.insert(passwordResetTokens).values(input);
+}
+
+export async function consumePasswordResetToken(tokenHash: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(passwordResetTokens).where(and(eq(passwordResetTokens.tokenHash, tokenHash), isNull(passwordResetTokens.usedAt), gt(passwordResetTokens.expiresAt, new Date()))).limit(1);
+  const token = rows[0];
+  if (!token) return undefined;
+  await db.update(passwordResetTokens).set({ usedAt: new Date() }).where(eq(passwordResetTokens.id, token.id));
+  return token;
+}
+
+export async function createInstitution(input: typeof institutions.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Institution storage is unavailable.");
+  await db.insert(institutions).values(input);
+  return db.select().from(institutions).where(eq(institutions.id, input.id)).limit(1).then(rows => rows[0]);
+}
+
+export async function getInstitution(institutionId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(institutions).where(eq(institutions.id, institutionId)).limit(1);
+  return rows[0];
+}
+
+export async function getMembership(userId: number, institutionId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(memberships).where(and(eq(memberships.userId, userId), eq(memberships.institutionId, institutionId))).limit(1);
+  return rows[0];
+}
+
+export async function getUserMemberships(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ membership: memberships, institution: institutions }).from(memberships).innerJoin(institutions, eq(memberships.institutionId, institutions.id)).where(and(eq(memberships.userId, userId), eq(memberships.status, "active"))).orderBy(desc(memberships.createdAt));
+}
+
+export async function createMembership(input: typeof memberships.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Membership storage is unavailable.");
+  await db.insert(memberships).values(input);
+}
+
+export async function listInstitutionMembers(institutionId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ user: users, membership: memberships }).from(memberships).innerJoin(users, eq(memberships.userId, users.id)).where(eq(memberships.institutionId, institutionId)).orderBy(desc(memberships.createdAt));
+}
+
+export async function createInvitation(input: typeof invitations.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Invitation storage is unavailable.");
+  await db.insert(invitations).values(input);
+}
+
+export async function getInvitationByHash(tokenHash: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(invitations).where(and(eq(invitations.tokenHash, tokenHash), isNull(invitations.acceptedAt), gt(invitations.expiresAt, new Date()))).limit(1);
+  return rows[0];
+}
+
+export async function acceptInvitation(id: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(invitations).set({ acceptedAt: new Date() }).where(eq(invitations.id, id));
+}
+
+export async function writeAuditLog(input: typeof auditLogs.$inferInsert) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(auditLogs).values(input);
+}
+
+export async function listAuditLogs(institutionId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(auditLogs).where(eq(auditLogs.institutionId, institutionId)).orderBy(desc(auditLogs.createdAt)).limit(100);
+}
+
+export async function createKnowledgeSource(source: typeof knowledgeSources.$inferInsert, chunks: Array<typeof knowledgeChunks.$inferInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Knowledge storage is unavailable.");
   await db.transaction(async tx => {
@@ -101,46 +221,53 @@ export async function createKnowledgeSource(
   });
 }
 
-export async function listKnowledgeSources() {
+export async function listKnowledgeSources(institutionId?: string) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(knowledgeSources).orderBy(desc(knowledgeSources.createdAt));
+  const where = institutionId ? eq(knowledgeSources.institutionId, institutionId) : undefined;
+  return db.select().from(knowledgeSources).where(where).orderBy(desc(knowledgeSources.createdAt));
 }
 
-export async function getPublicKnowledgeChunks() {
+export async function getPublicKnowledgeChunks(institutionId?: string) {
   const db = await getDb();
   if (!db) return [];
-  return db
-    .select({
-      id: knowledgeChunks.id,
-      sourceId: knowledgeSources.id,
-      title: knowledgeSources.title,
-      sourceUrl: knowledgeSources.sourceUrl,
-      content: knowledgeChunks.content,
-    })
-    .from(knowledgeChunks)
-    .innerJoin(knowledgeSources, eq(knowledgeChunks.sourceId, knowledgeSources.id))
-    .where(and(eq(knowledgeSources.status, "ready"), eq(knowledgeSources.visibility, "public")));
+  const tenantFilter = institutionId ? eq(knowledgeSources.institutionId, institutionId) : undefined;
+  return db.select({ id: knowledgeChunks.id, sourceId: knowledgeSources.id, title: knowledgeSources.title, sourceUrl: knowledgeSources.sourceUrl, content: knowledgeChunks.content }).from(knowledgeChunks).innerJoin(knowledgeSources, eq(knowledgeChunks.sourceId, knowledgeSources.id)).where(and(eq(knowledgeSources.status, "ready"), eq(knowledgeSources.visibility, "public"), tenantFilter));
 }
 
-export async function getSchoolSettings() {
+export async function getSchoolSettings(institutionId?: string) {
   const db = await getDb();
   if (!db) return undefined;
-  const rows = await db.select().from(schoolSettings).where(eq(schoolSettings.id, 1)).limit(1);
+  const where = institutionId ? eq(schoolSettings.institutionId, institutionId) : eq(schoolSettings.id, 1);
+  const rows = await db.select().from(schoolSettings).where(where).limit(1);
   return rows[0];
 }
 
 export async function upsertSchoolSettings(input: Omit<typeof schoolSettings.$inferInsert, "id">) {
   const db = await getDb();
   if (!db) throw new Error("School settings storage is unavailable.");
-  await db.insert(schoolSettings).values({ ...input, id: 1 }).onDuplicateKeyUpdate({
-    set: {
-      name: input.name,
-      logoKey: input.logoKey ?? null,
-      logoUrl: input.logoUrl ?? null,
-      updatedById: input.updatedById,
-      updatedAt: new Date(),
-    },
-  });
-  return getSchoolSettings();
+  await db.insert(schoolSettings).values({ ...input, id: 1 }).onDuplicateKeyUpdate({ set: { name: input.name, logoKey: input.logoKey ?? null, logoUrl: input.logoUrl ?? null, institutionId: input.institutionId ?? null, updatedById: input.updatedById, updatedAt: new Date() } });
+  return getSchoolSettings(input.institutionId ?? undefined);
+}
+
+export async function createInvitedUser(input: { email: string; name?: string | null }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  const existing = await getUserByEmail(input.email);
+  if (existing) return existing;
+  const result = await db.insert(users).values({ email: input.email, name: input.name ?? null, loginMethod: "password", role: "user", status: "invited", mustChangePassword: true }).$returningId();
+  const id = result[0]?.id;
+  return id ? getUserById(id) : undefined;
+}
+
+export async function activateUser(input: { userId: number; name: string; passwordHash: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  await db.update(users).set({ name: input.name, passwordHash: input.passwordHash, status: "active", mustChangePassword: false, passwordChangedAt: new Date(), updatedAt: new Date() }).where(eq(users.id, input.userId));
+}
+
+export async function activateMembership(userId: number, institutionId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Membership storage is unavailable.");
+  await db.update(memberships).set({ status: "active", updatedAt: new Date() }).where(and(eq(memberships.userId, userId), eq(memberships.institutionId, institutionId)));
 }

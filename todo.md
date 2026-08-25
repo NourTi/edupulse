@@ -51,3 +51,38 @@
 ## Desktop Runtime Follow-up
 
 - [x] Add a reproducible Windows packaging workflow and installation guidance; native installer execution requires a Windows runner with Rust and WebView2 tooling.
+
+## Authentication and Educator Workflow Audit
+
+- [ ] Audit admin, normal-user, password/credential, and role behavior in the current build.
+- [ ] Compare implemented teacher, university educator, and school workflow features against the supplied educator notes.
+- [ ] Demonstrate the current user paths and document what is demo-only versus production-ready.
+- [ ] Deliver a precise feature inventory, limitations, and recommended next implementation steps.
+
+## Full-Stack School Platform Upgrade
+
+- [ ] Review the current full-stack foundation and the Appwrite, Twenty, and SaaS Boilerplate references.
+- [ ] Define institutions, memberships, school roles, password credentials, invitations, sessions, and record-level authorization.
+- [ ] Implement password authentication, credential lifecycle, and secure account recovery.
+- [ ] Implement institution administration, staff invitations, audit logs, retention controls, document review, and granular permissions.
+- [ ] Implement complete normal-user journeys for teachers, students, guardians, and staff.
+- [ ] Implement tasks, follow-ups, essay pipelines, behavior/participation, mentorship timelines, resource library, language evolution, and education-business workflows.
+- [ ] Fix Arabic welcome-page contrast and review the full product navigation and copy.
+- [ ] Verify migrations, authorization boundaries, authentication flows, educator workflows, and responsive web/desktop behavior.
+- [ ] Save and deliver the full-stack upgrade checkpoint.
+
+## Phase 3 Delivery Record
+
+- [x] Add real email/password registration for a new institution owner and password login for active users.
+- [x] Add secure password hashing, opaque session tokens, password change, logout, and invitation acceptance.
+- [x] Replace the prototype role gate with an Arabic-first authenticated account portal and invitation form.
+- [x] Add institution memberships for owner, admin, registrar, finance administrator, teacher, counsellor, student, and guardian roles.
+- [x] Add institution-scoped member listing, audit-log access, knowledge ingestion, and school-brand administration primitives.
+- [x] Add invitation token issuance with seven-day expiry, invited-account activation, and membership activation.
+- [ ] Add password reset email delivery and recovery UI after an approved mail provider is selected.
+- [ ] Replace local demo student records with institution-scoped server records across registration, attendance, CEFR, payments, and reports.
+- [ ] Complete the educator CRM layer: structured tasks, essay pipelines, behavior history, mentorship timelines, resource library, longitudinal language evolution, and client management.
+- [ ] Complete authenticated guardian and student portals with record-level student relationship checks.
+- [ ] Harden the Tauri Windows build with encrypted local credential storage and signed release artifacts.
+- [x] Verify TypeScript, production build, unit suite, migration generation, and public landing-page rendering.
+- [ ] Resolve the already-applied database migration marker in the managed migration journal before the next schema change.

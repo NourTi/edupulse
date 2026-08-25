@@ -27,6 +27,7 @@ import {
   MessageCircleQuestion,
   LayoutDashboard,
   LibraryBig,
+  Loader2,
   LockKeyhole,
   LogOut,
   Menu,
@@ -46,6 +47,9 @@ import { toast } from "sonner";
 import { KnowledgeAdministration, PublicKnowledgeAgent } from "@/components/KnowledgePanels";
 import { ParentPolicyChat } from "@/components/ParentPolicyChat";
 import { SchoolBrandPanel, readSchoolBrand } from "@/components/SchoolBrandPanel";
+import { AccountPortal } from "@/components/AccountPortal";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
 import { LocalSearchOverlay } from "@/components/LocalSearchOverlay";
 import { escapeReceiptHtml, formatReceiptContent } from "@/lib/receiptFormatting";
 import { isDesktopRuntime, saveDesktopBackup } from "@/lib/desktopRuntime";
@@ -183,9 +187,12 @@ function buildReceiptMarkup(payment: Payment, student: Student | undefined, bran
 }
 
 export default function EduPulseApp() {
+  const { user: authUser, loading: authLoading, logout: authLogout } = useAuth();
+  const membershipsQuery = trpc.auth.myMemberships.useQuery(undefined, { enabled: Boolean(authUser), retry: false });
   const [screen, setScreen] = useState<Screen>("landing");
   const [language, setLanguage] = useState<Language>("ar");
   const [role, setRole] = useState<Role>("admin");
+  const [pendingRole, setPendingRole] = useState<Role>("admin");
   const [activeView, setActiveView] = useState("overview");
   const [data, setData] = useState<LocalData>(initialData);
   const [loading, setLoading] = useState(true);
@@ -200,6 +207,13 @@ export default function EduPulseApp() {
 
   const isArabic = language === "ar";
   const direction = isArabic ? "rtl" : "ltr";
+  const accountRole = useMemo<Role>(() => {
+    const membershipRole = membershipsQuery.data?.[0]?.membership.role;
+    if (membershipRole === "student" || membershipRole === "guardian") return "student";
+    if (membershipRole === "teacher") return "teacher";
+    if (membershipRole) return "admin";
+    return authUser?.role === "admin" ? "admin" : pendingRole;
+  }, [authUser?.role, membershipsQuery.data, pendingRole]);
   const currentStudent = data.students[0];
   const desktopRuntime = isDesktopRuntime();
   const selectedAssessment = data.assessments.find((assessment) => assessment.studentId === currentStudent.id) ?? data.assessments[0];
@@ -263,7 +277,14 @@ export default function EduPulseApp() {
 
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
-  const enterWorkspace = (nextRole: Role = role) => { setRole(nextRole); setScreen("workspace"); setActiveView("overview"); };
+  const enterWorkspace = (nextRole: Role = role) => {
+    setPendingRole(nextRole);
+    if (!authUser) { setScreen("access"); return; }
+    const safeRole = accountRole === "student" ? "student" : accountRole === "teacher" ? "teacher" : nextRole === "student" ? "student" : accountRole;
+    setRole(safeRole);
+    setScreen("workspace");
+    setActiveView("overview");
+  };
 
   const toggleSubject = (subject: string) => setRegistration((current) => ({ ...current, subjects: current.subjects.includes(subject) ? current.subjects.filter((item) => item !== subject) : [...current.subjects, subject] }));
 
@@ -388,7 +409,9 @@ export default function EduPulseApp() {
   }
 
   if (screen === "access") {
-    return <main className="relative min-h-screen overflow-hidden bg-[hsl(201_100%_13%)] text-white" dir={direction}><video className="absolute inset-0 z-0 h-full w-full object-cover opacity-40" autoPlay loop muted playsInline><source src={VIDEO_URL} type="video/mp4" /></video><div className="relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-6 sm:px-8"><header className="flex items-center justify-between"><button onClick={() => setScreen("landing")} className="flex items-center gap-2 text-sm text-white/70 hover:text-white"><ArrowLeft className="h-4 w-4" />{isArabic ? "العودة للمنصة" : "Back to platform"}</button><button onClick={() => setLanguage(isArabic ? "en" : "ar")} className="text-xs text-white/60">{isArabic ? "EN" : "العربية"}</button></header><div className="flex flex-1 items-center justify-center py-16"><div className="w-full max-w-4xl"><div className="mb-9 text-center"><img src={MARK_URL} alt="" className="mx-auto h-12 w-12" /><p className="text-display mt-5 text-5xl">{isArabic ? "اختر مساحة عملك." : "Choose your workspace."}</p><p className="mt-3 text-sm text-white/55">{isArabic ? "نظام دور محلي للعرض. ستصبح الصلاحيات الحقيقية محمية في نسخة سطح المكتب والخادم المحلي." : "A local role session for this prototype. Full protection belongs in the desktop and local-server release."}</p></div><div className="grid gap-5 md:grid-cols-3">{(Object.keys(roleInfo) as Role[]).map((item) => { const info = roleInfo[item]; const Icon = info.icon; return <button key={item} onClick={() => enterWorkspace(item)} className="surface-panel group rounded-2xl p-6 text-right transition hover:-translate-y-1 hover:border-white/30"><Icon className={`h-6 w-6 ${info.accent}`} /><p className="text-display mt-12 text-4xl">{info.arabic}</p><p className="mt-1 text-xs uppercase tracking-[0.14em] text-white/40">{info.title}</p><p className="mt-5 min-h-14 text-sm leading-6 text-white/55">{info.summary}</p><span className="mt-9 inline-flex items-center gap-2 text-sm text-white/80">{isArabic ? "فتح العرض" : "Open view"}<ArrowUpRight className="h-4 w-4" /></span></button>; })}</div></div></div></div></main>;
+    if (authLoading) return <main className="relative flex min-h-screen items-center justify-center bg-[hsl(201_100%_13%)] text-white"><Loader2 className="h-6 w-6 animate-spin" /></main>;
+    if (!authUser) return <main className="relative min-h-screen overflow-hidden bg-[hsl(201_100%_13%)] text-white" dir={direction}><video className="absolute inset-0 z-0 h-full w-full object-cover opacity-40" autoPlay loop muted playsInline><source src={VIDEO_URL} type="video/mp4" /></video><div className="relative z-10 mx-auto flex min-h-screen max-w-6xl items-center justify-center px-6 py-8"><AccountPortal language={language} onBack={() => setScreen("landing")} onAuthenticated={() => { setRole(accountRole); setScreen("workspace"); setActiveView("overview"); }} /></div></main>;
+    return <main className="relative min-h-screen overflow-hidden bg-[hsl(201_100%_13%)] text-white" dir={direction}><video className="absolute inset-0 z-0 h-full w-full object-cover opacity-40" autoPlay loop muted playsInline><source src={VIDEO_URL} type="video/mp4" /></video><div className="relative z-10 mx-auto flex min-h-screen max-w-4xl flex-col px-6 py-6 sm:px-8"><header className="flex items-center justify-between"><button onClick={() => setScreen("landing")} className="flex items-center gap-2 text-sm text-white/70 hover:text-white"><ArrowLeft className="h-4 w-4" />{isArabic ? "العودة للمنصة" : "Back to platform"}</button><button onClick={() => setLanguage(isArabic ? "en" : "ar")} className="text-xs text-white/60">{isArabic ? "EN" : "العربية"}</button></header><div className="flex flex-1 items-center justify-center py-16"><div className="surface-panel w-full max-w-xl rounded-[2rem] p-8 text-center"><img src={MARK_URL} alt="" className="mx-auto h-12 w-12" /><p className="text-display mt-6 text-5xl">{isArabic ? "أهلاً بك مجدداً." : "Welcome back."}</p><p className="mt-4 text-sm leading-7 text-white/55">{authUser.name || authUser.email} · {roleInfo[accountRole].arabic}</p><button onClick={() => enterWorkspace(accountRole)} className="liquid-glass mt-8 rounded-xl px-7 py-3.5 text-sm">{isArabic ? "فتح لوحة العمل" : "Open workspace"}<ArrowUpRight className="ml-2 inline h-4 w-4" /></button><button onClick={() => authLogout()} className="mt-5 block w-full text-xs text-white/45 transition hover:text-white">{isArabic ? "تسجيل الخروج" : "Sign out"}</button></div></div></div></main>;
   }
 
   const visibleNav = navItems.filter((item) => item.roles.includes(role));
