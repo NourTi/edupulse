@@ -1,24 +1,16 @@
 import { trpc } from "@/lib/trpc";
-import { COOKIE_NAME, UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { httpBatchLink, TRPCClientError } from "@trpc/client";
+import { httpBatchLink } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
-import { startLogin } from "./const";
 import "./index.css";
 
 const queryClient = new QueryClient();
 
-const redirectToLoginIfUnauthorized = (error: unknown) => {
-  if (!(error instanceof TRPCClientError)) return;
-  if (typeof window === "undefined") return;
-
-  const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
-
-  if (!isUnauthorized) return;
-
-  startLogin();
+const redirectToLoginIfUnauthorized = (_error: unknown) => {
+  // Authentication is handled explicitly by AccountPortal. Do not redirect to
+  // the legacy Manus OAuth flow on portable deployments.
 };
 
 queryClient.getQueryCache().subscribe(event => {
@@ -43,14 +35,12 @@ const trpcClient = trpc.createClient({
       url: "/api/trpc",
       transformer: superjson,
       headers() {
-        // Preview auto-login fallback: when the browser blocks iframe cookies
-        // (Safari ITP / private browsing / WebView), the runtime mirrors the
-        // session into sessionStorage so we can forward it as a Bearer token.
-        // The regular OAuth cookie flow keeps working and takes priority server-side.
+        // Optional local bearer forwarding for desktop wrappers. Production web
+        // deployments use the HttpOnly EduPulse password-session cookie.
         try {
-          const raw = sessionStorage.getItem("manus-cookie");
+          const raw = sessionStorage.getItem("edupulse-session");
           if (raw) {
-            const prefix = `${COOKIE_NAME}=`;
+            const prefix = "edupulse-session=";
             const pair = raw.split(";").find(s => s.trim().startsWith(prefix));
             const token = pair?.trim().slice(prefix.length);
             if (token) {

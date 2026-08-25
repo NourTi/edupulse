@@ -32,3 +32,8 @@ A provider subdomain can be used for `APP_BASE_URL` if the selected host supplie
 ## RAG deployment boundary
 
 The approved-source retrieval and citation policy belongs in the Node backend. For a portable deployment, the ingestion adapter must use a server-side crawler or approved URL extraction service, store source text/chunks in the database or S3-compatible storage, and call an OpenAI-compatible LLM only after retrieving approved institution-scoped chunks. Parent/student questions must continue to refuse unsupported personal-record claims and return citations only from approved sources.
+
+
+## CircleCI deployment
+
+The repository also includes `.circleci/config.yml`. CircleCI runs type checking, unit tests, and the production build on every change. On `main`, deployment pauses for an explicit approval step and then calls a configured external-host webhook. Create a CircleCI context named `edupulse-production` containing `DEPLOY_WEBHOOK_URL` and `DEPLOY_WEBHOOK_TOKEN`; without both values the deploy job refuses to run. This pipeline does not deploy to GitHub Pages or Manus and does not contain credentials.

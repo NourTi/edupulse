@@ -1,0 +1,71 @@
+version: 2.1
+
+orbs:
+  node: circleci/node@7.2.0
+
+jobs:
+  validate:
+    docker:
+      - image: cimg/node:22.13
+    steps:
+      - checkout
+      - run:
+          name: Enable Corepack
+          command: sudo corepack enable
+      - run:
+          name: Install dependencies
+          command: corepack pnpm install --frozen-lockfile
+      - run:
+          name: Type check
+          command: corepack pnpm run check
+      - run:
+          name: Unit tests
+          command: corepack pnpm test
+      - run:
+          name: Production build
+          command: corepack pnpm run build
+      - persist_to_workspace:
+          root: .
+          paths:
+            - dist
+            - package.json
+            - pnpm-lock.yaml
+
+  deploy:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Deploy through configured Node-host webhook
+          command: |
+            if [ -z "${DEPLOY_WEBHOOK_URL:-}" ]; then
+              echo "DEPLOY_WEBHOOK_URL is not configured; refusing an incomplete deployment."
+              exit 1
+            fi
+            curl --fail-with-body --silent --show-error \
+              --request POST \
+              --header "Authorization: Bearer ${DEPLOY_WEBHOOK_TOKEN:?DEPLOY_WEBHOOK_TOKEN is required}" \
+              --header "Content-Type: application/json" \
+              --data '{"revision":"'"${CIRCLE_SHA1}"'","branch":"'"${CIRCLE_BRANCH}"'"}' \
+              "${DEPLOY_WEBHOOK_URL}"
+
+workflows:
+  validate-on-change:
+    jobs:
+      - validate
+      - hold-for-production:
+          type: approval
+          requires:
+            - validate
+          filters:
+            branches:
+              only: main
+      - deploy:
+          requires:
+            - hold-for-production
+          context: edupulse-production
+          filters:
+            branches:
+              only: main

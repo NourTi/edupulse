@@ -135,15 +135,21 @@
 
 ## GitHub-Only Full-Stack Migration
 
-- [ ] Remove or abstract Manus-only runtime dependencies from the production server path.
+- [x] Remove or abstract Manus-only runtime dependencies from the production server path.
 - [ ] Add a portable full-stack container/deployment workflow that can run from the private GitHub repository.
-- [ ] Define portable database, object storage, authentication, Resend, and RAG environment variables without committing secrets.
+- [x] Define portable database, object storage, authentication, Resend, and RAG environment variables without committing secrets.
 - [ ] Choose a GitHub-compatible runtime host and domain strategy; GitHub itself is source control and Pages is static-only.
 - [x] Verify the portable build and document the remaining provider setup required for a live full-stack URL.
 
 ## Confirmed Option B Deployment
 
-- [ ] Prepare the complete Node/Express application for a separate Node-capable host while keeping GitHub as the private source of truth.
+- [x] Prepare the complete Node/Express application for a separate Node-capable host while keeping GitHub as the private source of truth.
 - [x] Add provider-neutral environment documentation for database, JWT, Resend, storage, LLM/RAG, and public URL configuration.
 - [ ] Add a reproducible full-stack deployment workflow that can be connected to the selected Node host.
 - [x] Push and validate the deployment configuration in the private GitHub repository.
+
+## CircleCI Deployment Pipeline
+
+- [ ] Add CircleCI configuration for private GitHub checkout, dependency install, type checking, tests, and production build.
+- [ ] Add a guarded deployment handoff that requires a configured external Node host and never commits secrets.
+- [ ] Validate and push the CircleCI pipeline to the private GitHub repository.
