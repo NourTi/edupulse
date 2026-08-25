@@ -120,7 +120,7 @@
 - [ ] Verify the grounded RAG agent is installed, callable, citation-grounded, and privacy-bounded for parent/student questions.
 - [ ] Add and expose the requested scraping/search ingestion gateway with a documented Crawl4AI-compatible path and fallback behavior.
 - [ ] Improve Arabic welcome-page text contrast, weight, and readability across desktop and mobile.
-- [ ] Document that native Tauri installer compilation requires a Windows runner; do not claim an installer is present in this Linux environment.
+- [x] Document that native Tauri installer compilation requires a Windows runner; do not claim an installer is present in this Linux environment.
 
 ## GitHub Source and Pages Packaging
 
@@ -139,11 +139,11 @@
 - [ ] Add a portable full-stack container/deployment workflow that can run from the private GitHub repository.
 - [ ] Define portable database, object storage, authentication, Resend, and RAG environment variables without committing secrets.
 - [ ] Choose a GitHub-compatible runtime host and domain strategy; GitHub itself is source control and Pages is static-only.
-- [ ] Validate the portable build and document the remaining provider setup required for a live full-stack URL.
+- [x] Verify the portable build and document the remaining provider setup required for a live full-stack URL.
 
 ## Confirmed Option B Deployment
 
 - [ ] Prepare the complete Node/Express application for a separate Node-capable host while keeping GitHub as the private source of truth.
-- [ ] Add provider-neutral environment documentation for database, JWT, Resend, storage, LLM/RAG, and public URL configuration.
+- [x] Add provider-neutral environment documentation for database, JWT, Resend, storage, LLM/RAG, and public URL configuration.
 - [ ] Add a reproducible full-stack deployment workflow that can be connected to the selected Node host.
-- [ ] Push and validate the deployment configuration in the private GitHub repository.
+- [x] Push and validate the deployment configuration in the private GitHub repository.
