@@ -1,11 +1,15 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { ArrowLeft, KeyRound, Loader2, Mail, ShieldCheck } from "lucide-react";
+import { ArrowLeft, KeyRound, Loader2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 
 export type AccountLanguage = "ar" | "en";
 type Props = { language: AccountLanguage; onBack: () => void; onAuthenticated: () => void; onLanguageChange: (language: AccountLanguage) => void };
 type Mode = "login" | "register" | "invite" | "forgot" | "reset";
+
+function AccountBrandMark() {
+  return <svg aria-label="EduPulse" role="img" viewBox="0 0 48 48" className="h-11 w-11" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="42" height="42" rx="13" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.65)"/><path d="M14 29c4-8 8-12 12-12 3 0 5 2 8 7" stroke="white" strokeWidth="2.5" strokeLinecap="round"/><path d="M14 34c5-6 9-9 13-9 3 0 5 1 7 4" stroke="#B6F2E4" strokeWidth="2.5" strokeLinecap="round"/><circle cx="15" cy="16" r="2.5" fill="#F9D58A"/></svg>;
+}
 
 const copy = {
   ar: { login: "تسجيل الدخول", register: "إنشاء حساب المؤسسة", invite: "قبول الدعوة", forgot: "استعادة كلمة المرور", reset: "كلمة مرور جديدة", email: "البريد الإلكتروني", password: "كلمة المرور", name: "الاسم الكامل", institution: "اسم المؤسسة التعليمية", token: "رمز الدعوة", submitLogin: "تسجيل الدخول", submitRegister: "إنشاء الحساب", submitInvite: "تفعيل الحساب", submitForgot: "إرسال رابط الاستعادة", submitReset: "حفظ كلمة المرور", switchRegister: "إنشاء حساب جديد", switchLogin: "لديك حساب؟ سجّل الدخول", switchInvite: "لديك دعوة من مؤسسة؟", switchForgot: "هل نسيت كلمة المرور؟", back: "العودة إلى المنصة", note: "أدخل بياناتك للوصول إلى مساحة مؤسستك التعليمية.", strength: "10 أحرف على الأقل، تشمل حرفاً كبيراً وحرفاً صغيراً ورقماً.", error: "تعذّر إتمام العملية. راجع البيانات وحاول مرة أخرى.", success: "تم تسجيل الدخول بنجاح.", created: "تم إنشاء الحساب بنجاح.", activated: "تم تفعيل الحساب بنجاح.", sent: "إذا كان الحساب موجوداً، سيصل رابط الاستعادة إلى بريدك.", resetDone: "تم تحديث كلمة المرور." },
@@ -44,9 +48,9 @@ export function AccountPortal({ language, onBack, onAuthenticated, onLanguageCha
   const title = language === "ar"
     ? (mode === "login" ? "مساحتك التعليمية." : mode === "register" ? "أنشئ حسابك." : mode === "invite" ? "انضم إلى مؤسستك." : mode === "forgot" ? "نستعيد وصولك." : "أنشئ كلمة مرور جديدة.")
     : (mode === "login" ? "Your school space." : mode === "register" ? "Create your account." : mode === "invite" ? "Join your school." : mode === "forgot" ? "Recover your access." : "Create a new password.");
-  return <section className="relative z-10 mx-auto w-full max-w-xl rounded-[2rem] border border-white/20 bg-[#002b3c]/95 p-6 shadow-2xl backdrop-blur-2xl sm:p-9" dir={language === "ar" ? "rtl" : "ltr"}>
-    <div className="mb-8 flex items-start justify-between gap-4"><button onClick={onBack} className="inline-flex items-center gap-2 text-xs text-white/80 transition hover:text-white"><ArrowLeft className="h-4 w-4" />{t.back}</button><div className="flex items-center gap-2"><button type="button" onClick={() => onLanguageChange(language === "ar" ? "en" : "ar")} className="rounded-full border border-white/20 px-3 py-2 text-[11px] text-white/80 transition hover:bg-white/10">{language === "ar" ? "English" : "العربية"}</button><div className="rounded-full border border-white/20 bg-white/10 p-3 text-white/90"><ShieldCheck className="h-5 w-5" /></div></div></div>
-    <div className="mb-8"><p className="mb-3 text-xs font-medium tracking-[0.16em] text-white/80">EduPulse · {heading}</p><h1 className="text-display text-5xl leading-[1.15] text-white">{title}</h1><p className="mt-4 text-base leading-8 text-white/90">{t.note}</p></div>
+  return <section className="relative z-10 mx-auto w-full max-w-xl rounded-[2rem] border border-white/30 bg-[#002334]/[0.97] p-6 shadow-[0_24px_90px_rgba(0,0,0,0.55)] backdrop-blur-2xl sm:p-9" dir={language === "ar" ? "rtl" : "ltr"}>
+    <div className="mb-8 flex items-start justify-between gap-4"><button onClick={onBack} className="inline-flex items-center gap-2 text-xs text-white/80 transition hover:text-white"><ArrowLeft className="h-4 w-4" />{t.back}</button><div className="flex items-center gap-2"><button type="button" onClick={() => onLanguageChange(language === "ar" ? "en" : "ar")} className="rounded-full border border-white/20 px-3 py-2 text-[11px] text-white/80 transition hover:bg-white/10">{language === "ar" ? "English" : "العربية"}</button><div className="rounded-2xl border border-white/25 bg-white/10 p-2 text-white/90"><AccountBrandMark /></div></div></div>
+    <div className="mb-8 rounded-2xl border border-white/10 bg-black/10 px-4 py-5"><p className="mb-3 text-xs font-medium tracking-[0.16em] text-white/85">EduPulse · {heading}</p><h1 className="text-display text-5xl leading-[1.15] text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.7)]">{title}</h1><p className="mt-4 text-base leading-8 text-white/95 drop-shadow-[0_1px_8px_rgba(0,0,0,0.65)]">{t.note}</p></div>
     <form onSubmit={submit} className="space-y-4">
       {mode !== "login" && mode !== "forgot" && mode !== "reset" && <label className="block"><span className="mb-2 block text-xs text-white/70">{t.name}</span><input required value={name} onChange={event => setName(event.target.value)} className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white outline-none transition focus:border-white/60" /></label>}
       {mode === "register" && <label className="block"><span className="mb-2 block text-xs text-white/70">{t.institution}</span><input required value={institutionName} onChange={event => setInstitutionName(event.target.value)} className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white outline-none transition focus:border-white/60" /></label>}

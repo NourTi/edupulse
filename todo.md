@@ -165,3 +165,9 @@
 - [x] Simplify the login screen into clear Arabic-first labels and user-friendly password guidance.
 - [x] Keep English available through the language switch without mixing technical copy into the Arabic view.
 - [x] Validate the login screen at desktop and mobile sizes, then push the Render-ready update.
+
+## Logo and Arabic Readability Fix
+
+- [x] Repair the shared EduPulse logo asset path and verify it across landing, login, and workspace views.
+- [x] Improve Arabic hero/login copy contrast, spacing, and background separation on desktop and mobile.
+- [ ] Validate the fix, push it to private GitHub, and redeploy through Render.
