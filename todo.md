@@ -170,4 +170,5 @@
 
 - [x] Repair the shared EduPulse logo asset path and verify it across landing, login, and workspace views.
 - [x] Improve Arabic hero/login copy contrast, spacing, and background separation on desktop and mobile.
-- [ ] Validate the fix, push it to private GitHub, and redeploy through Render.
+- [x] Validate the fix and push it to the private GitHub repository.
+- [ ] Redeploy the branding and Arabic readability fix through Render and verify the live landing/login screens.
