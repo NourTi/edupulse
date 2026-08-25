@@ -50,6 +50,7 @@ import { SchoolBrandPanel, readSchoolBrand } from "@/components/SchoolBrandPanel
 import { AccountPortal } from "@/components/AccountPortal";
 import { EducatorCRMPanel } from "@/components/EducatorCRMPanel";
 import { StudentPortalPanel } from "@/components/StudentPortalPanel";
+import { GuardianPortalPanel } from "@/components/GuardianPortalPanel";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { LocalSearchOverlay } from "@/components/LocalSearchOverlay";
@@ -58,7 +59,7 @@ import { isDesktopRuntime, saveDesktopBackup } from "@/lib/desktopRuntime";
 import { loadDesktopWorkspace, saveDesktopWorkspace } from "@/lib/desktopRecords";
 
 type Screen = "landing" | "access" | "workspace";
-type Role = "admin" | "teacher" | "student";
+type Role = "admin" | "teacher" | "student" | "guardian";
 type Language = "ar" | "en";
 type Subject = { id: string; name: string; nameAr: string; group: string };
 type Student = { id: string; name: string; nameAr: string; grade: string; guardian: string; phone: string; level: string; attendance: number; subjects: string[]; status: "Active" | "New" | "Review" };
@@ -119,6 +120,7 @@ const roleInfo: Record<Role, { title: string; arabic: string; summary: string; i
   admin: { title: "Administrator", arabic: "مدير المؤسسة", summary: "Registration, fees, records, roles, and institution health.", icon: ShieldCheck, accent: "text-amber-100" },
   teacher: { title: "Teacher", arabic: "المعلم", summary: "Cohorts, subjects, attendance, progress, and guardian drafts.", icon: GraduationCap, accent: "text-sky-100" },
   student: { title: "Student", arabic: "الطالب", summary: "A clear view of approved subjects, progress, reports, and messages.", icon: UserRoundCheck, accent: "text-emerald-100" },
+  guardian: { title: "Guardian", arabic: "ولي الأمر", summary: "Linked learner progress, attendance, reports, and approved communication.", icon: UsersRound, accent: "text-violet-100" },
 };
 
 function openDatabase(): Promise<IDBDatabase> {
@@ -211,7 +213,8 @@ export default function EduPulseApp() {
   const direction = isArabic ? "rtl" : "ltr";
   const accountRole = useMemo<Role>(() => {
     const membershipRole = membershipsQuery.data?.[0]?.membership.role;
-    if (membershipRole === "student" || membershipRole === "guardian") return "student";
+    if (membershipRole === "guardian") return "guardian";
+    if (membershipRole === "student") return "student";
     if (membershipRole === "teacher") return "teacher";
     if (membershipRole) return "admin";
     return authUser?.role === "admin" ? "admin" : pendingRole;
@@ -282,7 +285,7 @@ export default function EduPulseApp() {
   const enterWorkspace = (nextRole: Role = role) => {
     setPendingRole(nextRole);
     if (!authUser) { setScreen("access"); return; }
-    const safeRole = accountRole === "student" ? "student" : accountRole === "teacher" ? "teacher" : nextRole === "student" ? "student" : accountRole;
+    const safeRole = accountRole === "guardian" ? "guardian" : accountRole === "student" ? "student" : accountRole === "teacher" ? "teacher" : nextRole === "student" ? "student" : accountRole;
     setRole(safeRole);
     setScreen("workspace");
     setActiveView("overview");
@@ -381,7 +384,7 @@ export default function EduPulseApp() {
     { id: "knowledge", label: "مصادر المؤسسة", icon: BookOpen, roles: ["admin"] },
     { id: "ask", label: "اسأل المؤسسة", icon: MessageCircleQuestion, roles: ["admin", "teacher", "student"] },
     { id: "crm", label: "نظام المعلم", icon: ClipboardCheck, roles: ["admin", "teacher"] },
-    { id: "portal", label: "بوابة الطالب", icon: UserRoundCheck, roles: ["student"] },
+    { id: "portal", label: role === "guardian" ? "بوابة ولي الأمر" : "بوابة الطالب", icon: UserRoundCheck, roles: ["student", "guardian"] },
   ];
 
   const landingNav = [
@@ -424,7 +427,7 @@ export default function EduPulseApp() {
 
   const renderView = () => {
     if (activeView === "crm") return <EducatorCRMPanel isArabic={isArabic} />;
-    if (activeView === "portal") return <StudentPortalPanel isArabic={isArabic} />;
+    if (activeView === "portal") return role === "guardian" ? <GuardianPortalPanel isArabic={isArabic} /> : <StudentPortalPanel isArabic={isArabic} />;
     if (activeView === "overview") return <><SectionHeader eyebrow={`${roleInfo[role].arabic} · ${new Date().toLocaleDateString("ar-DZ", { weekday: "long", day: "numeric", month: "long" })}`} title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">{role === "student" ? "خطوتك التالية ظاهرة." : "كل ما يحتاج انتباهك ظاهر."}</em></>} action={role === "admin" ? <button onClick={() => setRegistrationOpen(true)} className="liquid-glass rounded-full px-5 py-3 text-sm"><CirclePlus className="ml-2 inline h-4 w-4" />تسجيل طالب</button> : undefined} /><section className="grid gap-4 md:grid-cols-3"><Metric label={role === "student" ? "الحضور" : "طلاب نشطون"} value={role === "student" ? `${currentStudent.attendance}%` : activeStudents} detail={role === "student" ? "ضمن السجل المعتمد" : "داخل هذا السجل المحلي"} icon={UsersRound} /><Metric label={role === "student" ? "مستوى اللغة" : "حضور اليوم"} value={role === "student" ? `CEFR ${currentStudent.level}` : "92%"} detail={role === "student" ? "آخر تقييم معتمد" : "عبر الأفواج المسجلة"} icon={BarChart3} /><Metric label={role === "student" ? "المواد" : "متابعات"} value={role === "student" ? currentStudent.subjects.length : 4} detail={role === "student" ? "مواد ضمن الخطة" : "تحتاج مراجعة بشرية"} icon={ClipboardCheck} /></section><section className="mt-8 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]"><div className="surface-panel overflow-hidden rounded-2xl"><div className="flex items-center justify-between border-b border-white/10 px-5 py-5"><div><p className="text-display text-3xl">{role === "student" ? "خطة التعلم" : "الطلاب في المتابعة"}</p><p className="mt-1 text-xs text-white/45">{role === "student" ? "مواد، حضور، وتقدم معتمد" : "سجل موحّد للطالب وولي الأمر والتقدم"}</p></div><button onClick={() => navigate(role === "student" ? "subjects" : "learners")} className="text-xs text-white/60 hover:text-white">عرض الكل</button></div>{role === "student" ? <div className="p-5"><div className="flex items-start justify-between"><div><p className="font-medium">{currentStudent.nameAr}</p><p className="mt-1 text-xs text-white/45">{currentStudent.grade} · CEFR {currentStudent.level}</p></div><StatusPill tone="good">حضور {currentStudent.attendance}%</StatusPill></div><div className="mt-7 grid gap-2 sm:grid-cols-2">{currentStudent.subjects.map((id) => <div key={id} className="rounded-xl border border-white/10 px-4 py-3 text-sm">{subjectName(id, "ar")}</div>)}</div></div> : <div className="divide-y divide-white/8">{data.students.map((student) => <div key={student.id} className="flex items-center justify-between gap-4 px-5 py-4"><div><p className="font-medium">{student.nameAr}</p><p className="mt-1 text-xs text-white/45">{student.grade} · {student.guardian}</p></div><div className="text-left"><StatusPill tone={student.status === "Review" ? "alert" : student.status === "New" ? "blue" : "good"}>{student.status === "Review" ? "مراجعة" : student.status === "New" ? "جديد" : "نشط"}</StatusPill><p className="mt-2 text-xs text-white/45">حضور {student.attendance || "—"}%</p></div></div>)}</div>}</div><div className="space-y-6"><article className="surface-panel rounded-2xl p-5"><div className="flex items-center justify-between"><div><p className="text-display text-3xl">الخطوة التالية</p><p className="mt-1 text-xs text-white/45">لا إرسال تلقائي، فقط متابعة واضحة</p></div><CalendarDays className="h-4 w-4 text-white/45" /></div><div className="mt-5 space-y-2">{["تأكيد موعد تقييم يوسف", "مراجعة تقرير أمل", "إرسال مسودة تقدم لولي أمر رانيا"].map((task, index) => <button key={task} onClick={() => toast.success("تم تسجيل المتابعة داخل مساحة العمل.")} className="flex w-full items-start gap-3 rounded-xl p-3 text-right hover:bg-white/6"><span className="mt-1 h-3.5 w-3.5 rounded-full border border-white/40" /><span><span className="block text-sm">{task}</span><span className="mt-1 block text-xs text-white/45">{index === 0 ? "اليوم" : "هذا الأسبوع"}</span></span></button>)}</div></article><article className="relative overflow-hidden rounded-2xl border border-white/10"><img src={ADMISSIONS_IMAGE} alt="Admissions materials" className="h-40 w-full object-cover opacity-65" /><div className="absolute inset-x-0 bottom-0 p-5"><p className="text-display text-3xl">من التسجيل إلى التقدم.</p></div></article></div></section></>;
 
     if (activeView === "registration") return <><SectionHeader eyebrow="Arabic-first registration" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">ابدأ بالمعلومات التي تحتاجها فقط.</em></>} copy="يتضمن النموذج الطالب وولي الأمر والصف والمواد. يمكن إضافة الحقول الخاصة بالمؤسسة في نسخة قاعدة البيانات المحلية المشفرة." action={<button onClick={() => setRegistrationOpen(true)} className="liquid-glass rounded-full px-5 py-3 text-sm">فتح النموذج</button>} /><RegistrationPanel registration={registration} setRegistration={setRegistration} toggleSubject={toggleSubject} submitRegistration={submitRegistration} /></>;

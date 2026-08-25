@@ -106,3 +106,10 @@
 - [x] Add an authenticated student portal view backed by the institution-linked self-record procedure.
 - [x] Show a privacy-safe empty state when no learner record is linked instead of falling back to another student.
 - [x] Wire the portal into student-only workspace navigation and validate it with TypeScript and the full unit suite.
+
+## Guardian Portal Surface
+
+- [x] Preserve guardian membership identity instead of collapsing guardians into student role behavior.
+- [x] Add a guardian-only portal showing explicitly linked learners and a safe empty/error state.
+- [x] Keep guardian portal access behind the institution-scoped guardian relationship procedure.
+- [x] Validate guardian role mapping and portal integration with TypeScript and the full unit suite.
