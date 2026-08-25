@@ -192,5 +192,12 @@
 - [ ] Diagnose the Google callback failure after selecting a different account.
 - [x] Add multi-state OAuth retry handling for multiple tabs and callback retries.
 - [ ] Fix the production callback failure after applying the Google identity migration on Render.
+- [x] Diagnose the production Google callback failure from Render logs: `createExternalUser` reports `Database is unavailable`, meaning the deployed service lacks a usable `DATABASE_URL` connection.
+- [ ] Configure and verify the Render service `DATABASE_URL` against the intended MySQL/TiDB database.
+- [ ] Diagnose the repeated Render database connection failure after `DATABASE_URL` was added.
+- [x] Add TiDB-compatible URL parsing and automatic TLS configuration without exposing secret values.
+- [ ] Verify the TiDB connection string, credentials, endpoint, port, and TLS settings on Render without exposing secret values.
+- [x] Confirm from Render logs that no database exists or is connected to the web service.
+- [ ] Select a suitable MySQL-compatible database provider for the Render deployment.
 - [ ] Apply migration `0005_dark_living_tribunal.sql` to the same database used by Render and verify the callback no longer returns `Google sign-in is temporarily unavailable`.
 - [ ] Live-test Google sign-in on Render with the Google Cloud owner account and a different Google account, confirming successful account linking and no invalid-state error on retry.

@@ -1,5 +1,6 @@
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import type { PoolOptions } from "mysql2";
 import {
   auditLogs,
   authSessions,
@@ -24,12 +25,32 @@ import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
+export function databaseConnectionOptions(connectionUrl: string): PoolOptions {
+  const parsed = new URL(connectionUrl);
+  const hostname = parsed.hostname.toLowerCase();
+  const sslRequested = process.env.DATABASE_SSL === "true" || parsed.searchParams.get("sslaccept") === "strict" || hostname.endsWith(".tidbcloud.com") || hostname.endsWith(".aivencloud.com");
+  const database = decodeURIComponent(parsed.pathname.replace(/^\//, ""));
+  if (!parsed.hostname || !parsed.username || !database) throw new Error("DATABASE_URL must include a host, username, and database name.");
+  return {
+    host: parsed.hostname,
+    port: parsed.port ? Number(parsed.port) : 3306,
+    user: decodeURIComponent(parsed.username),
+    password: decodeURIComponent(parsed.password),
+    database,
+    connectTimeout: 15_000,
+    waitForConnections: true,
+    connectionLimit: 5,
+    enableKeepAlive: true,
+    ssl: sslRequested ? { minVersion: "TLSv1.2" } : undefined,
+  };
+}
+
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      _db = drizzle({ connection: databaseConnectionOptions(process.env.DATABASE_URL) });
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      console.warn("[Database] Failed to initialize connection:", error instanceof Error ? error.message : "unknown error");
       _db = null;
     }
   }
