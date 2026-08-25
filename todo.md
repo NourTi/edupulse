@@ -93,3 +93,10 @@
 - [x] Add tenant-scoped tRPC procedures for learner listing/creation, attendance, CEFR assessment, payments, and guardian-linked learners.
 - [x] Enforce staff role gates and institution membership checks before server record access or mutation.
 - [x] Validate the records schema and API integration with TypeScript, unit tests, and a production build.
+
+## Student Relationship Foundation
+
+- [x] Add an explicit learner-to-student-account relationship table and migration.
+- [x] Add administrator/registrar-only student linking with active-membership validation.
+- [x] Add a student self-record procedure that refuses access without an explicit institution link.
+- [x] Re-run TypeScript and the full unit suite after the relationship changes.

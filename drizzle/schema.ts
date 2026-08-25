@@ -152,6 +152,14 @@ export const learners = mysqlTable("learners", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, table => ({ institutionIdx: index("learners_institution_idx").on(table.institutionId) }));
 
+export const learnerUsers = mysqlTable("learnerUsers", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  institutionId: varchar("institutionId", { length: 64 }).notNull(),
+  learnerId: varchar("learnerId", { length: 64 }).notNull(),
+  studentUserId: int("studentUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({ institutionIdx: index("learner_users_institution_idx").on(table.institutionId), learnerIdx: index("learner_users_learner_idx").on(table.learnerId), studentIdx: index("learner_users_student_idx").on(table.studentUserId) }));
+
 export const learnerGuardians = mysqlTable("learnerGuardians", {
   id: varchar("id", { length: 64 }).primaryKey(),
   institutionId: varchar("institutionId", { length: 64 }).notNull(),
@@ -202,6 +210,7 @@ export const paymentRecords = mysqlTable("paymentRecords", {
 
 export type Learner = typeof learners.$inferSelect;
 export type InsertLearner = typeof learners.$inferInsert;
+export type LearnerUser = typeof learnerUsers.$inferSelect;
 export type LearnerGuardian = typeof learnerGuardians.$inferSelect;
 export type AttendanceRecord = typeof attendanceRecords.$inferSelect;
 export type CefrAssessment = typeof cefrAssessments.$inferSelect;

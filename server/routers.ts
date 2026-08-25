@@ -26,6 +26,8 @@ import {
   getLearner,
   linkLearnerGuardian,
   listGuardianLearners,
+  linkLearnerStudent,
+  getStudentLearner,
   createAttendance,
   listAttendance,
   createCefrAssessment,
@@ -174,6 +176,22 @@ export const appRouter = router({
       const institutionId = await defaultInstitutionId(ctx.user.id, input?.institutionId);
       await requireInstitutionRole(ctx.user.id, institutionId, ["guardian"]);
       return listGuardianLearners(institutionId, ctx.user.id);
+    }),
+    linkStudent: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), learnerId: z.string().max(64), studentUserId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "registrar"]);
+      if (!(await getLearner(institutionId, input.learnerId))) throw new TRPCError({ code: "NOT_FOUND", message: "Learner not found." });
+      const studentMembership = await getMembership(input.studentUserId, institutionId);
+      if (!studentMembership || studentMembership.role !== "student" || studentMembership.status !== "active") throw new TRPCError({ code: "BAD_REQUEST", message: "The linked account must be an active student in this institution." });
+      await linkLearnerStudent({ id: `student_link_${nanoid(16)}`, institutionId, learnerId: input.learnerId, studentUserId: input.studentUserId });
+      return { success: true } as const;
+    }),
+    myStudentRecord: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional() }).optional()).query(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input?.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["student"]);
+      const record = await getStudentLearner(institutionId, ctx.user.id);
+      if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "No learner record is linked to this student account." });
+      return record.learner;
     }),
     attendance: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), learnerId: z.string().min(3).max(64) })).query(async ({ ctx, input }) => {
       const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);

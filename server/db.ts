@@ -10,6 +10,7 @@ import {
   knowledgeSources,
   memberships,
   learners,
+  learnerUsers,
   learnerGuardians,
   attendanceRecords,
   cefrAssessments,
@@ -343,4 +344,17 @@ export async function listPaymentRecords(institutionId: string, learnerId?: stri
   if (!db) return [];
   const where = learnerId ? and(eq(paymentRecords.institutionId, institutionId), eq(paymentRecords.learnerId, learnerId)) : eq(paymentRecords.institutionId, institutionId);
   return db.select().from(paymentRecords).where(where).orderBy(desc(paymentRecords.paidAt));
+}
+
+export async function linkLearnerStudent(input: typeof learnerUsers.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  await db.insert(learnerUsers).values(input);
+}
+
+export async function getStudentLearner(institutionId: string, studentUserId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select({ learner: learners, link: learnerUsers }).from(learnerUsers).innerJoin(learners, eq(learners.id, learnerUsers.learnerId)).where(and(eq(learnerUsers.institutionId, institutionId), eq(learnerUsers.studentUserId, studentUserId), eq(learners.institutionId, institutionId))).limit(1);
+  return rows[0];
 }
