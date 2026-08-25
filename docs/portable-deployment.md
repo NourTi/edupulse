@@ -15,13 +15,13 @@ The host must pass its assigned port through `PORT`; the server must not be conf
 
 ## Required runtime variables
 
-`DATABASE_URL` points to the managed MySQL/TiDB-compatible database. `JWT_SECRET` is a long random value used to sign application sessions. `APP_BASE_URL` is the public HTTPS URL used in password-reset links. `RESEND_API_KEY` and `RESEND_FROM_EMAIL` enable recovery email delivery; the sender must belong to a domain verified in Resend.
+`DATABASE_URL` points to the managed MySQL/TiDB-compatible database. `JWT_SECRET` is a long random value used to sign application sessions. `APP_BASE_URL` is the public HTTPS URL used in password-reset links. `RESEND_API_KEY` and `RESEND_FROM_EMAIL` enable recovery email delivery; the sender must belong to a domain verified in Resend. `OAUTH_SERVER_URL` is not required: EduPulse uses password sessions by default and loads the legacy OAuth routes only when that variable is deliberately configured.
 
 Portable adapter paths are now available for object storage and the LLM gateway. Configure an S3-compatible endpoint through `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, and `S3_SECRET_ACCESS_KEY`; the storage adapter uses signed URLs for private objects. Configure an OpenAI-compatible LLM endpoint through `LLM_API_BASE_URL`, `LLM_API_KEY`, and `LLM_MODEL`. If these portable variables are absent, the legacy Manus adapters remain available for compatibility; do not copy legacy `BUILT_IN_FORGE_*` values into an external host unless you intentionally want that dependency.
 
 ## GitHub Actions and host connection
 
-GitHub Actions can build and test this repository, but it cannot run the persistent Express server. Connect the private repository to the selected Node host using its GitHub integration, or add a host-specific deployment workflow after the provider is chosen. Store all values above in the host’s secret manager, never in GitHub source or workflow YAML.
+GitHub Actions and CircleCI can build and test this repository, but they do not run the persistent Express server. Connect the private repository to the selected Node host using its GitHub integration, or use the guarded CircleCI webhook after configuring the production context. Store all values above in the host’s secret manager, never in GitHub source or workflow YAML.
 
 GitHub Pages remains a static preview only. It cannot execute password authentication, tRPC procedures, MySQL queries, RAG retrieval, Resend delivery, or S3 uploads.
 

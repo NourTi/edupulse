@@ -156,6 +156,6 @@
 
 ## Render OAuth Startup Error
 
-- [ ] Remove the obsolete OAuth startup requirement from the password-only Render deployment.
+- [x] Remove the obsolete OAuth startup requirement from the password-only Render deployment.
 - [ ] Verify Render startup logs and the live password-authenticated route after the fix.
-- [ ] Update portable deployment documentation so `OAUTH_SERVER_URL` is not presented as required for password authentication.
+- [x] Update portable deployment documentation so `OAUTH_SERVER_URL` is not presented as required for password authentication.
