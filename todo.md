@@ -124,7 +124,11 @@
 
 ## GitHub Source and Pages Packaging
 
-- [ ] Create a private GitHub repository containing the complete EduPulse source.
-- [ ] Add a GitHub Pages workflow for the static frontend only, with an explicit full-stack limitation notice.
-- [ ] Document the GitHub Pages URL format and custom-domain activation steps.
-- [ ] Verify the source repository build and preserve Manus as the production backend host.
+- [x] Create a private GitHub repository containing the complete EduPulse source.
+- [x] Add a GitHub Pages workflow for the static frontend only, with an explicit full-stack limitation notice.
+- [x] Document the GitHub Pages URL format and custom-domain activation steps.
+- [x] Verify the source repository build and preserve Manus as the production backend host.
+
+## Private GitHub Constraint
+
+- [ ] Enable GitHub Pages for the private repository through GitHub Settings or a plan/token with Pages administration permission; keep the repository private.
