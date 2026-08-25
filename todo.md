@@ -153,3 +153,9 @@
 - [ ] Add CircleCI configuration for private GitHub checkout, dependency install, type checking, tests, and production build.
 - [ ] Add a guarded deployment handoff that requires a configured external Node host and never commits secrets.
 - [ ] Validate and push the CircleCI pipeline to the private GitHub repository.
+
+## Render OAuth Startup Error
+
+- [ ] Remove the obsolete OAuth startup requirement from the password-only Render deployment.
+- [ ] Verify Render startup logs and the live password-authenticated route after the fix.
+- [ ] Update portable deployment documentation so `OAUTH_SERVER_URL` is not presented as required for password authentication.
