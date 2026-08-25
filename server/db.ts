@@ -18,6 +18,7 @@ import {
   passwordResetTokens,
   schoolSettings,
   users,
+  userAuthAccounts,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -79,11 +80,31 @@ export async function getUserById(id: number) {
   return result[0];
 }
 
+export async function getUserAuthAccount(provider: string, providerAccountId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select({ account: userAuthAccounts, user: users }).from(userAuthAccounts).innerJoin(users, eq(userAuthAccounts.userId, users.id)).where(and(eq(userAuthAccounts.provider, provider), eq(userAuthAccounts.providerAccountId, providerAccountId))).limit(1);
+  return rows[0];
+}
+
+export async function createUserAuthAccount(input: typeof userAuthAccounts.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  await db.insert(userAuthAccounts).values(input);
+}
+
 export async function getUserByEmail(email: string) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
   return result[0];
+}
+
+export async function createExternalUser(input: { name: string; email: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  const result = await db.insert(users).values({ name: input.name, email: input.email, passwordHash: null, loginMethod: "google", role: "user", status: "active", mustChangePassword: false });
+  return getUserById(Number(result[0].insertId));
 }
 
 export async function createPasswordUser(input: { name: string; email: string; passwordHash: string }) {

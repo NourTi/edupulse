@@ -37,3 +37,19 @@ The approved-source retrieval and citation policy belongs in the Node backend. F
 ## CircleCI deployment
 
 The repository also includes `.circleci/config.yml`. CircleCI runs type checking, unit tests, and the production build on every change. On `main`, deployment pauses for an explicit approval step and then calls a configured external-host webhook. Create a CircleCI context named `edupulse-production` containing `DEPLOY_WEBHOOK_URL` and `DEPLOY_WEBHOOK_TOKEN`; without both values the deploy job refuses to run. This pipeline does not deploy to GitHub Pages or Manus and does not contain credentials.
+
+
+### Resend sender requirement
+
+Resend's official guidance states that the `resend.dev` domain is for testing only and can send only to the email address associated with the Resend account. Sending password-recovery messages to other users requires adding and verifying a domain in Resend, then using a sender address on that verified domain. Source: https://resend.com/docs/knowledge-base/403-error-resend-dev-domain
+
+
+### Optional Google sign-in
+
+Google sign-in is optional and does not replace password login. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` only in the Render secret manager. In Google Cloud Console, add this exact authorized redirect URI:
+
+```text
+https://edupulse-krcu.onrender.com/api/auth/google/callback
+```
+
+The application checks the OAuth state cookie, requests a verified Google email, links the Google identity to an existing EduPulse email when available, and creates no institution membership automatically. An administrator must invite or assign the user to an institution before school records become available.

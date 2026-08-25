@@ -29,6 +29,7 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 
 async function startServer() {
   const app = express();
+  app.set("trust proxy", 1);
   const server = createServer(app);
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
@@ -39,6 +40,13 @@ async function startServer() {
     registerOAuthRoutes(app);
   } else {
     console.log("[Auth] Password sessions enabled; legacy OAuth routes disabled.");
+  }
+  if (process.env.GOOGLE_CLIENT_ID?.trim() && process.env.GOOGLE_CLIENT_SECRET?.trim()) {
+    const { registerGoogleRoutes } = await import("../auth/google");
+    registerGoogleRoutes(app);
+    console.log("[Auth] Google sign-in enabled.");
+  } else {
+    console.log("[Auth] Google sign-in not configured.");
   }
   // tRPC API
   app.use(

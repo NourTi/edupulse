@@ -172,3 +172,18 @@
 - [x] Improve Arabic hero/login copy contrast, spacing, and background separation on desktop and mobile.
 - [x] Validate the fix and push it to the private GitHub repository.
 - [ ] Redeploy the branding and Arabic readability fix through Render and verify the live landing/login screens.
+
+## Resend Recovery Revisit
+
+- [ ] Configure the user-provided Resend API key in the Render secret manager.
+- [ ] Set `APP_BASE_URL` to `https://edupulse-krcu.onrender.com` in Render.
+- [ ] Obtain or confirm a Resend-verified `RESEND_FROM_EMAIL`; do not invent a sender address.
+- [ ] Test password-recovery request behavior and confirm generic privacy-safe responses.
+
+## Google Sign-In
+
+- [ ] Rotate the exposed Google client secret before production use.
+- [x] Store the replacement Google OAuth client ID and secret securely, never in source control.
+- [x] Add optional Google sign-in alongside password login with secure callback and account linking.
+- [x] Preserve institution membership roles and prevent cross-institution account takeover during Google linking.
+- [ ] Validate the bilingual Google login flow locally; configure and verify the Render callback after redeployment.

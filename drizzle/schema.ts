@@ -2,6 +2,7 @@ import {
   boolean,
   index,
   int,
+  uniqueIndex,
   mysqlEnum,
   mysqlTable,
   text,
@@ -28,6 +29,20 @@ export const users = mysqlTable("users", {
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+
+/** External identities are linked separately so a Google account never replaces a user's password or memberships. */
+export const userAuthAccounts = mysqlTable("userAuthAccounts", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  userId: int("userId").notNull(),
+  provider: varchar("provider", { length: 32 }).notNull(),
+  providerAccountId: varchar("providerAccountId", { length: 255 }).notNull(),
+  providerEmail: varchar("providerEmail", { length: 320 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({ providerAccountIdx: uniqueIndex("user_auth_accounts_provider_account_idx").on(table.provider, table.providerAccountId), userIdx: index("user_auth_accounts_user_idx").on(table.userId) }));
+
+export type UserAuthAccount = typeof userAuthAccounts.$inferSelect;
+export type InsertUserAuthAccount = typeof userAuthAccounts.$inferInsert;
 
 /** A school, university department, language centre, or independent educator workspace. */
 export const institutions = mysqlTable("institutions", {
