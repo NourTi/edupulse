@@ -202,4 +202,5 @@
 - [x] Select TiDB Cloud Starter as the MySQL-compatible database provider for the Render deployment.
 - [ ] Apply migration `0005_dark_living_tribunal.sql` to the same database used by Render and verify the callback no longer returns `Google sign-in is temporarily unavailable`.
 - [x] Add a controlled startup migration path for Render Free, where Shell access is unavailable.
+- [x] Fix Render startup ordering so the web port binds before or alongside the optional migration instead of producing `No open ports detected`.
 - [ ] Live-test Google sign-in on Render with the Google Cloud owner account and a different Google account, confirming successful account linking and no invalid-state error on retry.

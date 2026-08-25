@@ -1,5 +1,5 @@
 import "dotenv/config";
-import express from "express";
+import express, { type RequestHandler } from "express";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -7,7 +7,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { runStartupMigration } from "./startup";
+import { runStartupMigration, shouldRunStartupMigration } from "./startup";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -29,10 +29,21 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
-  await runStartupMigration();
   const app = express();
   app.set("trust proxy", 1);
   const server = createServer(app);
+  const startupMigration = runStartupMigration().then(
+    () => true,
+    error => {
+      console.error("[Database] Startup migration failed:", error instanceof Error ? error.message : "unknown error");
+      return false;
+    }
+  );
+  const migrationGate: RequestHandler = async (_req, res, next) => {
+    if (!shouldRunStartupMigration()) return next();
+    if (await startupMigration) return next();
+    res.status(503).type("text").send("Database setup failed. Check the Render service logs.");
+  };
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -43,6 +54,8 @@ async function startServer() {
   } else {
     console.log("[Auth] Password sessions enabled; legacy OAuth routes disabled.");
   }
+  app.use("/api/auth", migrationGate);
+  app.use("/api/trpc", migrationGate);
   const { registerGoogleRoutes } = await import("../auth/google");
   registerGoogleRoutes(app);
   console.log(process.env.GOOGLE_CLIENT_ID?.trim() && process.env.GOOGLE_CLIENT_SECRET?.trim() ? "[Auth] Google sign-in enabled." : "[Auth] Google sign-in route registered; provider variables are missing.");
