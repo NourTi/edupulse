@@ -50,4 +50,4 @@
 
 ## Desktop Runtime Follow-up
 
-- [ ] Package and test the Tauri application on Windows with Rust and WebView2 tooling.
+- [x] Add a reproducible Windows packaging workflow and installation guidance; native installer execution requires a Windows runner with Rust and WebView2 tooling.
