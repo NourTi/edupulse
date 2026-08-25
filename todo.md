@@ -113,3 +113,18 @@
 - [x] Add a guardian-only portal showing explicitly linked learners and a safe empty/error state.
 - [x] Keep guardian portal access behind the institution-scoped guardian relationship procedure.
 - [x] Validate guardian role mapping and portal integration with TypeScript and the full unit suite.
+
+## User-Reported Production Gaps
+
+- [ ] Configure Resend for password-reset delivery and add a secure recovery UI.
+- [ ] Verify the grounded RAG agent is installed, callable, citation-grounded, and privacy-bounded for parent/student questions.
+- [ ] Add and expose the requested scraping/search ingestion gateway with a documented Crawl4AI-compatible path and fallback behavior.
+- [ ] Improve Arabic welcome-page text contrast, weight, and readability across desktop and mobile.
+- [ ] Document that native Tauri installer compilation requires a Windows runner; do not claim an installer is present in this Linux environment.
+
+## GitHub Source and Pages Packaging
+
+- [ ] Create a private GitHub repository containing the complete EduPulse source.
+- [ ] Add a GitHub Pages workflow for the static frontend only, with an explicit full-stack limitation notice.
+- [ ] Document the GitHub Pages URL format and custom-domain activation steps.
+- [ ] Verify the source repository build and preserve Manus as the production backend host.

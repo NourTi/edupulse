@@ -11,6 +11,8 @@ import {
   createKnowledgeSource,
   createMembership,
   createPasswordUser,
+  createPasswordResetToken,
+  consumePasswordResetToken,
   createInvitedUser,
   getInvitationByHash,
   getMembership,
@@ -39,7 +41,8 @@ import {
   writeAuditLog,
 } from "./db";
 import { clearPasswordSession, clearPasswordSessionCookie, establishPasswordSession, setPasswordSessionCookie } from "./auth/session";
-import { hashOpaqueToken, hashPassword, normalizeEmail, verifyPassword } from "./auth/password";
+import { createOpaqueToken, hashOpaqueToken, hashPassword, normalizeEmail, verifyPassword } from "./auth/password";
+import { sendPasswordResetEmail } from "./email";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { invokeLLM } from "./_core/llm";
 import { systemRouter } from "./_core/systemRouter";
@@ -121,6 +124,22 @@ export const appRouter = router({
       const token = await establishPasswordSession(user.id, ctx.req);
       setPasswordSessionCookie(ctx.res, ctx.req, token);
       return { user };
+    }),
+    requestPasswordReset: publicProcedure.input(z.object({ email: z.string().email().max(320) })).mutation(async ({ input }) => {
+      const email = normalizeEmail(input.email);
+      const user = await getUserByEmail(email);
+      if (user?.status === "active" && user.passwordHash) {
+        const rawToken = createOpaqueToken();
+        await createPasswordResetToken({ id: `reset_${nanoid(16)}`, userId: user.id, tokenHash: hashOpaqueToken(rawToken), expiresAt: new Date(Date.now() + 60 * 60 * 1000) });
+        try { await sendPasswordResetEmail({ to: email, token: rawToken }); } catch (error) { console.error("[Auth] Password reset email failed", error); }
+      }
+      return { success: true } as const;
+    }),
+    resetPassword: publicProcedure.input(z.object({ token: z.string().min(20), newPassword: z.string().min(10).max(200) })).mutation(async ({ input }) => {
+      const reset = await consumePasswordResetToken(hashOpaqueToken(input.token));
+      if (!reset) throw new TRPCError({ code: "BAD_REQUEST", message: "This reset link is invalid or expired." });
+      await updateUserPassword(reset.userId, await hashPassword(input.newPassword));
+      return { success: true } as const;
     }),
     changePassword: protectedProcedure.input(z.object({ currentPassword: z.string().min(1), newPassword: z.string().min(10).max(200) })).mutation(async ({ ctx, input }) => {
       if (!(await verifyPassword(input.currentPassword, ctx.user.passwordHash))) throw new TRPCError({ code: "UNAUTHORIZED", message: "Current password is incorrect." });
