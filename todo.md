@@ -187,4 +187,10 @@
 - [x] Add optional Google sign-in alongside password login with secure callback and account linking.
 - [x] Preserve institution membership roles and prevent cross-institution account takeover during Google linking.
 - [ ] Validate the bilingual Google login flow locally; configure and verify the Render callback after redeployment.
-- [ ] Diagnose and fix the live Render Google sign-in 404 reported after provider configuration.
+- [x] Diagnose the live Render Google sign-in 404; the route now responds with an explicit configuration error instead of a generic 404.
+- [x] Fix the live Render Google sign-in configuration error by adding the expected provider variables to the running service.
+- [ ] Diagnose the Google callback failure after selecting a different account.
+- [x] Add multi-state OAuth retry handling for multiple tabs and callback retries.
+- [ ] Fix the production callback failure after applying the Google identity migration on Render.
+- [ ] Apply migration `0005_dark_living_tribunal.sql` to the same database used by Render and verify the callback no longer returns `Google sign-in is temporarily unavailable`.
+- [ ] Live-test Google sign-in on Render with the Google Cloud owner account and a different Google account, confirming successful account linking and no invalid-state error on retry.

@@ -1,4 +1,30 @@
 import { describe, expect, it } from "vitest";
+import { addGoogleState, consumeGoogleState } from "./auth/google";
+
+describe("Google OAuth state handling", () => {
+  it("keeps several login tabs valid without allowing an unbounded cookie", () => {
+    const states = Array.from({ length: 7 }, (_, index) => addGoogleState(undefined, `state-${index}`)).at(-1);
+    expect(states).toEqual(["state-6"]);
+
+    let cookie: string | undefined;
+    for (let index = 0; index < 7; index += 1) cookie = addGoogleState(cookie, `state-${index}`).join(".");
+    expect(cookie?.split(".")).toEqual(["state-2", "state-3", "state-4", "state-5", "state-6"]);
+  });
+
+  it("consumes only the matching state and preserves other tabs", () => {
+    const result = consumeGoogleState("first.second.third", "second");
+    expect(result.valid).toBe(true);
+    expect(result.remaining).toEqual(["first", "third"]);
+
+    const replay = consumeGoogleState(result.remaining.join("."), "second");
+    expect(replay.valid).toBe(false);
+  });
+
+  it("rejects a missing or modified state", () => {
+    expect(consumeGoogleState("abc123", "abc124").valid).toBe(false);
+    expect(consumeGoogleState(undefined, "abc123").valid).toBe(false);
+  });
+});
 
 describe("Google OAuth configuration", () => {
   it("accepts the configured client credentials at Google's token endpoint", async () => {
