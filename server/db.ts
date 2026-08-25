@@ -25,6 +25,12 @@ import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
+export function databaseErrorCode(error: unknown) {
+  if (error && typeof error === "object" && "code" in error) return String((error as { code?: unknown }).code).slice(0, 80);
+  if (error instanceof Error) return error.name;
+  return "unknown_error";
+}
+
 export function databaseConnectionOptions(connectionUrl: string): PoolOptions {
   const parsed = new URL(connectionUrl);
   const hostname = parsed.hostname.toLowerCase();
@@ -46,13 +52,19 @@ export function databaseConnectionOptions(connectionUrl: string): PoolOptions {
 }
 
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle({ connection: databaseConnectionOptions(process.env.DATABASE_URL) });
-    } catch (error) {
-      console.warn("[Database] Failed to initialize connection:", error instanceof Error ? error.message : "unknown error");
-      _db = null;
-    }
+  if (_db) return _db;
+  const connectionUrl = process.env.DATABASE_URL?.trim();
+  if (!connectionUrl) {
+    console.warn("[Database] DATABASE_URL is missing.");
+    return null;
+  }
+  try {
+    const options = databaseConnectionOptions(connectionUrl);
+    console.log(`[Database] Configured for ${options.host}:${options.port}/${options.database}; TLS ${options.ssl ? "enabled" : "disabled"}.`);
+    _db = drizzle({ connection: options });
+  } catch (error) {
+    console.warn(`[Database] Failed to initialize connection (${databaseErrorCode(error)}).`);
+    _db = null;
   }
   return _db;
 }

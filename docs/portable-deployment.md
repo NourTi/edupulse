@@ -57,3 +57,5 @@ The application checks the OAuth state cookie, requests a verified Google email,
 If Google returns `Invalid Google sign-in state`, start a new login from the EduPulse login page rather than refreshing an old callback URL. The callback state is intentionally one-time; the server supports up to five open login tabs and removes only the state that was used.
 
 If Google returns `Google sign-in is temporarily unavailable`, check the Render service logs using the reference shown on the error page. If the message says the authentication migration is missing, apply the repository migrations to the same database referenced by Render’s `DATABASE_URL`, then redeploy. The required Google identity table is created by migration `0005_dark_living_tribunal.sql`.
+
+For a safe connection check in a Render Shell, run `node scripts/check-db.mjs` from the repository root. It performs only `SELECT 1`, prints the host and database name, and never prints the username or password. Run this check before applying migrations. A successful check proves that Render can reach TiDB; it does not apply schema changes.
