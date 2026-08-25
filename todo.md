@@ -132,3 +132,18 @@
 ## Private GitHub Constraint
 
 - [ ] Enable GitHub Pages for the private repository through GitHub Settings or a plan/token with Pages administration permission; keep the repository private.
+
+## GitHub-Only Full-Stack Migration
+
+- [ ] Remove or abstract Manus-only runtime dependencies from the production server path.
+- [ ] Add a portable full-stack container/deployment workflow that can run from the private GitHub repository.
+- [ ] Define portable database, object storage, authentication, Resend, and RAG environment variables without committing secrets.
+- [ ] Choose a GitHub-compatible runtime host and domain strategy; GitHub itself is source control and Pages is static-only.
+- [ ] Validate the portable build and document the remaining provider setup required for a live full-stack URL.
+
+## Confirmed Option B Deployment
+
+- [ ] Prepare the complete Node/Express application for a separate Node-capable host while keeping GitHub as the private source of truth.
+- [ ] Add provider-neutral environment documentation for database, JWT, Resend, storage, LLM/RAG, and public URL configuration.
+- [ ] Add a reproducible full-stack deployment workflow that can be connected to the selected Node host.
+- [ ] Push and validate the deployment configuration in the private GitHub repository.
