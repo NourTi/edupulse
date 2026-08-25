@@ -100,3 +100,9 @@
 - [x] Add administrator/registrar-only student linking with active-membership validation.
 - [x] Add a student self-record procedure that refuses access without an explicit institution link.
 - [x] Re-run TypeScript and the full unit suite after the relationship changes.
+
+## Student Portal Surface
+
+- [x] Add an authenticated student portal view backed by the institution-linked self-record procedure.
+- [x] Show a privacy-safe empty state when no learner record is linked instead of falling back to another student.
+- [x] Wire the portal into student-only workspace navigation and validate it with TypeScript and the full unit suite.
