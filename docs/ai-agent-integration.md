@@ -51,3 +51,11 @@ The welcome assistant was already exposed through a public tRPC procedure, but t
 The “thank you” defect came from treating every message as a knowledge question. The assistant now detects common Arabic and English greetings, thanks, and farewells before protected-record checks, retrieval, or model invocation, and returns a deterministic conversational reply with no citations because no factual source was needed.
 
 Google authentication is not Google web search. EduPulse keeps Google sign-in separate from knowledge retrieval. Public factual answers use administrator-approved text or public pages. The existing Crawl4AI-compatible gateway prepares safe public-page jobs for an external worker; it does not execute unchecked crawling inside the web server. An administrator must approve the resulting source before it can support visitor answers.
+
+## Duplicate Chat Visual Verification
+
+On 26 August 2026, desktop and mobile previews were checked after the landing-page change. The full-page public `ParentPolicyChat` no longer renders in the landing assistant section; that section now presents a compact invitation to use the single bottom-corner assistant. The floating launcher remains visible in the desktop lower-right corner and the mobile lower-right corner without introducing a second chat panel. The dedicated authenticated `ask` workspace route continues to retain its full-page chat for signed-in use.
+
+## Single-Assistant Landing Verification
+
+After the duplicate-render fix, full-page desktop and mobile previews show the landing assistant section as a compact explanatory panel rather than a second chat. The only persistent visitor chat control is the floating bottom-corner launcher. The responsive layout remains intact and the launcher does not create a second background conversation surface.

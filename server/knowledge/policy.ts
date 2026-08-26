@@ -12,7 +12,7 @@ const protectedRecordTerms = [
 ];
 
 function normalizeIntentText(question: string) {
-  return question.toLowerCase().replace(/[!؟?.,،؛:]/g, " ").replace(/\s+/g, " ").trim();
+  return question.toLowerCase().replace(/[!؟?.,،؛:'’`]/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function startsWithPhrase(normalized: string, phrase: string) {
@@ -24,7 +24,7 @@ export type ConversationIntent = "greeting" | "thanks" | "farewell" | null;
 export function detectConversationIntent(question: string): ConversationIntent {
   const normalized = normalizeIntentText(question);
   const phrases = {
-    thanks: ["thank you", "thanks", "thank u", "thanks a lot", "thank you so much", "you helped me", "شكرا", "شكرًا", "شكرا لك", "شكرًا لك", "شكرا جزيلا", "مشكور", "بارك الله فيك", "جزاك الله خيرا", "يعطيك الصحة", "تمام شكرا", "حسنا شكرا"],
+    thanks: ["thank you very much", "thank you so much", "thanks a lot", "thank you", "thankyou", "thanks", "thank u", "thx", "than you", "thak you", "much appreciated", "appreciate it", "you helped me", "you have helped me", "شكرا جزيلا", "شكرا لك", "شكرًا لك", "شكرا", "شكرًا", "مشكور", "بارك الله فيك", "جزاك الله خيرا", "يعطيك الصحة", "تمام شكرا", "حسنا شكرا"],
     greeting: ["hello", "hi", "hey", "good morning", "good evening", "مرحبا", "مرحبًا", "السلام عليكم", "صباح الخير", "مساء الخير", "أهلا", "أهلًا"],
     farewell: ["bye", "goodbye", "see you", "مع السلامة", "إلى اللقاء", "نراك لاحقا", "شكرا وداعا"],
   } as const;
@@ -46,7 +46,7 @@ export function detectPlatformIntent(question: string): PlatformIntent {
 }
 
 export function conversationReply(intent: Exclude<ConversationIntent, null>, isArabic: boolean) {
-  if (intent === "thanks") return isArabic ? "على الرحب والسعة. هل تحتاج إلى شيء آخر؟" : "You’re welcome. Do you need anything else?";
+  if (intent === "thanks") return isArabic ? "على الرحب والسعة، وشكراً لك. أنا هنا لأي مساعدة أخرى؛ هل تحتاج إلى شيء آخر؟" : "You’re very welcome. I’m here if you need anything else—feel free to ask.";
   if (intent === "farewell") return isArabic ? "على الرحب والسعة. نتمنى لك يوماً موفقاً." : "You’re welcome. Have a great day.";
   return isArabic ? "مرحباً بك في EduPulse. اسألني عن البرامج، التسجيل، المواعيد، أو السياسات العامة المنشورة." : "Welcome to EduPulse. Ask me about published programmes, registration, schedules, or general policies.";
 }

@@ -10,6 +10,9 @@ describe("knowledge policy", () => {
 
   it("recognizes conversational closings and does not classify them as policy questions", () => {
     expect(detectConversationIntent("thank you")).toBe("thanks");
+    expect(detectConversationIntent("thank you very much")).toBe("thanks");
+    expect(detectConversationIntent("than you very much")).toBe("thanks");
+    expect(detectConversationIntent("thankyou")).toBe("thanks");
     expect(detectConversationIntent("شكرا جزيلا")).toBe("thanks");
     expect(detectConversationIntent("مرحبا")).toBe("greeting");
     expect(detectConversationIntent("bye")).toBe("farewell");

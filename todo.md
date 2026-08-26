@@ -329,3 +329,14 @@
 - [x] Add regression coverage for public assistant answer routing; launcher behavior is validated through type/build checks and responsive browser screenshots.
 - [x] Verify desktop/mobile appearance, RTL text flow, focus behavior, tests, and production build.
 - [x] Save and deliver the floating assistant milestone.
+
+## Duplicate Agent and Conversational Quality Fix
+
+- [x] Remove the full-page public `ParentPolicyChat` from the landing/public knowledge surface so only the floating assistant remains visible to visitors.
+- [x] Verify that authenticated or dedicated knowledge routes do not accidentally render a second public assistant; the dedicated `ask` route retains its own workspace chat while the landing page uses only the corner launcher.
+- [x] Expand thanks, acknowledgement, and closing detection for English, Arabic, mixed-language, and common misspelled variants.
+- [x] Return a natural assistant reply such as “You’re welcome. I’m here if you need anything else.” without retrieval or the no-source fallback.
+- [x] Use the supplied API/MCP repositories as reference material to improve the assistant’s capabilities and document exactly which patterns were adopted inside EduPulse in `docs/agent-reference-adoption.md`.
+- [x] Add regression tests proving the public assistant routing and exact extended thank-you phrase; the single-surface behavior is also verified in responsive screenshots.
+- [x] Validate the corrected UI, answer routing, TypeScript, tests, production build, and responsive screenshots.
+- [x] Save and deliver the duplicate-agent fix checkpoint.

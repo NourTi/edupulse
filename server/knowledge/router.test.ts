@@ -29,7 +29,7 @@ describe("knowledge router boundaries", () => {
 
   it("answers a visitor’s conversational thanks without institution sign-in or retrieval", async () => {
     const caller = appRouter.createCaller(context(null));
-    const result = await caller.knowledge.askPublic({ question: "thank you" });
+    const result = await caller.knowledge.askPublic({ question: "thank you very much" });
     expect(result.sources).toEqual([]);
     expect(result.answer).toContain("welcome");
   });
