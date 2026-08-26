@@ -149,8 +149,15 @@
 ## User-Reported Production Gaps
 
 - [ ] Configure Resend for password-reset delivery and add a secure recovery UI.
-- [x] Verify the grounded RAG agent is installed, callable, citation-grounded, and privacy-bounded for parent/student questions; welcome-page assistant uses the existing grounded endpoint and refusal/privacy behavior.
-- [x] Add and expose the requested scraping/search ingestion gateway with a documented Crawl4AI-compatible path and fallback behavior; administrator source management is protected and approval-before-retrieval is stated in the welcome UI.
+- [ ] Verify the grounded RAG agent is installed, callable, citation-grounded, and privacy-bounded for parent/student questions.
+- [x] Trace and document the complete welcome-agent path from chat UI through server retrieval, model adapter, approved sources, citations, and refusal behavior; documented in `docs/ai-agent-integration.md`.
+- [ ] Verify the model/API configuration is available in development and production, with a clear missing-configuration error instead of silent fallback.
+- [ ] Live-verify the grounded AI agent in development and on Render with valid model credentials, confirming successful answers with citations and the exact user-facing error when LLM configuration is missing or invalid.
+- [x] Add a focused test or diagnostic path proving the server LLM adapter fails loudly when configuration is missing and uses the configured server-side endpoint; the UI has a safe user-facing retry state.
+- [ ] Validate the welcome agent with grounded, unsupported, and source-ingestion scenarios, then restore the completed status when evidence exists.
+- [ ] Add and expose the requested scraping/search ingestion gateway with a documented Crawl4AI-compatible path and fallback behavior.
+- [x] Trace and verify the Crawl4AI-compatible ingestion hand-off, approval state, retrieval indexing, and fallback worker behavior used by the welcome agent; contract and normalization tests pass.
+- [x] Prevent the public welcome assistant from retrieving institutional sources across tenants when no institution context is supplied; unscoped retrieval now permits only intentionally global sources.
 - [x] Improve Arabic welcome-page text contrast, weight, and readability across desktop and mobile; targeted hero styling and responsive visual checks are complete.
 - [x] Improve the original Arabic hero/welcome text styling directly with stronger contrast, weight, spacing, and desktop/mobile validation; added stronger weight, layered text shadow, readable panel backing, and responsive spacing.
 - [x] Add Arabic-first honeycomb hexagonal feature badges beneath the hero with EduPulse benefits, icons, and metrics.

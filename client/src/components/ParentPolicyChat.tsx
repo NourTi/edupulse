@@ -16,6 +16,7 @@ const suggestedPrompts = [
 export function ParentPolicyChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [sources, setSources] = useState<SourceRef[]>([]);
+  const school = trpc.school.brand.useQuery();
   const ask = trpc.knowledge.askPublic.useMutation({
     onSuccess: result => {
       setMessages(current => [...current, { role: "assistant", content: result.answer }]);
@@ -32,13 +33,14 @@ export function ParentPolicyChat() {
     if (trimmed.length < 3 || ask.isPending) return;
     setMessages(current => [...current, { role: "user", content: trimmed }]);
     setSources([]);
-    ask.mutate({ question: trimmed });
+    ask.mutate({ question: trimmed, institutionId: school.data?.institutionId ?? undefined });
   };
 
   return <div className="mx-auto max-w-6xl" dir="rtl">
     <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/45">EduPulse · مساعد المؤسسة</p>
+        {!school.isLoading && !school.data?.institutionId && <p className="mt-3 border border-amber-100/20 bg-amber-100/[0.05] px-3 py-2 text-xs leading-6 text-amber-50/80">لم تُربط هذه الصفحة بمؤسسة بعد. سيصبح المساعد فعالاً بعد حفظ هوية المؤسسة ومصادرها المعتمدة.</p>}
         <h2 className="text-display mt-3 text-4xl leading-none sm:text-5xl">اسأل بثقة.</h2>
         <p className="mt-4 max-w-2xl text-sm leading-7 text-white/55">اسأل عن البرامج، المواعيد، الحضور، التسجيل، أو السياسات العامة. يجيب المساعد من المصادر التي اعتمدتها الإدارة فقط.</p>
       </div>

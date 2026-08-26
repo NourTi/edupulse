@@ -293,7 +293,7 @@ export async function listKnowledgeSources(institutionId?: string) {
 export async function getPublicKnowledgeChunks(institutionId?: string) {
   const db = await getDb();
   if (!db) return [];
-  const tenantFilter = institutionId ? eq(knowledgeSources.institutionId, institutionId) : undefined;
+  const tenantFilter = institutionId ? eq(knowledgeSources.institutionId, institutionId) : isNull(knowledgeSources.institutionId);
   return db.select({ id: knowledgeChunks.id, sourceId: knowledgeSources.id, title: knowledgeSources.title, sourceUrl: knowledgeSources.sourceUrl, content: knowledgeChunks.content }).from(knowledgeChunks).innerJoin(knowledgeSources, eq(knowledgeChunks.sourceId, knowledgeSources.id)).where(and(eq(knowledgeSources.status, "ready"), eq(knowledgeSources.visibility, "public"), tenantFilter));
 }
 
