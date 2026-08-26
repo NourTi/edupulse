@@ -364,3 +364,4 @@
 - [x] Keep dashboard content role-aware for administration, teacher, student, and guardian experiences.
 - [x] Validate hero preservation, vivid color contrast, Arabic-first RTL readability, desktop/mobile responsiveness, TypeScript, tests, and production build.
 - [x] Save and deliver the post-hero CRM redesign milestone.
+- [ ] Ensure the post-hero Dashboard module opens the authenticated overview when selected.

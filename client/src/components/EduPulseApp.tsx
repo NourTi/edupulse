@@ -482,7 +482,7 @@ export default function EduPulseApp() {
       </section>
 
       <PostHeroModuleStrip isArabic={isArabic} onSelect={(view) => {
-        if (["registration", "payments", "learners", "attendance", "cefr", "guardians", "subjects", "crm", "reports", "portal", "ask"].includes(view)) {
+        if (["overview", "registration", "payments", "learners", "attendance", "cefr", "guardians", "subjects", "crm", "reports", "portal", "ask"].includes(view)) {
           enterWorkspace(view === "portal" ? (role === "guardian" ? "guardian" : "student") : role);
           setActiveView(view);
         } else {
