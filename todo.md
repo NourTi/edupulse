@@ -154,7 +154,9 @@
 - [x] Improve Arabic welcome-page text contrast, weight, and readability across desktop and mobile; targeted hero styling and responsive visual checks are complete.
 - [x] Improve the original Arabic hero/welcome text styling directly with stronger contrast, weight, spacing, and desktop/mobile validation; added stronger weight, layered text shadow, readable panel backing, and responsive spacing.
 - [x] Add Arabic-first honeycomb hexagonal feature badges beneath the hero with EduPulse benefits, icons, and metrics.
+- [x] Restyle the honeycomb feature badges as morphism UI elements with layered depth, soft shadows, highlights, and RTL-responsive behavior; desktop and mobile wrapping verified.
 - [x] Add a Student Information System explanation section covering unified student, parent, educator, course, and lifecycle data.
+- [x] Replace generic education-level content with Algeria’s preparatory, primary, middle, secondary, and higher-education LMD stages, including durations and certificates.
 - [x] Add a welcome-page grounded AI assistant entry point with citation-safe policy answers and clear authentication/privacy boundaries.
 - [x] Connect welcome-page source discovery to the existing Crawl4AI-compatible gateway and document that scraped content must be approved/ingested before retrieval; the welcome CTA routes to the existing protected knowledge ingestion surface.
 - [x] Add a visible welcome-page source-discovery/admin ingestion entry point wired to the existing knowledge ingestion flow, with approval-before-retrieval messaging; the CTA opens protected administrator knowledge management or the access screen.
