@@ -75,3 +75,7 @@ The current local preview loaded the complete landing page and exposed one visit
 ## Complete Remediation Evidence
 
 The current remediation adds deterministic public routing for platform/about, creator, enrolment, conversation, and protected-record intents. It adds a stopword-filtered retrieval score, rejects uncited or out-of-range model citations, and logs only intent, outcome, source count, and rounded latency. The supplied Public APIs and MCP catalogs informed the composable-action, structured-result, citation, and explicit-boundary patterns documented in `docs/agent-reference-adoption.md`; they are not runtime dependencies. The local suite now passes 44 tests. Live Render verification remains pending because the Render service was still showing its wake-up page.
+
+## Render Version Verification
+
+After the e0fa008e checkpoint, `https://edupulse-krcu.onrender.com/` became reachable and rendered an older EduPulse landing page. It did not expose the current floating assistant marker; searching the page for `مساعد` returned no result. The current published Manus domain does expose the assistant. This confirms the user’s Render URL is not running the latest checkpointed agent build, so behavior observed there can be from stale code and cannot validate the current routing fixes.
