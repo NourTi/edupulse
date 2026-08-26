@@ -36,6 +36,9 @@ import {
   listCefrAssessments,
   createPaymentRecord,
   listPaymentRecords,
+  createEducatorTask,
+  listEducatorTasks,
+  completeEducatorTask,
   updateUserPassword,
   upsertSchoolSettings,
   writeAuditLog,
@@ -234,6 +237,27 @@ export const appRouter = router({
       const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
       await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "teacher", "counsellor"]);
       await createCefrAssessment({ id: `cefr_${nanoid(16)}`, institutionId, learnerId: input.learnerId, level: input.level, speaking: input.speaking, listening: input.listening, reading: input.reading, writing: input.writing, note: input.note, status: input.status, assessedById: ctx.user.id });
+      return { success: true } as const;
+    }),
+    educatorTasks: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional() }).optional()).query(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input?.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "teacher", "counsellor"]);
+      return listEducatorTasks(institutionId);
+    }),
+    createEducatorTask: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), learnerId: z.string().max(64).optional(), title: z.string().trim().min(2).max(255), category: z.enum(["follow_up", "essay", "behavior", "mentorship", "report"]).default("follow_up"), dueAt: z.coerce.date().optional() })).mutation(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "teacher", "counsellor"]);
+      if (input.learnerId && !(await getLearner(institutionId, input.learnerId))) throw new TRPCError({ code: "NOT_FOUND", message: "Learner not found." });
+      const task = await createEducatorTask({ id: `task_${nanoid(16)}`, institutionId, learnerId: input.learnerId, title: input.title, category: input.category, dueAt: input.dueAt, createdById: ctx.user.id });
+      await writeAuditLog({ id: `audit_${nanoid(16)}`, institutionId, actorUserId: ctx.user.id, action: "educator_task.created", entityType: "educator_task", entityId: task?.id, metadata: JSON.stringify({ category: input.category }) });
+      return task;
+    }),
+    completeEducatorTask: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), taskId: z.string().max(64) })).mutation(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "teacher", "counsellor"]);
+      const task = await completeEducatorTask(institutionId, input.taskId);
+      if (!task) throw new TRPCError({ code: "NOT_FOUND", message: "Educator task not found." });
+      await writeAuditLog({ id: `audit_${nanoid(16)}`, institutionId, actorUserId: ctx.user.id, action: "educator_task.completed", entityType: "educator_task", entityId: input.taskId });
       return { success: true } as const;
     }),
     payments: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), learnerId: z.string().max(64).optional() }).optional()).query(async ({ ctx, input }) => {

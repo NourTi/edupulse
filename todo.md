@@ -85,6 +85,9 @@
 - [x] Connect authenticated web learner registration and payment forms to the institution-scoped server API while preserving desktop local-first mode.
 - [ ] Run an authenticated browser check for server learner registration and payment persistence on Render.
 - [ ] Complete the educator CRM layer: structured tasks, essay pipelines, behavior history, mentorship timelines, resource library, longitudinal language evolution, and client management.
+- [x] Add institution-scoped educator task persistence with protected list/create/complete procedures, audit logging, and a local-first CRM panel fallback.
+- [x] Prevent completed server tasks from reopening locally, validate task ownership before completion, record completion audits, and disable server CRM queries/mutations in desktop mode.
+- [x] Add focused CRM boundary tests; TypeScript, 22 unit tests, and production build pass.
 - [ ] Complete authenticated guardian and student portals with record-level student relationship checks.
 - [ ] Harden the Tauri Windows build with encrypted local credential storage and signed release artifacts.
 - [x] Generate the required `src-tauri/icons/icon.ico` from the existing EduPulse icon for Windows packaging.

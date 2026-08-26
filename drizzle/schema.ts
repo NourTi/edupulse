@@ -231,6 +231,22 @@ export type AttendanceRecord = typeof attendanceRecords.$inferSelect;
 export type CefrAssessment = typeof cefrAssessments.$inferSelect;
 export type PaymentRecord = typeof paymentRecords.$inferSelect;
 
+export const educatorTasks = mysqlTable("educatorTasks", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  institutionId: varchar("institutionId", { length: 64 }).notNull(),
+  learnerId: varchar("learnerId", { length: 64 }),
+  title: varchar("title", { length: 255 }).notNull(),
+  category: mysqlEnum("category", ["follow_up", "essay", "behavior", "mentorship", "report"]).default("follow_up").notNull(),
+  dueAt: timestamp("dueAt"),
+  completedAt: timestamp("completedAt"),
+  createdById: int("createdById").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({ institutionIdx: index("educator_tasks_institution_idx").on(table.institutionId), learnerIdx: index("educator_tasks_learner_idx").on(table.learnerId) }));
+
+export type EducatorTask = typeof educatorTasks.$inferSelect;
+export type InsertEducatorTask = typeof educatorTasks.$inferInsert;
+
 /** Approved, institution-owned information available to the education assistant. */
 export const knowledgeSources = mysqlTable(
   "knowledgeSources",

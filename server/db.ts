@@ -16,6 +16,7 @@ import {
   attendanceRecords,
   cefrAssessments,
   paymentRecords,
+  educatorTasks,
   passwordResetTokens,
   schoolSettings,
   users,
@@ -385,6 +386,28 @@ export async function listCefrAssessments(institutionId: string, learnerId: stri
   const db = await getDb();
   if (!db) return [];
   return db.select().from(cefrAssessments).where(and(eq(cefrAssessments.institutionId, institutionId), eq(cefrAssessments.learnerId, learnerId))).orderBy(desc(cefrAssessments.assessedAt));
+}
+
+export async function createEducatorTask(input: typeof educatorTasks.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  await db.insert(educatorTasks).values(input);
+  return db.select().from(educatorTasks).where(eq(educatorTasks.id, input.id)).limit(1).then(rows => rows[0]);
+}
+
+export async function listEducatorTasks(institutionId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(educatorTasks).where(eq(educatorTasks.institutionId, institutionId)).orderBy(desc(educatorTasks.createdAt));
+}
+
+export async function completeEducatorTask(institutionId: string, taskId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  const task = await db.select().from(educatorTasks).where(and(eq(educatorTasks.institutionId, institutionId), eq(educatorTasks.id, taskId))).limit(1).then(rows => rows[0]);
+  if (!task) return undefined;
+  await db.update(educatorTasks).set({ completedAt: new Date(), updatedAt: new Date() }).where(and(eq(educatorTasks.institutionId, institutionId), eq(educatorTasks.id, taskId)));
+  return { ...task, completedAt: new Date() };
 }
 
 export async function createPaymentRecord(input: typeof paymentRecords.$inferInsert) {

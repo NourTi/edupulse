@@ -1,19 +1,47 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
 import { Check, ClipboardList, FileText, HeartHandshake, Library, MessageSquareText, Plus, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
-type Props = { isArabic: boolean };
+type Props = { isArabic: boolean; desktopRuntime?: boolean };
 
-const initialTasks = [
-  { title: "مراجعة مسودة رانيا", meta: "Essay pipeline · اليوم", done: false },
-  { title: "تحديث ملاحظة حضور يوسف", meta: "Behavior follow-up · هذا الأسبوع", done: false },
-  { title: "تحضير جلسة الإرشاد لأمل", meta: "Mentorship · الخميس", done: true },
+type Task = { id?: string; title: string; meta: string; done: boolean; category?: "follow_up" | "essay" | "behavior" | "mentorship" | "report" };
+
+const initialTasks: Task[] = [
+  { title: "مراجعة مسودة رانيا", meta: "Essay pipeline · اليوم", done: false, category: "essay" },
+  { title: "تحديث ملاحظة حضور يوسف", meta: "Behavior follow-up · هذا الأسبوع", done: false, category: "behavior" },
+  { title: "تحضير جلسة الإرشاد لأمل", meta: "Mentorship · الخميس", done: true, category: "mentorship" },
 ];
 
-export function EducatorCRMPanel({ isArabic }: Props) {
-  const [tasks, setTasks] = useState(initialTasks);
-  const toggle = (index: number) => setTasks(current => current.map((task, item) => item === index ? { ...task, done: !task.done } : task));
-  const addTask = () => { setTasks(current => [...current, { title: isArabic ? "متابعة جديدة" : "New follow-up", meta: isArabic ? "مهمة مدرسية · الآن" : "School task · now", done: false }]); toast.success(isArabic ? "تمت إضافة المتابعة." : "Follow-up added."); };
+export function EducatorCRMPanel({ isArabic, desktopRuntime = false }: Props) {
+  const { user } = useAuth();
+  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const serverTasksQuery = trpc.records.educatorTasks.useQuery(undefined, { enabled: Boolean(user) && !desktopRuntime, retry: false });
+  const createTaskMutation = trpc.records.createEducatorTask.useMutation();
+  const completeTaskMutation = trpc.records.completeEducatorTask.useMutation();
+
+  useEffect(() => {
+    if (!serverTasksQuery.isSuccess) return;
+    setTasks(serverTasksQuery.data.map(task => ({ id: task.id, title: task.title, meta: task.category.replace("_", " "), done: Boolean(task.completedAt), category: task.category })));
+  }, [serverTasksQuery.data, serverTasksQuery.isSuccess]);
+
+  const toggle = (index: number) => {
+    const task = tasks[index];
+    if (!task) return;
+    if (task.done && task.id) return;
+    setTasks(current => current.map((item, itemIndex) => itemIndex === index ? { ...item, done: true } : item));
+    if (task.id && !desktopRuntime) completeTaskMutation.mutate({ taskId: task.id }, { onError: () => toast.error(isArabic ? "تعذر تحديث المهمة." : "Could not update task.") });
+  };
+  const addTask = () => {
+    const title = isArabic ? "متابعة جديدة" : "New follow-up";
+    if (user && !desktopRuntime) {
+      createTaskMutation.mutate({ title, category: "follow_up" }, { onSuccess: task => { if (task) setTasks(current => [{ id: task.id, title: task.title, meta: isArabic ? "مهمة مدرسية · الآن" : "School task · now", done: false, category: task.category }, ...current]); toast.success(isArabic ? "تمت إضافة المتابعة." : "Follow-up added."); }, onError: () => toast.error(isArabic ? "تعذر حفظ المتابعة." : "Could not save follow-up.") });
+      return;
+    }
+    setTasks(current => [...current, { title, meta: isArabic ? "مهمة مدرسية · الآن" : "School task · now", done: false, category: "follow_up" }]);
+    toast.success(isArabic ? "تمت إضافة المتابعة محليًا." : "Follow-up added locally.");
+  };
   const labels = isArabic ? { eyebrow: "English Teacher Master System", title: "عمل المعلم، كسجل متصل.", copy: "اجمع المهمة، الدليل، المحادثة، والخطوة التالية في مسار واحد قابل للمراجعة.", tasks: "المهام والمتابعات", essays: "مسار المقالات", behavior: "السلوك والمشاركة", mentoring: "خط زمني للإرشاد", resources: "مكتبة الموارد", evolution: "تطور اللغة" } : { eyebrow: "English Teacher Master System", title: "Teaching work, connected.", copy: "Keep tasks, evidence, conversations, and next steps in one reviewable educator record.", tasks: "Tasks & follow-ups", essays: "Essay pipeline", behavior: "Behavior & participation", mentoring: "Mentorship timeline", resources: "Resource library", evolution: "Language evolution" };
   return <div className="space-y-6">
     <section><p className="mb-2 text-xs font-medium uppercase tracking-[0.2em] text-white/45">{labels.eyebrow}</p><h2 className="text-display text-4xl leading-none sm:text-5xl">{labels.title}</h2><p className="mt-3 max-w-xl text-sm leading-6 text-white/55">{labels.copy}</p></section>
