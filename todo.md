@@ -84,6 +84,9 @@
 - [ ] Complete the educator CRM layer: structured tasks, essay pipelines, behavior history, mentorship timelines, resource library, longitudinal language evolution, and client management.
 - [ ] Complete authenticated guardian and student portals with record-level student relationship checks.
 - [ ] Harden the Tauri Windows build with encrypted local credential storage and signed release artifacts.
+- [ ] Add SQLCipher-encrypted local desktop storage with a secure key lifecycle and a development/browser fallback; native Windows compilation remains runner-dependent.
+- [ ] Handle keyring retrieval errors safely: create a key only when the credential is absent, and fail fast on other keyring errors.
+- [ ] Add native validation for the SQLCipher Tauri path through the Windows CI runner or a Cargo-capable environment.
 - [x] Verify TypeScript, production build, unit suite, migration generation, and public landing-page rendering.
 - [ ] Resolve the already-applied database migration marker in the managed migration journal before the next schema change.
 
