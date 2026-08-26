@@ -305,3 +305,8 @@
 - [x] Document the selected free API path and explain why approved EduPulse sources remain safer than a generic public API.
 
 - [x] Add a lightweight per-process rate limit and timeout to the keyless public-source fallback so a public visitor cannot exhaust the external endpoint.
+
+## Durable Connector Reference
+
+- [x] Save the user-provided Glama App Automation catalog as a durable EduPulse project reference in `docs/connector-catalog.md`.
+- [x] Preserve a review-first rule: evaluate each future connector for true free access, security, maintenance, permissions, and EduPulse fit before enabling it.
