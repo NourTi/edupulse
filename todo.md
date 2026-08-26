@@ -99,6 +99,8 @@
 - [x] Compile and package the SQLCipher Tauri path successfully through the Windows GitHub Actions runner.
 - [ ] Run native Windows end-to-end checks: first-launch key creation, encrypted save/load, reopen existing database, and keyring failure handling.
 - [ ] Produce a downloadable Windows desktop artifact through the existing GitHub Actions Tauri workflow and document unsigned-versus-signed release status.
+- [ ] Provide and validate the local Windows build instructions for the user-selected Option B path, including prerequisites, commands, installer location, and SmartScreen expectations.
+- [x] Document the local Windows Option B build prerequisites, copyable PowerShell commands, installer location, unsigned SmartScreen behavior, and first-run SQLCipher checks.
 - [ ] Complete the Windows native Tauri build on GitHub Actions; two manual runs reached native compilation but were cancelled after prolonged no-progress, so no new installer artifact is claimed.
 - [x] Add Rust dependency caching and a 30-minute Windows job timeout to make the native packaging workflow more predictable.
 - [x] Fix the Windows workflow pnpm conflict so native SQLCipher validation can run.

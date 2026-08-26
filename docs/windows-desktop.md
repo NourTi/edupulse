@@ -12,14 +12,25 @@ The grounded knowledge agent, administrator sign-in, source ingestion, and citat
 
 ## Building on Windows
 
-Install Rust and the Microsoft C++ Build Tools, then run:
+Use a Windows 10 or Windows 11 computer. Install **Git for Windows**, **Node.js 22**, **pnpm**, the **Rust stable toolchain**, and **Microsoft C++ Build Tools** with the Desktop development with C++ workload. WebView2 is required at runtime; the configured installer uses the WebView2 download bootstrapper for machines where it is not already present.
+
+From PowerShell, run:
 
 ```powershell
-pnpm install
-pnpm tauri:build
+git clone https://github.com/NourTi/edupulse.git
+cd edupulse
+corepack enable
+corepack prepare pnpm@10.4.1 --activate
+pnpm install --frozen-lockfile
+pnpm run check
+pnpm test
+pnpm run desktop:web-build
+pnpm run tauri:build
 ```
 
-The Windows installer is emitted by Tauri under `src-tauri/target/release/bundle/nsis/`. The current configuration selects NSIS with the WebView2 download bootstrapper. An MSI package must be built on Windows.
+The installer is emitted under `src-tauri\\target\\release\\bundle\\nsis\\`, normally as `EduPulse_0.2.0_x64-setup.exe`. Copy that `.exe` to a separate folder before sharing it. This build is unsigned, so Windows SmartScreen may display a warning; choose **More info → Run anyway** only when you trust the file and its source. Do not distribute a public release until an Authenticode certificate is configured.
+
+After installation, verify first launch, create one local record, close and reopen EduPulse, confirm the record remains, export a backup, and test that the grounded policy assistant clearly reports offline state when the network is unavailable. The live database remains in the per-user application-data directory and must not be copied from the installation folder.
 
 ## Local Data and Backup
 
