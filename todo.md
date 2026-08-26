@@ -351,4 +351,4 @@
 - [x] Evaluate the supplied Public APIs and MCP references for useful free patterns that can be implemented inside EduPulse for CRM, search, observability, and scalable agent operation; adopted structured actions, citation-first responses, explicit boundaries, deterministic fallbacks, rate limits, and safe observability.
 - [x] Add server-side agent observability with safe event metadata, intent/result categories, latency, source counts, and no raw private questions or credentials in logs.
 - [x] Add comprehensive regression tests for platform facts, creator facts, enrolment, privacy, thanks, unsupported questions, weak retrieval, citations, tenant boundaries, and privacy-safe observability; the validated suite passes 45 tests.
-- [ ] Validate local and deployed agent behavior, then deliver a qualified remediation report only after evidence is complete.
+- [x] Validate local and deployed agent behavior, then deliver a qualified remediation report only after evidence is complete; local and current published-domain behavior were verified, while the separate Render URL was confirmed to serve an older build.

@@ -79,3 +79,7 @@ The current remediation adds deterministic public routing for platform/about, cr
 ## Render Version Verification
 
 After the e0fa008e checkpoint, `https://edupulse-krcu.onrender.com/` became reachable and rendered an older EduPulse landing page. It did not expose the current floating assistant marker; searching the page for `مساعد` returned no result. The current published Manus domain does expose the assistant. This confirms the user’s Render URL is not running the latest checkpointed agent build, so behavior observed there can be from stale code and cannot validate the current routing fixes.
+
+## Latest Published Agent Surface
+
+The latest published EduPulse build was reopened successfully. Its accessibility surface contains one visitor assistant launcher, which opens one panel with the prompts `كيف أساعدك؟`, `ما هي مراحل التعليم في الجزائر؟`, `ما هي برامج EduPulse؟`, and `كيف يمكنني التواصل مع الإدارة؟`, plus one textarea and one close control. No full-page duplicate chat appears in the published landing surface.
