@@ -25,3 +25,5 @@ The main dashboard should lead with a welcome/status area, a colorful KPI row, a
 ## EduPulse verification note
 
 The local preview loads the public landing page and the administrator entry correctly routes to the protected Arabic login screen. The visual verification session did not contain credentials, so it could not enter the authenticated dashboard to capture the new overview surface. The dashboard implementation itself is type-checked and included in the production build; final click-through still requires an authenticated test account.
+
+The role-selector button was also checked through the local preview. It correctly routes to the Arabic protected login form rather than bypassing authentication. This is the expected production behavior; an authenticated administrator test account is needed to inspect the dashboard inside the real workspace.
