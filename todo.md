@@ -87,6 +87,7 @@
 - [ ] Complete the educator CRM layer: structured tasks, essay pipelines, behavior history, mentorship timelines, resource library, longitudinal language evolution, and client management.
 - [ ] Persist educator essay pipelines, behavior/participation records, mentorship timelines, resource-library records, language-evolution records, and client-management records with institution authorization.
 - [x] Add the institution-scoped educatorRecords schema, migration, protected list/create procedures, audit logging, and connected CRM counts for the remaining educator domains; full edit forms remain pending.
+- [x] Add a connected-mode Arabic/English CRM record form for essay, behaviour, mentorship, resource, language-evolution, and client records with local-first desktop guardrails.
 - [x] Add institution-scoped educator task persistence with protected list/create/complete procedures, audit logging, and a local-first CRM panel fallback.
 - [x] Prevent completed server tasks from reopening locally, validate task ownership before completion, record completion audits, and disable server CRM queries/mutations in desktop mode.
 - [x] Add focused CRM boundary tests; TypeScript, 22 unit tests, and production build pass.

@@ -20,7 +20,9 @@ export function EducatorCRMPanel({ isArabic, desktopRuntime = false }: Props) {
   const serverTasksQuery = trpc.records.educatorTasks.useQuery(undefined, { enabled: Boolean(user) && !desktopRuntime, retry: false });
   const createTaskMutation = trpc.records.createEducatorTask.useMutation();
   const completeTaskMutation = trpc.records.completeEducatorTask.useMutation();
+  const createRecordMutation = trpc.records.createEducatorRecord.useMutation();
   const serverRecordsQuery = trpc.records.educatorRecords.useQuery(undefined, { enabled: Boolean(user) && !desktopRuntime, retry: false });
+  const [recordForm, setRecordForm] = useState({ category: "essay" as "essay" | "behavior" | "mentorship" | "resource" | "language_evolution" | "client", title: "", summary: "", stage: "" });
   const recordCount = (category: "essay" | "behavior" | "mentorship" | "resource" | "language_evolution" | "client") => serverRecordsQuery.data?.filter(record => record.category === category).length ?? 0;
   const essayCount = (stage: string, fallback: string) => serverRecordsQuery.isSuccess ? String(serverRecordsQuery.data.filter(record => record.category === "essay" && record.stage === stage).length) : fallback;
 
@@ -36,6 +38,18 @@ export function EducatorCRMPanel({ isArabic, desktopRuntime = false }: Props) {
     setTasks(current => current.map((item, itemIndex) => itemIndex === index ? { ...item, done: true } : item));
     if (task.id && !desktopRuntime) completeTaskMutation.mutate({ taskId: task.id }, { onError: () => toast.error(isArabic ? "تعذر تحديث المهمة." : "Could not update task.") });
   };
+  const addRecord = () => {
+    if (!recordForm.title.trim() || !recordForm.summary.trim()) {
+      toast.error(isArabic ? "أدخل عنوان السجل وملخصه." : "Enter a record title and summary.");
+      return;
+    }
+    if (!user || desktopRuntime) {
+      toast.info(isArabic ? "يحفظ هذا السجل في النسخة المتصلة فقط." : "This record is saved in connected mode only.");
+      return;
+    }
+    createRecordMutation.mutate(recordForm, { onSuccess: () => { setRecordForm(current => ({ ...current, title: "", summary: "", stage: "" })); void serverRecordsQuery.refetch(); toast.success(isArabic ? "تم حفظ سجل CRM." : "CRM record saved."); }, onError: () => toast.error(isArabic ? "تعذر حفظ سجل CRM." : "Could not save CRM record.") });
+  };
+
   const addTask = () => {
     const title = isArabic ? "متابعة جديدة" : "New follow-up";
     if (user && !desktopRuntime) {
@@ -55,6 +69,7 @@ export function EducatorCRMPanel({ isArabic, desktopRuntime = false }: Props) {
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       {[{ icon: HeartHandshake, title: labels.mentoring, ar: "جلسات موثقة", en: "documented sessions", category: "mentorship" as const }, { icon: MessageSquareText, title: labels.behavior, ar: "سجلات مشاركة", en: "participation records", category: "behavior" as const }, { icon: Library, title: labels.resources, ar: "موارد معتمدة", en: "approved resources", category: "resource" as const }, { icon: TrendingUp, title: labels.evolution, ar: "سجلات تطور", en: "evolution records", category: "language_evolution" as const }].map(({ icon: Icon, title, ar, en, category }) => <button key={title} onClick={() => toast.info(isArabic ? "سيفتح سجل هذه الوحدة في النسخة التالية." : "This module record opens in the next iteration.")} className="surface-panel rounded-2xl p-5 text-right transition hover:-translate-y-0.5 hover:border-white/25"><Icon className="h-5 w-5 text-white/55" /><p className="mt-7 text-xl text-display">{title}</p><p className="mt-2 text-sm text-white/70">{recordCount(category)} {isArabic ? ar : en}</p><p className="mt-2 text-[11px] leading-5 text-white/40">{isArabic ? "سجل قابل للمراجعة، لا قرار آلي." : "Reviewable record, no automated decision."}</p></button>)}
     </div>
-    <div className="rounded-2xl border border-amber-200/15 bg-amber-200/5 p-4 text-xs leading-6 text-amber-50/70"><ClipboardList className="mr-2 inline h-4 w-4" />{isArabic ? "المهام وسجلات CRM المحفوظة في المؤسسة تظهر هنا عند الاتصال. وضع سطح المكتب يحتفظ بمساره المحلي المشفّر." : "Institution-saved tasks and CRM records appear here when connected. Desktop mode keeps its encrypted local path."}</div>
+    <article className="surface-panel rounded-2xl p-5"><div className="flex items-center justify-between gap-3"><div><p className="text-display text-2xl">{isArabic ? "إضافة سجل تربوي" : "Add educator record"}</p><p className="mt-1 text-xs text-white/45">{isArabic ? "أدخل دليلاً قابلاً للمراجعة، لا قراراً آلياً." : "Capture reviewable evidence, never an automated decision."}</p></div><ClipboardList className="h-5 w-5 text-white/45" /></div><div className="mt-5 grid gap-3 md:grid-cols-2"><select value={recordForm.category} onChange={event => setRecordForm(current => ({ ...current, category: event.target.value as typeof current.category }))} className="rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm text-white"><option value="essay">{isArabic ? "مسار المقالات" : "Essay pipeline"}</option><option value="behavior">{isArabic ? "السلوك والمشاركة" : "Behaviour"}</option><option value="mentorship">{isArabic ? "الإرشاد" : "Mentorship"}</option><option value="resource">{isArabic ? "مورد تعليمي" : "Resource"}</option><option value="language_evolution">{isArabic ? "تطور اللغة" : "Language evolution"}</option><option value="client">{isArabic ? "إدارة عميل" : "Client management"}</option></select><input value={recordForm.stage} onChange={event => setRecordForm(current => ({ ...current, stage: event.target.value }))} placeholder={isArabic ? "المرحلة أو الحالة" : "Stage or status"} className="rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-white/35" /><input value={recordForm.title} onChange={event => setRecordForm(current => ({ ...current, title: event.target.value }))} placeholder={isArabic ? "عنوان السجل" : "Record title"} className="rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-white/35 md:col-span-2" /><textarea value={recordForm.summary} onChange={event => setRecordForm(current => ({ ...current, summary: event.target.value }))} placeholder={isArabic ? "الدليل أو الملخص" : "Evidence or summary"} className="min-h-24 rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-white/35 md:col-span-2" /><button onClick={addRecord} disabled={createRecordMutation.isPending} className="liquid-glass rounded-xl px-4 py-2 text-sm md:col-span-2">{createRecordMutation.isPending ? (isArabic ? "جارٍ الحفظ…" : "Saving…") : (isArabic ? "حفظ السجل" : "Save record")}</button></div></article>
+    <div className="rounded-2xl border border-amber-200/15 bg-amber-200/5 p-4 text-xs leading-6 text-amber-50/70">{isArabic ? "المهام وسجلات CRM المحفوظة في المؤسسة تظهر هنا عند الاتصال. وضع سطح المكتب يحتفظ بمساره المحلي المشفّر." : "Institution-saved tasks and CRM records appear here when connected. Desktop mode keeps its encrypted local path."}</div>
   </div>;
 }
