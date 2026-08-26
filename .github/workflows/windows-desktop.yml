@@ -36,6 +36,9 @@ jobs:
           pnpm run check
           pnpm test
 
+      - name: Build desktop frontend
+        run: pnpm run desktop:web-build
+
       - name: Build Windows installer
         run: pnpm run tauri:build
 
