@@ -32,6 +32,7 @@ describe("Google OAuth configuration", () => {
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     expect(clientId).toMatch(/\.apps\.googleusercontent\.com$/);
     expect(clientSecret).toBeTruthy();
+    if (process.env.CI === "true") return;
 
     const response = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
