@@ -287,7 +287,7 @@
 - [x] Inspect the provided MailFlat MCP page and Glama Python search catalog for relevant capabilities, maintenance signals, data handling, and deployment fit; findings are documented in `docs/mcp-search-evaluation.md`.
 - [x] Audit EduPulse’s configured connectors and current AI/Crawl4AI boundaries before enabling an external service; no matching connector was configured.
 - [x] Select only services that directly improve public-source discovery, approved ingestion, email workflows, or agent reliability; rejected MailFlat and the third-party Brave wrapper for production chat, and selected a constrained no-auth Wikipedia fallback.
-- [ ] Configure required connectors or credentials only after the user understands the purpose and confirms any mandatory setup.
+- [x] Configure required connectors or credentials only after the user understands the purpose and confirms any mandatory setup; no credential is required for the selected Wikipedia path, and paid/undocumented connectors remain disabled.
 - [x] Implement and validate the selected integration, or document why it should not be integrated yet; added and tested the constrained no-auth Wikipedia fallback, while documenting why MailFlat and the third-party Brave wrapper are not production integrations.
 - [x] Save and deliver the MCP/search-service evaluation milestone.
 
