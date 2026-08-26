@@ -352,3 +352,15 @@
 - [x] Add server-side agent observability with safe event metadata, intent/result categories, latency, source counts, and no raw private questions or credentials in logs.
 - [x] Add comprehensive regression tests for platform facts, creator facts, enrolment, privacy, thanks, unsupported questions, weak retrieval, citations, tenant boundaries, and privacy-safe observability; the validated suite passes 45 tests.
 - [x] Validate local and deployed agent behavior, then deliver a qualified remediation report only after evidence is complete; local and current published-domain behavior were verified, while the separate Render URL was confirmed to serve an older build.
+
+## Post-Hero CRM Redesign
+
+- [x] Preserve the existing hero section exactly; do not change its copy, background, composition, or primary controls.
+- [x] Replace the pale/dark post-hero feature treatment with a bright, vivid light CRM workspace language inspired by the supplied screenshots.
+- [x] Add an icon-based module navigation strip for dashboard, scheduling, payments, communication, lessons, registration, leads, student CRM, grades, portals, and AI tools.
+- [x] Build a polished post-hero dashboard panel with a searchable/organized activity view, announcements, notes, notifications, birthdays, and checklist-style status areas.
+- [x] Build a student-information panel with tabs/filter controls, learner identity, contact, registration, payments, and class information.
+- [x] Build a grades/gradebook panel with term selection, assignments, scores, class grade, notes, export, and edit affordances using safe non-production sample presentation data only.
+- [x] Keep dashboard content role-aware for administration, teacher, student, and guardian experiences.
+- [x] Validate hero preservation, vivid color contrast, Arabic-first RTL readability, desktop/mobile responsiveness, TypeScript, tests, and production build.
+- [ ] Save and deliver the post-hero CRM redesign milestone.
