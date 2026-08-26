@@ -21,3 +21,7 @@ The user-provided reference is [Zoho CRM for education](https://www.zoho.com/crm
 EduPulse should borrow the reference’s clarity and operational confidence, not its brand, copy, or proprietary visual assets. The adapted interface will remain Arabic-first and RTL. It should feel like a calm school operations cockpit: vivid enough to be inviting, restrained enough for long work sessions, and explicit about what needs attention.
 
 The main dashboard should lead with a welcome/status area, a colorful KPI row, a “school database” module grid, a priority work queue, recent activity, and an Algeria-specific education pathway summary. The landing page can use brighter feature sections and light cards while retaining the existing EduPulse identity and morphism badges.
+
+## EduPulse verification note
+
+The local preview loads the public landing page and the administrator entry correctly routes to the protected Arabic login screen. The visual verification session did not contain credentials, so it could not enter the authenticated dashboard to capture the new overview surface. The dashboard implementation itself is type-checked and included in the production build; final click-through still requires an authenticated test account.
