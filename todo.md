@@ -86,6 +86,7 @@
 - [ ] Run an authenticated browser check for server learner registration and payment persistence on Render.
 - [ ] Complete the educator CRM layer: structured tasks, essay pipelines, behavior history, mentorship timelines, resource library, longitudinal language evolution, and client management.
 - [ ] Persist educator essay pipelines, behavior/participation records, mentorship timelines, resource-library records, language-evolution records, and client-management records with institution authorization.
+- [x] Add the institution-scoped educatorRecords schema, migration, protected list/create procedures, audit logging, and connected CRM counts for the remaining educator domains; full edit forms remain pending.
 - [x] Add institution-scoped educator task persistence with protected list/create/complete procedures, audit logging, and a local-first CRM panel fallback.
 - [x] Prevent completed server tasks from reopening locally, validate task ownership before completion, record completion audits, and disable server CRM queries/mutations in desktop mode.
 - [x] Add focused CRM boundary tests; TypeScript, 22 unit tests, and production build pass.
@@ -97,6 +98,7 @@
 - [x] Compile and package the SQLCipher Tauri path successfully through the Windows GitHub Actions runner.
 - [ ] Run native Windows end-to-end checks: first-launch key creation, encrypted save/load, reopen existing database, and keyring failure handling.
 - [ ] Produce a downloadable Windows desktop artifact through the existing GitHub Actions Tauri workflow and document unsigned-versus-signed release status.
+- [ ] Complete the Windows native Tauri build on GitHub Actions; two manual runs reached native compilation but were cancelled after prolonged no-progress, so no new installer artifact is claimed.
 - [x] Fix the Windows workflow pnpm conflict so native SQLCipher validation can run.
 - [x] Provide non-secret Google-shaped test variables in Windows CI so configuration tests do not depend on production secrets.
 - [x] Add the desktop frontend build step before the Windows Tauri packaging step.

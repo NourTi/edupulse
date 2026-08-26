@@ -17,6 +17,7 @@ import {
   cefrAssessments,
   paymentRecords,
   educatorTasks,
+  educatorRecords,
   passwordResetTokens,
   schoolSettings,
   users,
@@ -408,6 +409,20 @@ export async function completeEducatorTask(institutionId: string, taskId: string
   if (!task) return undefined;
   await db.update(educatorTasks).set({ completedAt: new Date(), updatedAt: new Date() }).where(and(eq(educatorTasks.institutionId, institutionId), eq(educatorTasks.id, taskId)));
   return { ...task, completedAt: new Date() };
+}
+
+export async function createEducatorRecord(input: typeof educatorRecords.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  await db.insert(educatorRecords).values(input);
+  return db.select().from(educatorRecords).where(eq(educatorRecords.id, input.id)).limit(1).then(rows => rows[0]);
+}
+
+export async function listEducatorRecords(institutionId: string, category?: typeof educatorRecords.$inferSelect["category"]) {
+  const db = await getDb();
+  if (!db) return [];
+  const where = category ? and(eq(educatorRecords.institutionId, institutionId), eq(educatorRecords.category, category)) : eq(educatorRecords.institutionId, institutionId);
+  return db.select().from(educatorRecords).where(where).orderBy(desc(educatorRecords.createdAt));
 }
 
 export async function createPaymentRecord(input: typeof paymentRecords.$inferInsert) {

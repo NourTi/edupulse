@@ -39,6 +39,8 @@ import {
   createEducatorTask,
   listEducatorTasks,
   completeEducatorTask,
+  createEducatorRecord,
+  listEducatorRecords,
   updateUserPassword,
   upsertSchoolSettings,
   writeAuditLog,
@@ -259,6 +261,19 @@ export const appRouter = router({
       if (!task) throw new TRPCError({ code: "NOT_FOUND", message: "Educator task not found." });
       await writeAuditLog({ id: `audit_${nanoid(16)}`, institutionId, actorUserId: ctx.user.id, action: "educator_task.completed", entityType: "educator_task", entityId: input.taskId });
       return { success: true } as const;
+    }),
+    educatorRecords: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), category: z.enum(["essay", "behavior", "mentorship", "resource", "language_evolution", "client"]).optional() }).optional()).query(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input?.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "teacher", "counsellor"]);
+      return listEducatorRecords(institutionId, input?.category);
+    }),
+    createEducatorRecord: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), learnerId: z.string().max(64).optional(), category: z.enum(["essay", "behavior", "mentorship", "resource", "language_evolution", "client"]), title: z.string().trim().min(2).max(255), summary: z.string().trim().min(2).max(8000), stage: z.string().trim().max(80).optional(), score: z.number().int().min(0).max(100).optional() })).mutation(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "teacher", "counsellor"]);
+      if (input.learnerId && !(await getLearner(institutionId, input.learnerId))) throw new TRPCError({ code: "NOT_FOUND", message: "Learner not found." });
+      const record = await createEducatorRecord({ id: `crm_${nanoid(16)}`, institutionId, learnerId: input.learnerId, category: input.category, title: input.title, summary: input.summary, stage: input.stage, score: input.score, createdById: ctx.user.id });
+      await writeAuditLog({ id: `audit_${nanoid(16)}`, institutionId, actorUserId: ctx.user.id, action: "educator_record.created", entityType: input.category, entityId: record?.id });
+      return record;
     }),
     payments: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), learnerId: z.string().max(64).optional() }).optional()).query(async ({ ctx, input }) => {
       const institutionId = await defaultInstitutionId(ctx.user.id, input?.institutionId);

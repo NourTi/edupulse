@@ -247,6 +247,23 @@ export const educatorTasks = mysqlTable("educatorTasks", {
 export type EducatorTask = typeof educatorTasks.$inferSelect;
 export type InsertEducatorTask = typeof educatorTasks.$inferInsert;
 
+export const educatorRecords = mysqlTable("educatorRecords", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  institutionId: varchar("institutionId", { length: 64 }).notNull(),
+  learnerId: varchar("learnerId", { length: 64 }),
+  category: mysqlEnum("category", ["essay", "behavior", "mentorship", "resource", "language_evolution", "client"]).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  summary: text("summary").notNull(),
+  stage: varchar("stage", { length: 80 }),
+  score: int("score"),
+  createdById: int("createdById").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({ institutionIdx: index("educator_records_institution_idx").on(table.institutionId), learnerIdx: index("educator_records_learner_idx").on(table.learnerId), categoryIdx: index("educator_records_category_idx").on(table.institutionId, table.category) }));
+
+export type EducatorRecord = typeof educatorRecords.$inferSelect;
+export type InsertEducatorRecord = typeof educatorRecords.$inferInsert;
+
 /** Approved, institution-owned information available to the education assistant. */
 export const knowledgeSources = mysqlTable(
   "knowledgeSources",
