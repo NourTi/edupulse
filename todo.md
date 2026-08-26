@@ -363,4 +363,4 @@
 - [x] Build a grades/gradebook panel with term selection, assignments, scores, class grade, notes, export, and edit affordances using safe non-production sample presentation data only.
 - [x] Keep dashboard content role-aware for administration, teacher, student, and guardian experiences.
 - [x] Validate hero preservation, vivid color contrast, Arabic-first RTL readability, desktop/mobile responsiveness, TypeScript, tests, and production build.
-- [ ] Save and deliver the post-hero CRM redesign milestone.
+- [x] Save and deliver the post-hero CRM redesign milestone.
