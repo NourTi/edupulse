@@ -253,3 +253,12 @@
 - [ ] Live-test Google sign-in on Render with the Google Cloud owner account and a different Google account, confirming successful account linking and no invalid-state error on retry.
 - [x] Verify the live Render public landing, Arabic login, and password-recovery screens load without submitting credentials; authenticated persistence and provider checks remain pending.
 - [x] Expose the validated Crawl4AI job hand-off through an administrator-only procedure without executing crawler code inside the web request.
+
+## Zoho-Inspired Visual Refresh
+
+- [x] Review Zoho’s education CRM landing-page dashboard treatment and extract useful non-copying patterns for EduPulse; findings saved in `docs/zoho-education-reference.md`.
+- [x] Define a brighter mixed-color visual system that reduces dark anxiety while preserving Arabic-first RTL readability and EduPulse identity.
+- [x] Redesign the authenticated dashboard with colorful KPI cards, clear school-wide database navigation, actionable activity summaries, and responsive RTL layout in `VividDashboard.tsx`.
+- [x] Add selected education CRM information architecture improvements inspired by the reference without copying proprietary branding or text.
+- [x] Validate the refreshed dashboard and landing experience with TypeScript, full tests, production build, and responsive landing screenshot; authenticated dashboard click-through was limited by browser-session availability.
+- [ ] Save and deliver the Zoho-inspired visual refresh checkpoint.
