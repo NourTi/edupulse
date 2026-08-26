@@ -56,6 +56,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { storagePut } from "./storage";
 import { assertSafePublicUrl, chunkText, containsProtectedRecordIntent, extractTextFromHtml, retrieveRelevantChunks, toSourceReferences } from "./knowledge/policy";
+import { createCrawl4AIJob } from "./knowledge/crawl4aiGateway";
 
 const schoolRoles = ["owner", "admin", "registrar", "finance_admin", "teacher", "counsellor", "student", "guardian"] as const;
 type SchoolRole = (typeof schoolRoles)[number];
@@ -333,6 +334,11 @@ export const appRouter = router({
       const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
       await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "registrar", "teacher"]);
       return saveApprovedSource({ ...input, institutionId, kind: "document", userId: ctx.user.id });
+    }),
+    prepareCrawl4AIJob: protectedProcedure.input(z.object({ sourceId: z.string().trim().min(3).max(64), url: z.string().url(), visibility: z.enum(["public", "staff"]).default("public"), institutionId: z.string().max(64).optional() })).mutation(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "registrar"]);
+      return { institutionId, job: createCrawl4AIJob({ sourceId: input.sourceId, url: input.url, visibility: input.visibility, requestedById: ctx.user.id }) };
     }),
     ingestUrl: protectedProcedure.input(z.object({ title: z.string().trim().min(3).max(255), url: z.string().url(), visibility: z.enum(["public", "staff"]).default("public"), institutionId: z.string().max(64).optional() })).mutation(async ({ ctx, input }) => {
       const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);

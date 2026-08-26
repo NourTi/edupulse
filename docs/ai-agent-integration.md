@@ -19,7 +19,7 @@ EduPulse uses a server-side grounded policy assistant. It is not a general unres
 
 An administrator first saves the institution brand settings. This associates the public school settings row with the institution ID. The administrator then uses Knowledge Administration to import reviewed text or a safe public webpage. The import is role-protected, stores the source and chunks, and marks the administrator-submitted source `ready` for retrieval. The public assistant receives that institution ID from the school-brand row and can then retrieve only that institution’s public sources.
 
-The current managed lightweight webpage importer uses a server-side `fetch` plus readable-text extraction. `server/knowledge/crawl4aiGateway.ts` defines the versioned Crawl4AI-compatible worker hand-off for a later isolated crawler. It validates safe public URLs and normalizes worker output into citation-ready chunks. Crawl4AI does not answer visitors directly; it prepares source text for the same approved retrieval path.
+The current managed lightweight webpage importer uses a server-side `fetch` plus readable-text extraction. `server/knowledge/crawl4aiGateway.ts` defines the versioned Crawl4AI-compatible worker hand-off for a later isolated crawler. It validates safe public URLs and normalizes worker output into citation-ready chunks. The protected `knowledge.prepareCrawl4AIJob` procedure exposes this hand-off to owner, administrator, and registrar accounts without executing crawler code inside the web request. Crawl4AI does not answer visitors directly; it prepares source text for the same approved retrieval path.
 
 ## Configuration
 

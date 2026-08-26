@@ -252,3 +252,4 @@
 - [x] Fix Render startup ordering so the web port binds before or alongside the optional migration instead of producing `No open ports detected`.
 - [ ] Live-test Google sign-in on Render with the Google Cloud owner account and a different Google account, confirming successful account linking and no invalid-state error on retry.
 - [x] Verify the live Render public landing, Arabic login, and password-recovery screens load without submitting credentials; authenticated persistence and provider checks remain pending.
+- [x] Expose the validated Crawl4AI job hand-off through an administrator-only procedure without executing crawler code inside the web request.
