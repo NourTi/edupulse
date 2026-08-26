@@ -34,4 +34,14 @@ describe("educator CRM task boundaries", () => {
     const caller = appRouter.createCaller(context(null));
     await expect(caller.records.createEducatorTask({ title: "Follow up" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
+
+  it("rejects unaffiliated access to educator records", async () => {
+    const caller = appRouter.createCaller(context("user"));
+    await expect(caller.records.educatorRecords()).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("rejects anonymous educator record creation", async () => {
+    const caller = appRouter.createCaller(context(null));
+    await expect(caller.records.createEducatorRecord({ category: "essay", title: "Draft", summary: "Needs review" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
 });

@@ -90,7 +90,7 @@
 - [x] Add a connected-mode Arabic/English CRM record form for essay, behaviour, mentorship, resource, language-evolution, and client records with local-first desktop guardrails.
 - [x] Add institution-scoped educator task persistence with protected list/create/complete procedures, audit logging, and a local-first CRM panel fallback.
 - [x] Prevent completed server tasks from reopening locally, validate task ownership before completion, record completion audits, and disable server CRM queries/mutations in desktop mode.
-- [x] Add focused CRM boundary tests; TypeScript, 22 unit tests, and production build pass.
+- [x] Add focused CRM boundary tests for tasks and educator records; TypeScript, 24 unit tests, and production build pass.
 - [ ] Complete authenticated guardian and student portals with record-level student relationship checks.
 - [ ] Harden the Tauri Windows build with encrypted local credential storage and signed release artifacts.
 - [x] Generate the required `src-tauri/icons/icon.ico` from the existing EduPulse icon for Windows packaging.
