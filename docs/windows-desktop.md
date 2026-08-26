@@ -28,7 +28,7 @@ pnpm run desktop:web-build
 pnpm run tauri:build
 ```
 
-The installer is emitted under `src-tauri\\target\\release\\bundle\\nsis\\`, normally as `EduPulse_0.2.0_x64-setup.exe`. Copy that `.exe` to a separate folder before sharing it. This build is unsigned, so Windows SmartScreen may display a warning; choose **More info → Run anyway** only when you trust the file and its source. Do not distribute a public release until an Authenticode certificate is configured.
+The installer is emitted under `src-tauri\\target\\release\\bundle\\nsis\\`, normally as `EduPulse_1.0.0_x64-setup.exe`. Copy that `.exe` to a separate folder before sharing it. This build is unsigned, so Windows SmartScreen may display a warning; choose **More info → Run anyway** only when you trust the file and its source. Do not distribute a public release until an Authenticode certificate is configured.
 
 After installation, verify first launch, create one local record, close and reopen EduPulse, confirm the record remains, export a backup, and test that the grounded policy assistant clearly reports offline state when the network is unavailable. The live database remains in the per-user application-data directory and must not be copied from the installation folder.
 
