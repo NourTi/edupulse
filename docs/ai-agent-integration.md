@@ -7,9 +7,9 @@ EduPulse uses a server-side grounded policy assistant. It is not a general unres
 ## Request path
 
 1. A visitor enters a question in `client/src/components/ParentPolicyChat.tsx`.
-2. The component reads the public school identity from `trpc.school.brand` and sends the resolved `institutionId` with the question.
-3. `knowledge.askPublic` in `server/routers.ts` rejects individual-record questions before retrieval.
-4. `getPublicKnowledgeChunks` in `server/db.ts` selects only `ready` and `public` sources for the requested institution. If no institution context exists, it selects only intentionally global sources whose `institutionId` is null; it no longer searches every institution.
+2. The public chat sends only the visitor’s question; it does not require a session or expose an institution identifier in the browser.
+3. `knowledge.askPublic` in `server/routers.ts` handles greetings, thanks, and farewells before protected-record checks or retrieval, then rejects individual-record questions before retrieval.
+4. `getPublicKnowledgeChunks` in `server/db.ts` resolves the explicitly configured public school identity for this deployment and selects only `ready` and `public` sources for that institution. If no public identity exists, it selects only intentionally global sources whose `institutionId` is null; it never searches every institution.
 5. `retrieveRelevantChunks` ranks matching chunks by shared Arabic/English terms.
 6. The server sends only the matching approved excerpts to `invokeLLM` in `server/_core/llm.ts`.
 7. The system prompt requires the model to use only those excerpts, cite factual claims as `[S1]`, `[S2]`, and say when the evidence is insufficient.
@@ -17,7 +17,7 @@ EduPulse uses a server-side grounded policy assistant. It is not a general unres
 
 ## How an institution makes it functional
 
-An administrator first saves the institution brand settings. This associates the public school settings row with the institution ID. The administrator then uses Knowledge Administration to import reviewed text or a safe public webpage. The import is role-protected, stores the source and chunks, and marks the administrator-submitted source `ready` for retrieval. The public assistant receives that institution ID from the school-brand row and can then retrieve only that institution’s public sources.
+An administrator first saves the institution brand settings. This associates the public school settings row with the institution ID used as the deployment’s explicit public-school mapping. The administrator then uses Knowledge Administration to import reviewed text or a safe public webpage. The import is role-protected, stores the source and chunks, and marks the administrator-submitted source `ready` for retrieval. Visitors can then ask general questions without signing in, and the server retrieves only that mapped institution’s public sources.
 
 The current managed lightweight webpage importer uses a server-side `fetch` plus readable-text extraction. `server/knowledge/crawl4aiGateway.ts` defines the versioned Crawl4AI-compatible worker hand-off for a later isolated crawler. It validates safe public URLs and normalizes worker output into citation-ready chunks. The protected `knowledge.prepareCrawl4AIJob` procedure exposes this hand-off to owner, administrator, and registrar accounts without executing crawler code inside the web request. Crawl4AI does not answer visitors directly; it prepares source text for the same approved retrieval path.
 
@@ -43,3 +43,11 @@ The assistant is only functional for factual policy questions when the instituti
 ## Current verification
 
 The project passes TypeScript, the full unit suite, and the production build. The tests cover privacy refusal, source ranking, citation deduplication, safe URL validation, readable-text extraction, crawler result normalization, and non-administrator ingestion boundaries. A live model call is not executed during automated tests to avoid sending test prompts to the configured model service; a signed-in institution with approved sources is required for end-to-end production testing.
+
+## Visitor-access and conversational-fix note
+
+The welcome assistant was already exposed through a public tRPC procedure, but the UI also queried school identity on mount and described the assistant as institution-linked. That made the public experience appear dependent on sign-in. The chat now sends no session or institution identifier for visitor questions. The server resolves the deployment’s explicitly configured public school identity, when present, and retrieves only ready sources marked public for that institution. If no public identity is configured, it does not search another tenant.
+
+The “thank you” defect came from treating every message as a knowledge question. The assistant now detects common Arabic and English greetings, thanks, and farewells before protected-record checks, retrieval, or model invocation, and returns a deterministic conversational reply with no citations because no factual source was needed.
+
+Google authentication is not Google web search. EduPulse keeps Google sign-in separate from knowledge retrieval. Public factual answers use administrator-approved text or public pages. The existing Crawl4AI-compatible gateway prepares safe public-page jobs for an external worker; it does not execute unchecked crawling inside the web server. An administrator must approve the resulting source before it can support visitor answers.

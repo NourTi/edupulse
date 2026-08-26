@@ -262,3 +262,13 @@
 - [x] Add selected education CRM information architecture improvements inspired by the reference without copying proprietary branding or text.
 - [x] Validate the refreshed dashboard and landing experience with TypeScript, full tests, production build, and responsive landing screenshot; authenticated dashboard click-through was limited by browser-session availability.
 - [x] Save and deliver the Zoho-inspired visual refresh checkpoint.
+
+## Visitor Agent and Arabic Readability Fixes
+
+- [x] Audit Arabic headline/paragraph spacing, line-height, font loading, and RTL wrapping across the landing page and dashboard; increased Arabic body rhythm and display line-height with controlled word spacing.
+- [x] Remove the unnecessary institution sign-in gate from the public welcome assistant while preserving tenant isolation and private-record boundaries; visitor chat no longer queries protected identity or sends a tenant ID from the browser.
+- [x] Add intent handling for conversational closings such as thanks, greetings, and acknowledgements so they receive natural responses instead of policy answers.
+- [x] Connect public answers to approved public knowledge sources through the existing ingestion/gateway path; public visitors use the explicitly mapped school’s ready/public sources, while the Crawl4AI gateway remains approval-gated and never runs unchecked crawling in the web request.
+- [x] Add regression tests for visitor access, conversational closings, unsupported questions, citations, and source boundaries; 36 tests pass.
+- [x] Verify Arabic readability, visitor chat behavior, source grounding, type checks, tests, production build, and responsive mobile screenshot; live model/crawler calls remain intentionally outside automated tests.
+- [x] Save and deliver the visitor-agent and Arabic-readability fix checkpoint.

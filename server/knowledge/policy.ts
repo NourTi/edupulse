@@ -11,6 +11,27 @@ const protectedRecordTerms = [
   "ابني", "ابنتي", "بنتي", "درجات", "درجة", "الحضور", "سجل الطالب", "رصيد", "الرسوم",
 ];
 
+export type ConversationIntent = "greeting" | "thanks" | "farewell" | null;
+
+export function detectConversationIntent(question: string): ConversationIntent {
+  const normalized = question.toLowerCase().replace(/[!؟?.,،؛:]/g, " ").replace(/\s+/g, " ").trim();
+  const phrases = {
+    thanks: ["thank you", "thanks", "thank u", "شكرا", "شكرًا", "مشكور", "بارك الله فيك", "جزاك الله خيرا", "يعطيك الصحة"],
+    greeting: ["hello", "hi", "hey", "good morning", "good evening", "مرحبا", "مرحبًا", "السلام عليكم", "صباح الخير", "مساء الخير", "أهلا", "أهلًا"],
+    farewell: ["bye", "goodbye", "see you", "مع السلامة", "إلى اللقاء", "نراك لاحقا", "شكرا وداعا"],
+  } as const;
+  for (const phrase of phrases.thanks) if (normalized === phrase || normalized.startsWith(`${phrase} `)) return "thanks";
+  for (const phrase of phrases.farewell) if (normalized === phrase || normalized.startsWith(`${phrase} `)) return "farewell";
+  for (const phrase of phrases.greeting) if (normalized === phrase || normalized.startsWith(`${phrase} `)) return "greeting";
+  return null;
+}
+
+export function conversationReply(intent: Exclude<ConversationIntent, null>, isArabic: boolean) {
+  if (intent === "thanks") return isArabic ? "على الرحب والسعة. إذا احتجت أي معلومة عامة عن المؤسسة أو البرامج، أنا هنا لمساعدتك." : "You’re welcome. If you need general information about the institution or its programmes, I’m here to help.";
+  if (intent === "farewell") return isArabic ? "على الرحب والسعة. نتمنى لك يوماً موفقاً." : "You’re welcome. Have a great day.";
+  return isArabic ? "مرحباً بك في EduPulse. اسألني عن البرامج، التسجيل، المواعيد، أو السياسات العامة المنشورة." : "Welcome to EduPulse. Ask me about published programmes, registration, schedules, or general policies.";
+}
+
 export function containsProtectedRecordIntent(question: string) {
   const normalized = question.toLowerCase();
   return protectedRecordTerms.some(term => normalized.includes(term));

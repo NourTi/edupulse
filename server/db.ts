@@ -293,7 +293,13 @@ export async function listKnowledgeSources(institutionId?: string) {
 export async function getPublicKnowledgeChunks(institutionId?: string) {
   const db = await getDb();
   if (!db) return [];
-  const tenantFilter = institutionId ? eq(knowledgeSources.institutionId, institutionId) : isNull(knowledgeSources.institutionId);
+  // Visitors have no session to carry a tenant ID. The singleton school setting
+  // is the explicit public-school mapping for this deployment; it is never a
+  // wildcard across institutions. An explicit institutionId remains supported
+  // for signed-in, institution-specific surfaces.
+  const publicSettings = institutionId ? undefined : await getSchoolSettings();
+  const resolvedInstitutionId = institutionId ?? publicSettings?.institutionId ?? undefined;
+  const tenantFilter = resolvedInstitutionId ? eq(knowledgeSources.institutionId, resolvedInstitutionId) : isNull(knowledgeSources.institutionId);
   return db.select({ id: knowledgeChunks.id, sourceId: knowledgeSources.id, title: knowledgeSources.title, sourceUrl: knowledgeSources.sourceUrl, content: knowledgeChunks.content }).from(knowledgeChunks).innerJoin(knowledgeSources, eq(knowledgeChunks.sourceId, knowledgeSources.id)).where(and(eq(knowledgeSources.status, "ready"), eq(knowledgeSources.visibility, "public"), tenantFilter));
 }
 

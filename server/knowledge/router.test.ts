@@ -27,6 +27,13 @@ describe("knowledge router boundaries", () => {
     await expect(caller.knowledge.ingestText({ title: "School handbook", content: "A".repeat(80), visibility: "public", mimeType: "text/plain" })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
+  it("answers a visitor’s conversational thanks without institution sign-in or retrieval", async () => {
+    const caller = appRouter.createCaller(context(null));
+    const result = await caller.knowledge.askPublic({ question: "thank you" });
+    expect(result.sources).toEqual([]);
+    expect(result.answer).toContain("welcome");
+  });
+
   it("refuses individual student-record requests without querying a private record", async () => {
     const caller = appRouter.createCaller(context(null));
     const result = await caller.knowledge.askPublic({ question: "ما هي درجات ابني؟" });

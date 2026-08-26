@@ -99,10 +99,17 @@
   .nav-link:hover, .nav-link[data-active="true"] { color: white; }
 }
 
+html[lang="ar"] body {
+  line-height: 1.65;
+  font-kerning: normal;
+  text-rendering: optimizeLegibility;
+}
 html[lang="ar"] .text-display {
   font-family: "Amiri", "Instrument Serif", serif;
   letter-spacing: 0;
-  line-height: 0.94;
+  word-spacing: 0.035em;
+  line-height: 1.18 !important;
+  text-wrap: balance;
 }
 
 /* The product narrative below the cinematic threshold behaves like an editorial

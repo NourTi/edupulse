@@ -1,11 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { assertSafePublicUrl, chunkText, containsProtectedRecordIntent, extractTextFromHtml, retrieveRelevantChunks, toSourceReferences } from "./policy";
+import { assertSafePublicUrl, chunkText, containsProtectedRecordIntent, conversationReply, detectConversationIntent, extractTextFromHtml, retrieveRelevantChunks, toSourceReferences } from "./policy";
 
 describe("knowledge policy", () => {
   it("detects individual-record questions before retrieval", () => {
     expect(containsProtectedRecordIntent("Can I see my child's attendance?")).toBe(true);
     expect(containsProtectedRecordIntent("ما هي رسوم ابني؟")).toBe(true);
     expect(containsProtectedRecordIntent("What are the school opening hours?")).toBe(false);
+  });
+
+  it("recognizes conversational closings and does not classify them as policy questions", () => {
+    expect(detectConversationIntent("thank you")).toBe("thanks");
+    expect(detectConversationIntent("شكرا جزيلا")).toBe("thanks");
+    expect(detectConversationIntent("مرحبا")).toBe("greeting");
+    expect(detectConversationIntent("bye")).toBe("farewell");
+    expect(detectConversationIntent("What are the opening hours?")).toBeNull();
+    expect(conversationReply("thanks", false)).toContain("welcome");
+    expect(conversationReply("thanks", true)).toContain("الرحب");
   });
 
   it("keeps source chunks and ranks relevant text", () => {

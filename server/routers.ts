@@ -55,7 +55,7 @@ import { invokeLLM } from "./_core/llm";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { storagePut } from "./storage";
-import { assertSafePublicUrl, chunkText, containsProtectedRecordIntent, extractTextFromHtml, retrieveRelevantChunks, toSourceReferences } from "./knowledge/policy";
+import { assertSafePublicUrl, chunkText, containsProtectedRecordIntent, conversationReply, detectConversationIntent, extractTextFromHtml, retrieveRelevantChunks, toSourceReferences } from "./knowledge/policy";
 import { createCrawl4AIJob } from "./knowledge/crawl4aiGateway";
 
 const schoolRoles = ["owner", "admin", "registrar", "finance_admin", "teacher", "counsellor", "student", "guardian"] as const;
@@ -352,6 +352,8 @@ export const appRouter = router({
     }),
     askPublic: publicProcedure.input(z.object({ question: z.string().trim().min(3).max(800), institutionId: z.string().max(64).optional() })).mutation(async ({ input }) => {
       const isArabic = /[\u0600-\u06FF]/.test(input.question);
+      const conversationIntent = detectConversationIntent(input.question);
+      if (conversationIntent) return { answer: conversationReply(conversationIntent, isArabic), sources: [] as Array<{ id: string; title: string; url: string | null }> };
       if (containsProtectedRecordIntent(input.question)) return { answer: publicRecordRedirect(isArabic), sources: [] as Array<{ id: string; title: string; url: string | null }> };
       const matches = retrieveRelevantChunks(input.question, await getPublicKnowledgeChunks(input.institutionId));
       if (!matches.length) return { answer: isArabic ? "لا أجد جوابًا معتمدًا في مصادر المؤسسة المنشورة. يمكن لفريق الإدارة إضافة المصدر المناسب أو مساعدتك عبر القناة المعتمدة." : "I cannot find an approved answer in the institution’s published sources. An administrator can add the relevant source or help through the approved contact channel.", sources: [] as Array<{ id: string; title: string; url: string | null }> };
