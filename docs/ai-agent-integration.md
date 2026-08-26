@@ -59,3 +59,7 @@ On 26 August 2026, desktop and mobile previews were checked after the landing-pa
 ## Single-Assistant Landing Verification
 
 After the duplicate-render fix, full-page desktop and mobile previews show the landing assistant section as a compact explanatory panel rather than a second chat. The only persistent visitor chat control is the floating bottom-corner launcher. The responsive layout remains intact and the launcher does not create a second background conversation surface.
+
+## Screenshot Phrase Regression
+
+The reported input included the misspelled phrase `than lyou very much`. The conversation detector now treats that exact phrase, alongside `thank you very much`, `than you very much`, `thankyou`, and Arabic thanks variants, as a closing intent. The router returns the deterministic welcome reply before source retrieval, so it cannot reach the institutional no-source fallback.

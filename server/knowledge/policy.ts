@@ -24,7 +24,7 @@ export type ConversationIntent = "greeting" | "thanks" | "farewell" | null;
 export function detectConversationIntent(question: string): ConversationIntent {
   const normalized = normalizeIntentText(question);
   const phrases = {
-    thanks: ["thank you very much", "thank you so much", "thanks a lot", "thank you", "thankyou", "thanks", "thank u", "thx", "than you", "thak you", "much appreciated", "appreciate it", "you helped me", "you have helped me", "شكرا جزيلا", "شكرا لك", "شكرًا لك", "شكرا", "شكرًا", "مشكور", "بارك الله فيك", "جزاك الله خيرا", "يعطيك الصحة", "تمام شكرا", "حسنا شكرا"],
+    thanks: ["thank you very much", "thank you so much", "thanks a lot", "thank you", "thankyou", "thanks", "thank u", "thx", "than you", "than lyou", "than lyou very much", "thank lyou", "thank lyou very much", "thak you", "much appreciated", "appreciate it", "you helped me", "you have helped me", "شكرا جزيلا", "شكرا لك", "شكرًا لك", "شكرا", "شكرًا", "مشكور", "بارك الله فيك", "جزاك الله خيرا", "يعطيك الصحة", "تمام شكرا", "حسنا شكرا"],
     greeting: ["hello", "hi", "hey", "good morning", "good evening", "مرحبا", "مرحبًا", "السلام عليكم", "صباح الخير", "مساء الخير", "أهلا", "أهلًا"],
     farewell: ["bye", "goodbye", "see you", "مع السلامة", "إلى اللقاء", "نراك لاحقا", "شكرا وداعا"],
   } as const;
