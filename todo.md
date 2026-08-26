@@ -87,7 +87,8 @@
 - [ ] Add SQLCipher-encrypted local desktop storage with a secure key lifecycle and a development/browser fallback; native Windows compilation remains runner-dependent.
 - [ ] Handle keyring retrieval errors safely: create a key only when the credential is absent, and fail fast on other keyring errors.
 - [ ] Add native validation for the SQLCipher Tauri path through the Windows CI runner or a Cargo-capable environment.
-- [ ] Fix the Windows workflow pnpm conflict so native SQLCipher validation can run.
+- [x] Fix the Windows workflow pnpm conflict so native SQLCipher validation can run.
+- [ ] Provide non-secret Google-shaped test variables in Windows CI so configuration tests do not depend on production secrets.
 - [x] Verify TypeScript, production build, unit suite, migration generation, and public landing-page rendering.
 - [ ] Resolve the already-applied database migration marker in the managed migration journal before the next schema change.
 

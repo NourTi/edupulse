@@ -29,6 +29,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Check and test
+        env:
+          GOOGLE_CLIENT_ID: "000000000000-ci-validation.apps.googleusercontent.com"
+          GOOGLE_CLIENT_SECRET: "ci-only-placeholder"
         run: |
           pnpm run check
           pnpm test
