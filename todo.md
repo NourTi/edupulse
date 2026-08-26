@@ -100,6 +100,7 @@
 - [ ] Run native Windows end-to-end checks: first-launch key creation, encrypted save/load, reopen existing database, and keyring failure handling.
 - [ ] Produce a downloadable Windows desktop artifact through the existing GitHub Actions Tauri workflow and document unsigned-versus-signed release status.
 - [ ] Complete the Windows native Tauri build on GitHub Actions; two manual runs reached native compilation but were cancelled after prolonged no-progress, so no new installer artifact is claimed.
+- [x] Add Rust dependency caching and a 30-minute Windows job timeout to make the native packaging workflow more predictable.
 - [x] Fix the Windows workflow pnpm conflict so native SQLCipher validation can run.
 - [x] Provide non-secret Google-shaped test variables in Windows CI so configuration tests do not depend on production secrets.
 - [x] Add the desktop frontend build step before the Windows Tauri packaging step.
