@@ -89,7 +89,8 @@
 - [ ] Add native validation for the SQLCipher Tauri path through the Windows CI runner or a Cargo-capable environment.
 - [x] Fix the Windows workflow pnpm conflict so native SQLCipher validation can run.
 - [x] Provide non-secret Google-shaped test variables in Windows CI so configuration tests do not depend on production secrets.
-- [ ] Add the desktop frontend build step before the Windows Tauri packaging step.
+- [x] Add the desktop frontend build step before the Windows Tauri packaging step.
+- [ ] Correct the desktop frontend output path so Tauri can find the generated assets on Windows.
 - [x] Verify TypeScript, production build, unit suite, migration generation, and public landing-page rendering.
 - [ ] Resolve the already-applied database migration marker in the managed migration journal before the next schema change.
 
