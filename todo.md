@@ -85,6 +85,7 @@
 - [x] Connect authenticated web learner registration and payment forms to the institution-scoped server API while preserving desktop local-first mode.
 - [ ] Run an authenticated browser check for server learner registration and payment persistence on Render.
 - [ ] Complete the educator CRM layer: structured tasks, essay pipelines, behavior history, mentorship timelines, resource library, longitudinal language evolution, and client management.
+- [ ] Persist educator essay pipelines, behavior/participation records, mentorship timelines, resource-library records, language-evolution records, and client-management records with institution authorization.
 - [x] Add institution-scoped educator task persistence with protected list/create/complete procedures, audit logging, and a local-first CRM panel fallback.
 - [x] Prevent completed server tasks from reopening locally, validate task ownership before completion, record completion audits, and disable server CRM queries/mutations in desktop mode.
 - [x] Add focused CRM boundary tests; TypeScript, 22 unit tests, and production build pass.
@@ -95,6 +96,7 @@
 - [ ] Handle keyring retrieval errors safely: create a key only when the credential is absent, and fail fast on other keyring errors.
 - [x] Compile and package the SQLCipher Tauri path successfully through the Windows GitHub Actions runner.
 - [ ] Run native Windows end-to-end checks: first-launch key creation, encrypted save/load, reopen existing database, and keyring failure handling.
+- [ ] Produce a downloadable Windows desktop artifact through the existing GitHub Actions Tauri workflow and document unsigned-versus-signed release status.
 - [x] Fix the Windows workflow pnpm conflict so native SQLCipher validation can run.
 - [x] Provide non-secret Google-shaped test variables in Windows CI so configuration tests do not depend on production secrets.
 - [x] Add the desktop frontend build step before the Windows Tauri packaging step.

@@ -28,6 +28,8 @@ The desktop bridge lets the user choose where to save an EduPulse JSON backup. T
 
 ## Reproducible Windows packaging
 
-The repository includes `.github/workflows/windows-desktop.yml`. A Windows runner installs Node 22 and pnpm, runs the unit tests and type check, then executes `pnpm run tauri:build` to produce NSIS `.exe` and MSI artifacts. The workflow uploads artifacts for manual download and publishes them to a GitHub Release when triggered by a version tag such as `v0.1.0`.
+The repository includes `.github/workflows/windows-desktop.yml`. A Windows runner installs Node 22 and pnpm, runs the unit tests and type check, then executes `pnpm run tauri:build` to produce NSIS `.exe` and MSI artifacts. The workflow runs on pushes to `main`, manual dispatches, and version tags. For a normal commit, open the repository’s **Actions → Windows desktop build → latest successful run → Artifacts → edupulse-windows-installer** and download the ZIP containing the installer. For a version tag such as `v0.1.0`, the workflow also attaches the `.exe` and `.msi` files to a GitHub Release.
+
+CI artifacts are currently **unsigned**. They are suitable for controlled testing, but Windows SmartScreen may warn users. A public production release should add an Authenticode certificate and signing secret to the GitHub repository, then sign the installer before publishing it. Never commit the certificate or private key.
 
 The current sandbox can validate the frontend and server build but cannot create a native Windows installer or validate the native SQLCipher build. Build and test the installer on Windows with Rust and WebView2 installed or through the Windows GitHub Actions workflow. The workflow must be the final authority for Windows SQLCipher compilation. Do not place the local encrypted database in the repository or on a shared network drive; keep it in the per-user application-data directory and export backups through the desktop bridge.
