@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addGoogleState, consumeGoogleState } from "./auth/google";
+import { addGoogleState, consumeGoogleState, normalizeOrigin } from "./auth/google";
 
 describe("Google OAuth state handling", () => {
   it("keeps several login tabs valid without allowing an unbounded cookie", () => {
@@ -23,6 +23,20 @@ describe("Google OAuth state handling", () => {
   it("rejects a missing or modified state", () => {
     expect(consumeGoogleState("abc123", "abc124").valid).toBe(false);
     expect(consumeGoogleState(undefined, "abc123").valid).toBe(false);
+  });
+});
+
+describe("Google OAuth origin handling", () => {
+  it("accepts public HTTPS origins and localhost development", () => {
+    expect(normalizeOrigin("https://edupulse-3uaxdfe5.manus.space")).toBe("https://edupulse-3uaxdfe5.manus.space");
+    expect(normalizeOrigin("http://localhost:3000")).toBe("http://localhost:3000");
+  });
+
+  it("rejects unsafe or non-origin values", () => {
+    expect(normalizeOrigin("https://user:pass@example.com")).toBeNull();
+    expect(normalizeOrigin("https://example.com/path")).toBeNull();
+    expect(normalizeOrigin("http://example.com")).toBeNull();
+    expect(normalizeOrigin("not-a-url")).toBeNull();
   });
 });
 

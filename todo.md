@@ -365,3 +365,10 @@
 - [x] Validate hero preservation, vivid color contrast, Arabic-first RTL readability, desktop/mobile responsiveness, TypeScript, tests, and production build.
 - [x] Save and deliver the post-hero CRM redesign milestone.
 - [ ] Ensure the post-hero Dashboard module opens the authenticated overview when selected.
+
+## Google Sign-In 403 Investigation
+
+- [x] Trace the Google OAuth start URL, callback route, redirect URI, and runtime configuration.
+- [x] Identify whether the 403 is caused by Google Cloud client restrictions, consent-screen/testing state, redirect URI mismatch, or application configuration.
+- [x] Apply and test any required secure application-side OAuth fix without weakening state or tenant isolation.
+- [x] Document the exact Google Cloud and Render settings needed for successful sign-in.

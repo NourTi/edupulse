@@ -6,6 +6,7 @@ import { createExternalUser, createUserAuthAccount, getUserAuthAccount, getUserB
 import { establishPasswordSession, setPasswordSessionCookie } from "./session";
 
 const STATE_COOKIE = "edupulse_google_state";
+const ORIGIN_COOKIE = "edupulse_google_origin";
 const MAX_PENDING_STATES = 5;
 const GOOGLE_AUTHORIZE = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN = "https://oauth2.googleapis.com/token";
@@ -17,8 +18,25 @@ function appBaseUrl(req: Request) {
   return (process.env.APP_BASE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/$/, "");
 }
 
-function callbackUrl(req: Request) {
-  return `${appBaseUrl(req)}/api/auth/google/callback`;
+export function normalizeOrigin(value: string | undefined) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (!["https:", "http:"].includes(url.protocol) || url.username || url.password || url.pathname !== "/" || url.search || url.hash) return null;
+    if (url.protocol === "http:" && !["localhost", "127.0.0.1"].includes(url.hostname)) return null;
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
+function requestedOrigin(req: Request) {
+  const queryOrigin = typeof req.query.origin === "string" ? normalizeOrigin(req.query.origin) : null;
+  return queryOrigin || normalizeOrigin(process.env.APP_BASE_URL) || appBaseUrl(req);
+}
+
+function callbackUrl(origin: string) {
+  return `${origin}/api/auth/google/callback`;
 }
 
 function configured() {
@@ -67,17 +85,22 @@ export function registerGoogleRoutes(app: Express) {
   app.get("/api/auth/google", (req, res) => {
     if (!configured()) return res.status(503).send("Google sign-in is not configured.");
     const state = crypto.randomBytes(24).toString("hex");
+    const origin = requestedOrigin(req);
     const previousState = parse(req.headers.cookie || "")[STATE_COOKIE];
     const pendingStates = addGoogleState(previousState, state);
-    res.cookie(STATE_COOKIE, pendingStates.join("."), { httpOnly: true, sameSite: "lax", secure: cookieSecure(req), maxAge: 10 * 60 * 1000, path: "/" });
-    const params = new URLSearchParams({ client_id: process.env.GOOGLE_CLIENT_ID!, redirect_uri: callbackUrl(req), response_type: "code", scope: "openid email profile", state, access_type: "online", prompt: "select_account" });
+    const cookieOptions = { httpOnly: true, sameSite: "lax" as const, secure: cookieSecure(req), maxAge: 10 * 60 * 1000, path: "/" };
+    res.cookie(STATE_COOKIE, pendingStates.join("."), cookieOptions);
+    res.cookie(ORIGIN_COOKIE, origin, cookieOptions);
+    const params = new URLSearchParams({ client_id: process.env.GOOGLE_CLIENT_ID!, redirect_uri: callbackUrl(origin), response_type: "code", scope: "openid email profile", state, access_type: "online", prompt: "select_account" });
     return res.redirect(`${GOOGLE_AUTHORIZE}?${params.toString()}`);
   });
 
   app.get("/api/auth/google/callback", async (req, res) => {
     if (!configured()) return res.status(503).send("Google sign-in is not configured.");
     const state = typeof req.query.state === "string" ? req.query.state : "";
-    const savedState = parse(req.headers.cookie || "")[STATE_COOKIE];
+    const savedCookies = parse(req.headers.cookie || "");
+    const savedOrigin = normalizeOrigin(savedCookies[ORIGIN_COOKIE]) || normalizeOrigin(process.env.APP_BASE_URL) || appBaseUrl(req);
+    const savedState = savedCookies[STATE_COOKIE];
     const stateResult = consumeGoogleState(savedState, state);
     if (!state || !stateResult.valid) return res.status(400).send(restartMessage("Invalid Google sign-in state.", "state_mismatch"));
     if (stateResult.remaining.length) {
@@ -85,12 +108,13 @@ export function registerGoogleRoutes(app: Express) {
     } else {
       res.clearCookie(STATE_COOKIE, { httpOnly: true, sameSite: "lax", secure: cookieSecure(req), path: "/" });
     }
+    res.clearCookie(ORIGIN_COOKIE, { httpOnly: true, sameSite: "lax", secure: cookieSecure(req), path: "/" });
     const code = typeof req.query.code === "string" ? req.query.code : "";
     if (!code) return res.status(400).send(restartMessage("Google sign-in was cancelled or failed.", "missing_code"));
 
     const reference = `google_${nanoid(8)}`;
     try {
-      const tokenResponse = await fetch(GOOGLE_TOKEN, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ code, client_id: process.env.GOOGLE_CLIENT_ID!, client_secret: process.env.GOOGLE_CLIENT_SECRET!, redirect_uri: callbackUrl(req), grant_type: "authorization_code" }) });
+      const tokenResponse = await fetch(GOOGLE_TOKEN, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ code, client_id: process.env.GOOGLE_CLIENT_ID!, client_secret: process.env.GOOGLE_CLIENT_SECRET!, redirect_uri: callbackUrl(savedOrigin), grant_type: "authorization_code" }) });
       const token = await tokenResponse.json() as { access_token?: string };
       if (!tokenResponse.ok || !token.access_token) return res.status(401).send(restartMessage("Google sign-in could not be completed.", reference));
       const profileResponse = await fetch(GOOGLE_USERINFO, { headers: { Authorization: `Bearer ${token.access_token}` } });
