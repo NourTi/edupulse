@@ -107,6 +107,7 @@
 - [x] Document the local Windows Option B build prerequisites, copyable PowerShell commands, installer location, unsigned SmartScreen behavior, and first-run SQLCipher checks.
 - [x] Provide the user-selected Option B build guide; native execution and installer verification remain the user’s Windows-side step.
 - [x] Ensure the end-user Windows download is a self-contained EduPulse installer and clearly separate bundled app/runtime assets from developer-only build prerequisites; Tauri bundles the compiled app and offline WebView2 installer.
+- [x] Align Tauri product version with the Node package version so the generated installer filename and release metadata are consistent.
 - [x] Verify and document the remaining Windows prerequisite boundary: WebView2 is bundled in offlineInstaller mode, while Git, Node.js, pnpm, Rust, and source cloning remain developer-only requirements.
 - [ ] Complete the Windows native Tauri build on GitHub Actions; two manual runs reached native compilation but were cancelled after prolonged no-progress, so no new installer artifact is claimed.
 - [x] Add Rust dependency caching and a 30-minute Windows job timeout to make the native packaging workflow more predictable.
