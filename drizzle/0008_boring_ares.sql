@@ -1,0 +1,1 @@
+ALTER TABLE `educatorRecords` ADD `archivedAt` timestamp;

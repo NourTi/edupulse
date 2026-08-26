@@ -84,13 +84,17 @@
 - [x] Hydrate authenticated web learners, payments, attendance summaries, and CEFR assessments from institution-scoped procedures; local desktop mode remains unchanged.
 - [x] Connect authenticated web learner registration and payment forms to the institution-scoped server API while preserving desktop local-first mode.
 - [ ] Run an authenticated browser check for server learner registration and payment persistence on Render.
-- [ ] Complete the educator CRM layer: structured tasks, essay pipelines, behavior history, mentorship timelines, resource library, longitudinal language evolution, and client management.
-- [ ] Persist educator essay pipelines, behavior/participation records, mentorship timelines, resource-library records, language-evolution records, and client-management records with institution authorization.
-- [x] Add the institution-scoped educatorRecords schema, migration, protected list/create procedures, audit logging, and connected CRM counts for the remaining educator domains; full edit forms remain pending.
+- [x] Complete the educator CRM layer: structured tasks, essay pipelines, behavior history, mentorship timelines, resource library, longitudinal language evolution, and client management through institution-scoped category workflows, learner links, CRUD, filters, and reviewable states.
+- [x] Add category-focused CRM workspaces for essay review, behaviour follow-up, mentorship sessions, resource metadata, language milestones, and client pipeline states through module-specific guidance, stage fields, filtered records, learner links, edit, and archive actions.
+- [x] Add module-specific empty/loading/error states and category-filtered record views with institution-scoped validation.
+- [x] Persist educator essay pipelines, behavior/participation records, mentorship timelines, resource-library records, language-evolution records, and client-management records through the institution-scoped educator-record model and protected CRUD procedures.
+- [x] Add the institution-scoped educatorRecords schema, migration, protected CRUD procedures, audit logging, connected CRM counts, learner links, and non-destructive archive behavior for the remaining educator domains.
 - [x] Add a connected-mode Arabic/English CRM record form for essay, behaviour, mentorship, resource, language-evolution, and client records with local-first desktop guardrails.
+- [x] Add institution-scoped list, edit, archive, and learner-link interactions for persisted educator CRM records.
+- [x] Add focused unit coverage for educator-record validation, institution isolation, learner-not-found, not-found records, and archive/edit behavior; the full suite now passes 32 tests.
 - [x] Add institution-scoped educator task persistence with protected list/create/complete procedures, audit logging, and a local-first CRM panel fallback.
 - [x] Prevent completed server tasks from reopening locally, validate task ownership before completion, record completion audits, and disable server CRM queries/mutations in desktop mode.
-- [x] Add focused CRM boundary tests for tasks and educator records; TypeScript, 24 unit tests, and production build pass.
+- [x] Add focused CRM boundary tests for tasks and educator records; TypeScript, 32 unit tests, and production build pass.
 - [ ] Complete authenticated guardian and student portals with record-level student relationship checks.
 - [ ] Harden the Tauri Windows build with encrypted local credential storage and signed release artifacts.
 - [x] Generate the required `src-tauri/icons/icon.ico` from the existing EduPulse icon for Windows packaging.

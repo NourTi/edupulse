@@ -259,6 +259,7 @@ export const educatorRecords = mysqlTable("educatorRecords", {
   createdById: int("createdById").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  archivedAt: timestamp("archivedAt"),
 }, table => ({ institutionIdx: index("educator_records_institution_idx").on(table.institutionId), learnerIdx: index("educator_records_learner_idx").on(table.learnerId), categoryIdx: index("educator_records_category_idx").on(table.institutionId, table.category) }));
 
 export type EducatorRecord = typeof educatorRecords.$inferSelect;

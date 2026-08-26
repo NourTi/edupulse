@@ -41,6 +41,8 @@ import {
   completeEducatorTask,
   createEducatorRecord,
   listEducatorRecords,
+  updateEducatorRecord,
+  archiveEducatorRecord,
   updateUserPassword,
   upsertSchoolSettings,
   writeAuditLog,
@@ -273,6 +275,23 @@ export const appRouter = router({
       if (input.learnerId && !(await getLearner(institutionId, input.learnerId))) throw new TRPCError({ code: "NOT_FOUND", message: "Learner not found." });
       const record = await createEducatorRecord({ id: `crm_${nanoid(16)}`, institutionId, learnerId: input.learnerId, category: input.category, title: input.title, summary: input.summary, stage: input.stage, score: input.score, createdById: ctx.user.id });
       await writeAuditLog({ id: `audit_${nanoid(16)}`, institutionId, actorUserId: ctx.user.id, action: "educator_record.created", entityType: input.category, entityId: record?.id });
+      return record;
+    }),
+    updateEducatorRecord: protectedProcedure.input(z.object({ recordId: z.string().max(64), institutionId: z.string().max(64).optional(), learnerId: z.string().max(64).optional(), title: z.string().trim().min(2).max(255).optional(), summary: z.string().trim().min(2).max(8000).optional(), stage: z.string().trim().max(80).optional(), score: z.number().int().min(0).max(100).optional() })).mutation(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "teacher", "counsellor"]);
+      if (input.learnerId && !(await getLearner(institutionId, input.learnerId))) throw new TRPCError({ code: "NOT_FOUND", message: "Learner not found." });
+      const record = await updateEducatorRecord(institutionId, input.recordId, { learnerId: input.learnerId, title: input.title, summary: input.summary, stage: input.stage, score: input.score });
+      if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "Educator record not found." });
+      await writeAuditLog({ id: `audit_${nanoid(16)}`, institutionId, actorUserId: ctx.user.id, action: "educator_record.updated", entityType: record.category, entityId: record.id });
+      return record;
+    }),
+    archiveEducatorRecord: protectedProcedure.input(z.object({ recordId: z.string().max(64), institutionId: z.string().max(64).optional() })).mutation(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "teacher", "counsellor"]);
+      const record = await archiveEducatorRecord(institutionId, input.recordId);
+      if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "Educator record not found." });
+      await writeAuditLog({ id: `audit_${nanoid(16)}`, institutionId, actorUserId: ctx.user.id, action: "educator_record.archived", entityType: "educator_record", entityId: record.id });
       return record;
     }),
     payments: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), learnerId: z.string().max(64).optional() }).optional()).query(async ({ ctx, input }) => {

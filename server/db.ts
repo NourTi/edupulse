@@ -421,8 +421,29 @@ export async function createEducatorRecord(input: typeof educatorRecords.$inferI
 export async function listEducatorRecords(institutionId: string, category?: typeof educatorRecords.$inferSelect["category"]) {
   const db = await getDb();
   if (!db) return [];
-  const where = category ? and(eq(educatorRecords.institutionId, institutionId), eq(educatorRecords.category, category)) : eq(educatorRecords.institutionId, institutionId);
+  const categoryWhere = category ? eq(educatorRecords.category, category) : undefined;
+  const where = categoryWhere ? and(eq(educatorRecords.institutionId, institutionId), categoryWhere, isNull(educatorRecords.archivedAt)) : and(eq(educatorRecords.institutionId, institutionId), isNull(educatorRecords.archivedAt));
   return db.select().from(educatorRecords).where(where).orderBy(desc(educatorRecords.createdAt));
+}
+
+export async function updateEducatorRecord(institutionId: string, recordId: string, input: Partial<Pick<typeof educatorRecords.$inferInsert, "title" | "summary" | "stage" | "score" | "learnerId">>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  const existing = await db.select().from(educatorRecords).where(and(eq(educatorRecords.institutionId, institutionId), eq(educatorRecords.id, recordId), isNull(educatorRecords.archivedAt))).limit(1).then(rows => rows[0]);
+  if (!existing) return undefined;
+  const changes = Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined));
+  await db.update(educatorRecords).set({ ...changes, updatedAt: new Date() }).where(and(eq(educatorRecords.institutionId, institutionId), eq(educatorRecords.id, recordId), isNull(educatorRecords.archivedAt)));
+  return db.select().from(educatorRecords).where(and(eq(educatorRecords.institutionId, institutionId), eq(educatorRecords.id, recordId))).limit(1).then(rows => rows[0]);
+}
+
+export async function archiveEducatorRecord(institutionId: string, recordId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  const existing = await db.select().from(educatorRecords).where(and(eq(educatorRecords.institutionId, institutionId), eq(educatorRecords.id, recordId), isNull(educatorRecords.archivedAt))).limit(1).then(rows => rows[0]);
+  if (!existing) return undefined;
+  const archivedAt = new Date();
+  await db.update(educatorRecords).set({ archivedAt, updatedAt: archivedAt }).where(and(eq(educatorRecords.institutionId, institutionId), eq(educatorRecords.id, recordId), isNull(educatorRecords.archivedAt)));
+  return { ...existing, archivedAt };
 }
 
 export async function createPaymentRecord(input: typeof paymentRecords.$inferInsert) {

@@ -44,4 +44,14 @@ describe("educator CRM task boundaries", () => {
     const caller = appRouter.createCaller(context(null));
     await expect(caller.records.createEducatorRecord({ category: "essay", title: "Draft", summary: "Needs review" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
+
+  it("rejects anonymous educator record updates", async () => {
+    const caller = appRouter.createCaller(context(null));
+    await expect(caller.records.updateEducatorRecord({ recordId: "crm_missing", title: "Changed" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  it("rejects unaffiliated educator record archival", async () => {
+    const caller = appRouter.createCaller(context("user"));
+    await expect(caller.records.archiveEducatorRecord({ recordId: "crm_missing" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
 });
