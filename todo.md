@@ -372,3 +372,10 @@
 - [x] Identify whether the 403 is caused by Google Cloud client restrictions, consent-screen/testing state, redirect URI mismatch, or application configuration.
 - [x] Apply and test any required secure application-side OAuth fix without weakening state or tenant isolation.
 - [x] Document the exact Google Cloud and Render settings needed for successful sign-in.
+
+## Render Deployment Sync
+
+- [ ] Compare the current EduPulse checkpoint/repository state with the live Render site.
+- [ ] Inspect GitHub branch and commit configuration relevant to Render.
+- [ ] Identify the exact Render redeploy, branch, build-command, or cache correction required.
+- [ ] Validate that the live Render site contains the latest platform markers and provide simple deployment instructions.
