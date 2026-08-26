@@ -63,3 +63,15 @@ After the duplicate-render fix, full-page desktop and mobile previews show the l
 ## Screenshot Phrase Regression
 
 The reported input included the misspelled phrase `than lyou very much`. The conversation detector now treats that exact phrase, alongside `thank you very much`, `than you very much`, `thankyou`, and Arabic thanks variants, as a closing intent. The router returns the deterministic welcome reply before source retrieval, so it cannot reach the institutional no-source fallback.
+
+## Deployment Comparison During Agent Audit
+
+On 26 August 2026, the published Manus domain `edupulse-3uaxdfe5.manus.space` served the current EduPulse landing page with the single bottom-corner assistant. The user’s Render domain `edupulse-krcu.onrender.com` returned Render’s `Application loading` / `Service waking up` page instead of the application. Therefore, a harmful unrelated answer observed on Render may come from an older build or an incomplete service start; it cannot be treated as evidence of the current published code until Render finishes booting and the latest source is deployed there.
+
+## Current Preview Verification
+
+The current local preview loaded the complete landing page and exposed one visitor assistant launcher, with the knowledge section describing the same single-corner interaction. The Render URL remained on its service-waking page during this audit, so Render cannot yet be used to verify the latest agent routing.
+
+## Complete Remediation Evidence
+
+The current remediation adds deterministic public routing for platform/about, creator, enrolment, conversation, and protected-record intents. It adds a stopword-filtered retrieval score, rejects uncited or out-of-range model citations, and logs only intent, outcome, source count, and rounded latency. The supplied Public APIs and MCP catalogs informed the composable-action, structured-result, citation, and explicit-boundary patterns documented in `docs/agent-reference-adoption.md`; they are not runtime dependencies. The local suite now passes 44 tests. Live Render verification remains pending because the Render service was still showing its wake-up page.

@@ -17,3 +17,7 @@ Future connectors may be implemented inside EduPulse when their use case, licens
 ## Current fix covered by this reference
 
 The landing page now has one visitor assistant: the full-page public chat was removed from the background section, while the dedicated authenticated knowledge route can retain its workspace chat. The corner assistant sends the visitor question to `knowledge.askPublic`. English, Arabic, mixed-language, and common misspelled thanks are handled before retrieval, producing a natural response such as “You’re very welcome. I’m here if you need anything else—feel free to ask.”
+
+## Approved creator profile
+
+The public profile may state only that the creator is the configured EduPulse owner, an English teacher and PhD educator who teaches at university and secondary-school levels. These facts come from the project owner’s own instructions. The agent must not infer or invent a personal name, biography, institution, contact details, or credentials beyond the configured owner name and these approved facts.

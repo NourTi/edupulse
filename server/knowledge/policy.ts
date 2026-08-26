@@ -34,11 +34,30 @@ export function detectConversationIntent(question: string): ConversationIntent {
   return null;
 }
 
+export type EnrollmentIntent = "enrollment" | null;
+
+export function detectEnrollmentIntent(question: string): EnrollmentIntent {
+  const normalized = normalizeIntentText(question);
+  const terms = [
+    "sign my son", "sign my daughter", "sign my child", "register my son", "register my daughter", "register my child",
+    "enroll my son", "enrol my son", "enroll my daughter", "enrol my daughter", "enroll my child", "enrol my child",
+    "enrollment", "enrolment", "admission", "how do i register", "how can i register", "how to register",
+    "تسجيل ابني", "تسجيل ابنتي", "تسجيل طفلي", "أريد تسجيل ابني", "اريد تسجيل ابني", "أريد تسجيل ابنتي", "كيف أسجل ابني", "كيف اسجل ابني", "التسجيل",
+  ];
+  return terms.some(term => normalized.includes(term)) ? "enrollment" : null;
+}
+
+export function enrollmentReply(isArabic: boolean) {
+  return isArabic
+    ? "يسعدنا مساعدتك في تسجيل ابنك أو ابنتك. ابدأ بإرسال طلب التسجيل من بوابة المؤسسة أو تواصل مع الإدارة لمعرفة المقاعد المتاحة والوثائق المطلوبة. لا ترسل هنا درجات الطالب أو بياناته الخاصة."
+    : "We can help you start an enrolment request. Use the institution’s registration portal or contact the administration to confirm available places and required documents. Please do not send grades or private student details in this public chat.";
+}
+
 export type PlatformIntent = "about" | "creator" | null;
 
 export function detectPlatformIntent(question: string): PlatformIntent {
   const normalized = normalizeIntentText(question);
-  const creatorTerms = ["who created edupulse", "who is the creator", "who is the founder", "creator of edupulse", "founder of edupulse", "من أنشأ edupulse", "من أسس edupulse", "من مؤسس edupulse", "من هو المؤسس", "صاحب المنصة", "مطور المنصة"];
+  const creatorTerms = ["who created edupulse", "who is the creator", "who is the founder", "creator of edupulse", "founder of edupulse", "who built edupulse", "who made edupulse", "who is behind edupulse", "من أنشأ edupulse", "من أسس edupulse", "من مؤسس edupulse", "من هو المؤسس", "من صنع edupulse", "من أنشأ هذه المنصة", "صاحب المنصة", "مطور المنصة"];
   if (creatorTerms.some(term => normalized.includes(term))) return "creator";
   const aboutTerms = ["what is edupulse", "tell me about edupulse", "about edupulse", "what does edupulse do", "منصة edupulse", "عن edupulse", "ما هي edupulse", "ما هي المنصة", "من أنت"];
   if (aboutTerms.some(term => normalized.includes(term))) return "about";
@@ -52,7 +71,7 @@ export function conversationReply(intent: Exclude<ConversationIntent, null>, isA
 }
 
 export function platformReply(intent: Exclude<PlatformIntent, null>, isArabic: boolean, ownerName: string) {
-  if (intent === "creator") return isArabic ? `EduPulse منصة لإدارة المدارس والمؤسسات التعليمية، أنشأها ${ownerName}. تجمع المنصة معلومات المتعلمين، التسجيل، الحضور، المدفوعات، التقييمات، ومتابعة عمل المربين في مساحة واحدة. [P1]` : `EduPulse is a school and education-management platform created by ${ownerName}. It brings learner information, registration, attendance, payments, assessments, and educator workflows into one workspace. [P1]`;
+  if (intent === "creator") return isArabic ? `EduPulse منصة لإدارة المدارس والمؤسسات التعليمية، أنشأها ${ownerName}، وهو أستاذ للغة الإنجليزية ومربٍ حاصل على درجة الدكتوراه يدرّس في الجامعة والتعليم الثانوي. تجمع المنصة معلومات المتعلمين، التسجيل، الحضور، المدفوعات، التقييمات، ومتابعة عمل المربين في مساحة واحدة. [P1]` : `EduPulse is a school and education-management platform created by ${ownerName}, an English teacher and PhD educator who teaches at university and secondary-school levels. It brings learner information, registration, attendance, payments, assessments, and educator workflows into one workspace. [P1]`;
   return isArabic ? `EduPulse منصة عربية أولاً لإدارة المدارس ومراكز التعليم. تساعد الإدارة والمربين على تنظيم بيانات المتعلمين، التسجيل، الحضور، المدفوعات، تقييمات CEFR، المتابعة، ومصادر السياسات المعتمدة، مع دعم مراحل التعليم الجزائرية. [P1]` : "EduPulse is an Arabic-first platform for schools and education centres. It helps teams organize learner records, registration, attendance, payments, CEFR assessments, educator follow-up, and approved policy knowledge, with support for Algeria’s education stages. [P1]";
 }
 
@@ -79,8 +98,10 @@ export function chunkText(raw: string, maxLength = 1100) {
   return chunks.length ? chunks : [clean.slice(0, maxLength)];
 }
 
+const retrievalStopWords = new Set(["a", "an", "the", "is", "are", "am", "what", "which", "who", "where", "when", "why", "how", "do", "does", "can", "could", "i", "me", "my", "you", "your", "we", "our", "to", "of", "in", "on", "for", "about", "please", "tell", "this", "these", "that", "it", "وا", "و", "ما", "ماذا", "من", "أين", "متى", "لماذا", "كيف", "هل", "عن", "في", "منصة", "لي", "ابني", "ابنتي"]);
+
 function tokens(value: string) {
-  return Array.from(new Set(value.toLowerCase().match(/[A-Za-z0-9\u0600-\u06FF]{2,}/g) ?? []));
+  return Array.from(new Set((value.toLowerCase().match(/[A-Za-z0-9\u0600-\u06FF]{2,}/g) ?? []).filter(token => !retrievalStopWords.has(token))));
 }
 
 export function retrieveRelevantChunks(question: string, chunks: RetrievedChunk[], limit = 5) {
@@ -95,6 +116,12 @@ export function retrieveRelevantChunks(question: string, chunks: RetrievedChunk[
     .filter(chunk => chunk.score > 0)
     .sort((a, b) => b.score - a.score || a.content.length - b.content.length)
     .slice(0, limit);
+}
+
+export function validateGroundedAnswer(answer: string, sourceCount: number) {
+  const citations = Array.from(answer.matchAll(/\[S(\d+)\]/g)).map(match => Number(match[1]));
+  if (!answer.trim() || citations.length === 0) return false;
+  return citations.every(citation => citation >= 1 && citation <= sourceCount);
 }
 
 export function toSourceReferences(chunks: RetrievedChunk[]) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertSafePublicUrl, chunkText, containsProtectedRecordIntent, conversationReply, detectConversationIntent, detectPlatformIntent, extractTextFromHtml, platformReply, retrieveRelevantChunks, toSourceReferences } from "./policy";
+import { assertSafePublicUrl, chunkText, containsProtectedRecordIntent, conversationReply, detectConversationIntent, detectEnrollmentIntent, detectPlatformIntent, enrollmentReply, extractTextFromHtml, platformReply, retrieveRelevantChunks, toSourceReferences, validateGroundedAnswer } from "./policy";
 
 describe("knowledge policy", () => {
   it("detects individual-record questions before retrieval", () => {
@@ -22,10 +22,29 @@ describe("knowledge policy", () => {
     expect(conversationReply("thanks", true)).toContain("الرحب");
   });
 
+  it("rejects uncited and out-of-range model answers", () => {
+    expect(validateGroundedAnswer("An answer without evidence", 2)).toBe(false);
+    expect(validateGroundedAnswer("A grounded answer [S1]", 2)).toBe(true);
+    expect(validateGroundedAnswer("A bad citation [S3]", 2)).toBe(false);
+  });
+
+  it("does not retrieve a chunk from generic question words alone", () => {
+    expect(retrieveRelevantChunks("what is this", [{ id: "1", sourceId: "s1", title: "Sexual harassment policy in America", sourceUrl: null, content: "This is a policy." }])).toEqual([]);
+  });
+
+  it("routes public enrolment requests to useful guidance without exposing student data", () => {
+    expect(detectEnrollmentIntent("I want to sign my son")).toBe("enrollment");
+    expect(detectEnrollmentIntent("أريد تسجيل ابني")).toBe("enrollment");
+    expect(enrollmentReply(false)).toContain("enrolment");
+    expect(enrollmentReply(true)).toContain("تسجيل");
+  });
+
   it("recognizes platform and creator questions as approved profile intents", () => {
     expect(detectPlatformIntent("What is EduPulse?")).toBe("about");
     expect(detectPlatformIntent("من مؤسس EduPulse؟")).toBe("creator");
+    expect(detectPlatformIntent("Who built EduPulse?")).toBe("creator");
     expect(platformReply("creator", false, "Alex")).toContain("Alex");
+    expect(platformReply("creator", false, "Alex")).toContain("English teacher");
     expect(platformReply("about", true, "Alex")).toContain("منصة");
   });
 

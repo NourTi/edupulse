@@ -340,3 +340,15 @@
 - [x] Add regression tests proving the public assistant routing and exact extended thank-you phrase; the single-surface behavior is also verified in responsive screenshots.
 - [x] Validate the corrected UI, answer routing, TypeScript, tests, production build, and responsive screenshots.
 - [x] Save and deliver the duplicate-agent fix checkpoint.
+
+## Complete AI Agent Remediation
+
+- [x] Audit every public-agent route, prompt, classifier, retrieval query, fallback, and deployed-version path to locate why EduPulse questions can receive unrelated answers; the current published build is deterministic for platform, creator, enrolment, thanks, and protected-record intents, while Render was still waking.
+- [x] Add a durable, approved EduPulse project profile covering the platform, its creator, purpose, Algerian education scope, features, privacy boundaries, and contact guidance.
+- [x] Add explicit question routing for platform/about, creator, enrolment intent, general knowledge, school policy, protected student records, thanks, greetings, and unsupported/off-topic requests.
+- [x] Ensure “I want to sign my son” receives a helpful public enrolment response without exposing or requesting private student records.
+- [x] Prevent unrelated model answers when retrieval is empty, weak, or mismatched; stopword-filtered retrieval and citation validation now reject generic or uncited model output.
+- [x] Evaluate the supplied Public APIs and MCP references for useful free patterns that can be implemented inside EduPulse for CRM, search, observability, and scalable agent operation; adopted structured actions, citation-first responses, explicit boundaries, deterministic fallbacks, rate limits, and safe observability.
+- [x] Add server-side agent observability with safe event metadata, intent/result categories, latency, source counts, and no raw private questions or credentials in logs.
+- [x] Add comprehensive regression tests for platform facts, creator facts, enrolment, privacy, thanks, unsupported questions, weak retrieval, citations, and tenant boundaries; the validated suite passes 44 tests.
+- [ ] Validate local and deployed agent behavior, then deliver a qualified remediation report only after evidence is complete.

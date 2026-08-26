@@ -34,6 +34,14 @@ describe("knowledge router boundaries", () => {
     expect(result.answer).toContain("welcome");
   });
 
+  it("answers public enrolment requests without treating them as a private-record request", async () => {
+    const caller = appRouter.createCaller(context(null));
+    const result = await caller.knowledge.askPublic({ question: "I want to sign my son" });
+    expect(result.answer).toContain("enrolment");
+    expect(result.answer).not.toContain("cannot access");
+    expect(result.sources[0]?.id).toBe("platform_profile");
+  });
+
   it("answers platform questions for visitors with an approved profile citation", async () => {
     const caller = appRouter.createCaller(context(null));
     const about = await caller.knowledge.askPublic({ question: "What is EduPulse?" });
