@@ -102,14 +102,14 @@
 - [ ] Handle keyring retrieval errors safely: create a key only when the credential is absent, and fail fast on other keyring errors.
 - [x] Compile and package the SQLCipher Tauri path successfully through the Windows GitHub Actions runner.
 - [ ] Run native Windows end-to-end checks: first-launch key creation, encrypted save/load, reopen existing database, and keyring failure handling.
-- [ ] Produce a downloadable Windows desktop artifact through the existing GitHub Actions Tauri workflow and document unsigned-versus-signed release status.
+- [x] Produce a downloadable Windows desktop artifact through the existing GitHub Actions Tauri workflow and document unsigned-versus-signed release status; corrected main run 32982342052 uploaded `EduPulse_1.0.0_x64-setup.exe`.
 - [x] Provide and validate the local Windows build instructions for the user-selected Option B path, including prerequisites, commands, installer location, and SmartScreen expectations; commands match the current package scripts, while native execution remains user-side.
 - [x] Document the local Windows Option B build prerequisites, copyable PowerShell commands, installer location, unsigned SmartScreen behavior, and first-run SQLCipher checks.
 - [x] Provide the user-selected Option B build guide; native execution and installer verification remain the user’s Windows-side step.
 - [x] Ensure the end-user Windows download is a self-contained EduPulse installer and clearly separate bundled app/runtime assets from developer-only build prerequisites; Tauri bundles the compiled app and offline WebView2 installer.
 - [x] Align Tauri product version with the Node package version so the generated installer filename and release metadata are consistent.
 - [x] Verify and document the remaining Windows prerequisite boundary: WebView2 is bundled in offlineInstaller mode, while Git, Node.js, pnpm, Rust, and source cloning remain developer-only requirements.
-- [ ] Complete the Windows native Tauri build on GitHub Actions; two manual runs reached native compilation but were cancelled after prolonged no-progress, so no new installer artifact is claimed.
+- [x] Complete the Windows native Tauri build on GitHub Actions; corrected main run 32982342052 completed successfully and uploaded the installer.
 - [x] Add Rust dependency caching and a 30-minute Windows job timeout to make the native packaging workflow more predictable.
 - [x] Configure automatic Windows installer builds on manual dispatch, every main-branch push, and version tags, with downloadable artifact upload and tag release publishing.
 - [x] Fix the Windows workflow pnpm conflict so native SQLCipher validation can run.
