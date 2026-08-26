@@ -227,6 +227,9 @@ export default function EduPulseApp() {
   const createLearnerMutation = trpc.records.createLearner.useMutation();
   const recordPaymentMutation = trpc.records.recordPayment.useMutation();
   const currentStudent = data.students[0] ?? { id: "", name: "", nameAr: "لا يوجد طالب مسجل بعد", grade: "—", guardian: "—", phone: "—", level: "—", attendance: 0, subjects: [], status: "New" as const };
+  const learnerRecordInput = useMemo(() => ({ learnerId: currentStudent.id }), [currentStudent.id]);
+  const serverAttendanceQuery = trpc.records.attendance.useQuery(learnerRecordInput, { enabled: Boolean(authUser) && !desktopRuntime && (accountRole === "admin" || accountRole === "teacher") && currentStudent.id.startsWith("learner_"), retry: false });
+  const serverCefrQuery = trpc.records.cefr.useQuery(learnerRecordInput, { enabled: Boolean(authUser) && !desktopRuntime && (accountRole === "admin" || accountRole === "teacher") && currentStudent.id.startsWith("learner_"), retry: false });
   const selectedAssessment = data.assessments.find((assessment) => assessment.studentId === currentStudent.id) ?? data.assessments[0];
   const activeStudents = data.students.filter((student) => student.status === "Active").length;
   const balanceDue = data.payments.filter((payment) => payment.state === "Balance due").reduce((sum, payment) => sum + payment.amount, 0);
@@ -252,6 +255,19 @@ export default function EduPulseApp() {
     const serverStudents: Student[] = serverLearnersQuery.data.map((learner) => ({ id: learner.id, name: learner.name, nameAr: learner.nameAr, grade: learner.grade, guardian: "—", phone: learner.phone ?? "—", level: "—", attendance: 0, subjects: [], status: learner.status === "active" ? "Active" : learner.status === "archived" ? "Review" : "New" }));
     setData(current => ({ ...current, students: serverStudents }));
   }, [authUser, desktopRuntime, serverLearnersQuery.data, serverLearnersQuery.isSuccess]);
+
+  useEffect(() => {
+    if (!authUser || desktopRuntime || !serverAttendanceQuery.isSuccess) return;
+    const records = serverAttendanceQuery.data;
+    const attendance = records.length ? Math.round((records.filter(record => record.status === "present" || record.status === "late").length / records.length) * 100) : 0;
+    setData(current => ({ ...current, students: current.students.map(student => student.id === currentStudent.id ? { ...student, attendance } : student) }));
+  }, [authUser, currentStudent.id, desktopRuntime, serverAttendanceQuery.data, serverAttendanceQuery.isSuccess]);
+
+  useEffect(() => {
+    if (!authUser || desktopRuntime || !serverCefrQuery.isSuccess) return;
+    const assessments: CefrAssessment[] = serverCefrQuery.data.map(assessment => ({ id: assessment.id, studentId: assessment.learnerId, level: assessment.level, speaking: assessment.speaking, listening: assessment.listening, reading: assessment.reading, writing: assessment.writing, note: assessment.note ?? "", date: new Date(assessment.assessedAt).toISOString().slice(0, 10) }));
+    setData(current => ({ ...current, assessments }));
+  }, [authUser, desktopRuntime, serverCefrQuery.data, serverCefrQuery.isSuccess]);
 
   useEffect(() => {
     if (!authUser || desktopRuntime || !serverPaymentsQuery.isSuccess) return;
