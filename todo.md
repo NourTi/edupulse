@@ -272,3 +272,34 @@
 - [x] Add regression tests for visitor access, conversational closings, unsupported questions, citations, and source boundaries; 36 tests pass.
 - [x] Verify Arabic readability, visitor chat behavior, source grounding, type checks, tests, production build, and responsive mobile screenshot; live model/crawler calls remain intentionally outside automated tests.
 - [x] Save and deliver the visitor-agent and Arabic-readability fix checkpoint.
+
+## Public Agent Reliability and Platform Knowledge
+
+- [ ] Verify whether the user-facing Render deployment contains the latest conversational-intent fix and identify why “thank you” reaches the no-source fallback.
+- [ ] Broaden deterministic conversational handling for thanks, acknowledgements, short closings, and mixed Arabic/English variants.
+- [ ] Add approved public knowledge about EduPulse, its capabilities, and its creator so platform questions receive grounded answers with no invented personal claims.
+- [ ] Keep Google OAuth separate from Google web search and define an optional safe search provider path with explicit credentials, domain allowlisting, citations, and fallback behavior.
+- [ ] Add regression tests for platform/about questions, conversational variants, and public-source boundaries.
+- [ ] Validate local and deployed public-chat behavior, then save the assistant reliability checkpoint.
+
+## MCP and Search-Service Evaluation
+
+- [x] Inspect the provided MailFlat MCP page and Glama Python search catalog for relevant capabilities, maintenance signals, data handling, and deployment fit; findings are documented in `docs/mcp-search-evaluation.md`.
+- [x] Audit EduPulse’s configured connectors and current AI/Crawl4AI boundaries before enabling an external service; no matching connector was configured.
+- [x] Select only services that directly improve public-source discovery, approved ingestion, email workflows, or agent reliability; rejected MailFlat and the third-party Brave wrapper for production chat, and selected a constrained no-auth Wikipedia fallback.
+- [ ] Configure required connectors or credentials only after the user understands the purpose and confirms any mandatory setup.
+- [x] Implement and validate the selected integration, or document why it should not be integrated yet; added and tested the constrained no-auth Wikipedia fallback, while documenting why MailFlat and the third-party Brave wrapper are not production integrations.
+- [x] Save and deliver the MCP/search-service evaluation milestone.
+
+- [x] Evaluate the user-provided `mcp-brave-search` `brave_web_search` tool entry and compare its endpoint and trust signals with the official Brave Search MCP/API; rejected it for production because it is third-party and its remote endpoint/security details are not established.
+
+## Zero-Cost Search Constraint
+
+- [x] Find a genuinely free or keyless public-web retrieval option rather than a free MCP wrapper that still requires a paid Brave API key; selected the no-auth Wikipedia API for general factual questions.
+- [x] Verify that any selected option can be rate-limited, cited, and isolated from private school data before integrating it; requests are server-side, bounded, cited, and never used for private or institution-specific policy retrieval.
+
+## Public APIs Catalog Review
+
+- [x] Review the Public APIs authentication section and identify no-auth candidates relevant to public education information, language support, or source discovery; findings saved in `docs/mcp-search-evaluation.md`.
+- [x] Reject candidates that lack stable documentation, have unsuitable licensing, expose sensitive data, or cannot provide trustworthy citations; rejected MailFlat for production chat and the undocumented third-party Brave wrapper.
+- [x] Document the selected free API path and explain why approved EduPulse sources remain safer than a generic public API.

@@ -11,25 +11,49 @@ const protectedRecordTerms = [
   "ابني", "ابنتي", "بنتي", "درجات", "درجة", "الحضور", "سجل الطالب", "رصيد", "الرسوم",
 ];
 
+function normalizeIntentText(question: string) {
+  return question.toLowerCase().replace(/[!؟?.,،؛:]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function startsWithPhrase(normalized: string, phrase: string) {
+  return normalized === phrase || normalized.startsWith(`${phrase} `);
+}
+
 export type ConversationIntent = "greeting" | "thanks" | "farewell" | null;
 
 export function detectConversationIntent(question: string): ConversationIntent {
-  const normalized = question.toLowerCase().replace(/[!؟?.,،؛:]/g, " ").replace(/\s+/g, " ").trim();
+  const normalized = normalizeIntentText(question);
   const phrases = {
-    thanks: ["thank you", "thanks", "thank u", "شكرا", "شكرًا", "مشكور", "بارك الله فيك", "جزاك الله خيرا", "يعطيك الصحة"],
+    thanks: ["thank you", "thanks", "thank u", "thanks a lot", "thank you so much", "you helped me", "شكرا", "شكرًا", "شكرا لك", "شكرًا لك", "شكرا جزيلا", "مشكور", "بارك الله فيك", "جزاك الله خيرا", "يعطيك الصحة", "تمام شكرا", "حسنا شكرا"],
     greeting: ["hello", "hi", "hey", "good morning", "good evening", "مرحبا", "مرحبًا", "السلام عليكم", "صباح الخير", "مساء الخير", "أهلا", "أهلًا"],
     farewell: ["bye", "goodbye", "see you", "مع السلامة", "إلى اللقاء", "نراك لاحقا", "شكرا وداعا"],
   } as const;
-  for (const phrase of phrases.thanks) if (normalized === phrase || normalized.startsWith(`${phrase} `)) return "thanks";
-  for (const phrase of phrases.farewell) if (normalized === phrase || normalized.startsWith(`${phrase} `)) return "farewell";
-  for (const phrase of phrases.greeting) if (normalized === phrase || normalized.startsWith(`${phrase} `)) return "greeting";
+  for (const phrase of phrases.thanks) if (startsWithPhrase(normalized, phrase)) return "thanks";
+  for (const phrase of phrases.farewell) if (startsWithPhrase(normalized, phrase)) return "farewell";
+  for (const phrase of phrases.greeting) if (startsWithPhrase(normalized, phrase)) return "greeting";
+  return null;
+}
+
+export type PlatformIntent = "about" | "creator" | null;
+
+export function detectPlatformIntent(question: string): PlatformIntent {
+  const normalized = normalizeIntentText(question);
+  const creatorTerms = ["who created edupulse", "who is the creator", "who is the founder", "creator of edupulse", "founder of edupulse", "من أنشأ edupulse", "من أسس edupulse", "من مؤسس edupulse", "من هو المؤسس", "صاحب المنصة", "مطور المنصة"];
+  if (creatorTerms.some(term => normalized.includes(term))) return "creator";
+  const aboutTerms = ["what is edupulse", "tell me about edupulse", "about edupulse", "what does edupulse do", "منصة edupulse", "عن edupulse", "ما هي edupulse", "ما هي المنصة", "من أنت"];
+  if (aboutTerms.some(term => normalized.includes(term))) return "about";
   return null;
 }
 
 export function conversationReply(intent: Exclude<ConversationIntent, null>, isArabic: boolean) {
-  if (intent === "thanks") return isArabic ? "على الرحب والسعة. إذا احتجت أي معلومة عامة عن المؤسسة أو البرامج، أنا هنا لمساعدتك." : "You’re welcome. If you need general information about the institution or its programmes, I’m here to help.";
+  if (intent === "thanks") return isArabic ? "على الرحب والسعة. هل تحتاج إلى شيء آخر؟" : "You’re welcome. Do you need anything else?";
   if (intent === "farewell") return isArabic ? "على الرحب والسعة. نتمنى لك يوماً موفقاً." : "You’re welcome. Have a great day.";
   return isArabic ? "مرحباً بك في EduPulse. اسألني عن البرامج، التسجيل، المواعيد، أو السياسات العامة المنشورة." : "Welcome to EduPulse. Ask me about published programmes, registration, schedules, or general policies.";
+}
+
+export function platformReply(intent: Exclude<PlatformIntent, null>, isArabic: boolean, ownerName: string) {
+  if (intent === "creator") return isArabic ? `EduPulse منصة لإدارة المدارس والمؤسسات التعليمية، أنشأها ${ownerName}. تجمع المنصة معلومات المتعلمين، التسجيل، الحضور، المدفوعات، التقييمات، ومتابعة عمل المربين في مساحة واحدة. [P1]` : `EduPulse is a school and education-management platform created by ${ownerName}. It brings learner information, registration, attendance, payments, assessments, and educator workflows into one workspace. [P1]`;
+  return isArabic ? `EduPulse منصة عربية أولاً لإدارة المدارس ومراكز التعليم. تساعد الإدارة والمربين على تنظيم بيانات المتعلمين، التسجيل، الحضور، المدفوعات، تقييمات CEFR، المتابعة، ومصادر السياسات المعتمدة، مع دعم مراحل التعليم الجزائرية. [P1]` : "EduPulse is an Arabic-first platform for schools and education centres. It helps teams organize learner records, registration, attendance, payments, CEFR assessments, educator follow-up, and approved policy knowledge, with support for Algeria’s education stages. [P1]";
 }
 
 export function containsProtectedRecordIntent(question: string) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertSafePublicUrl, chunkText, containsProtectedRecordIntent, conversationReply, detectConversationIntent, extractTextFromHtml, retrieveRelevantChunks, toSourceReferences } from "./policy";
+import { assertSafePublicUrl, chunkText, containsProtectedRecordIntent, conversationReply, detectConversationIntent, detectPlatformIntent, extractTextFromHtml, platformReply, retrieveRelevantChunks, toSourceReferences } from "./policy";
 
 describe("knowledge policy", () => {
   it("detects individual-record questions before retrieval", () => {
@@ -16,6 +16,13 @@ describe("knowledge policy", () => {
     expect(detectConversationIntent("What are the opening hours?")).toBeNull();
     expect(conversationReply("thanks", false)).toContain("welcome");
     expect(conversationReply("thanks", true)).toContain("الرحب");
+  });
+
+  it("recognizes platform and creator questions as approved profile intents", () => {
+    expect(detectPlatformIntent("What is EduPulse?")).toBe("about");
+    expect(detectPlatformIntent("من مؤسس EduPulse؟")).toBe("creator");
+    expect(platformReply("creator", false, "Alex")).toContain("Alex");
+    expect(platformReply("about", true, "Alex")).toContain("منصة");
   });
 
   it("keeps source chunks and ranks relevant text", () => {

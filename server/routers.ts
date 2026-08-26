@@ -51,12 +51,14 @@ import { clearPasswordSession, clearPasswordSessionCookie, establishPasswordSess
 import { createOpaqueToken, hashOpaqueToken, hashPassword, normalizeEmail, verifyPassword } from "./auth/password";
 import { sendPasswordResetEmail } from "./email";
 import { getSessionCookieOptions } from "./_core/cookies";
+import { ENV } from "./_core/env";
 import { invokeLLM } from "./_core/llm";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { storagePut } from "./storage";
-import { assertSafePublicUrl, chunkText, containsProtectedRecordIntent, conversationReply, detectConversationIntent, extractTextFromHtml, retrieveRelevantChunks, toSourceReferences } from "./knowledge/policy";
+import { assertSafePublicUrl, chunkText, containsProtectedRecordIntent, conversationReply, detectConversationIntent, detectPlatformIntent, extractTextFromHtml, platformReply, retrieveRelevantChunks, toSourceReferences } from "./knowledge/policy";
 import { createCrawl4AIJob } from "./knowledge/crawl4aiGateway";
+import { fetchWikipediaAnswer, isLikelyGeneralKnowledgeQuestion } from "./knowledge/freeSources";
 
 const schoolRoles = ["owner", "admin", "registrar", "finance_admin", "teacher", "counsellor", "student", "guardian"] as const;
 type SchoolRole = (typeof schoolRoles)[number];
@@ -354,8 +356,18 @@ export const appRouter = router({
       const isArabic = /[\u0600-\u06FF]/.test(input.question);
       const conversationIntent = detectConversationIntent(input.question);
       if (conversationIntent) return { answer: conversationReply(conversationIntent, isArabic), sources: [] as Array<{ id: string; title: string; url: string | null }> };
+      const platformIntent = detectPlatformIntent(input.question);
+      if (platformIntent) return { answer: platformReply(platformIntent, isArabic, ENV.ownerName), sources: [{ id: "platform_profile", title: "EduPulse platform profile", url: null }] };
       if (containsProtectedRecordIntent(input.question)) return { answer: publicRecordRedirect(isArabic), sources: [] as Array<{ id: string; title: string; url: string | null }> };
       const matches = retrieveRelevantChunks(input.question, await getPublicKnowledgeChunks(input.institutionId));
+      if (!matches.length && isLikelyGeneralKnowledgeQuestion(input.question)) {
+        try {
+          const freeSource = await fetchWikipediaAnswer(input.question, isArabic);
+          if (freeSource) return { answer: isArabic ? `${freeSource.extract} [W1]` : `${freeSource.extract} [W1]`, sources: [{ id: "wikipedia", title: freeSource.title, url: freeSource.url }] };
+        } catch {
+          // Keep the approved-source response below when the public free source is unavailable.
+        }
+      }
       if (!matches.length) return { answer: isArabic ? "لا أجد جوابًا معتمدًا في مصادر المؤسسة المنشورة. يمكن لفريق الإدارة إضافة المصدر المناسب أو مساعدتك عبر القناة المعتمدة." : "I cannot find an approved answer in the institution’s published sources. An administrator can add the relevant source or help through the approved contact channel.", sources: [] as Array<{ id: string; title: string; url: string | null }> };
       const excerpts = matches.map((match, index) => `[S${index + 1}] ${match.title}\n${match.content}`).join("\n\n");
       try {

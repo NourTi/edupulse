@@ -34,6 +34,16 @@ describe("knowledge router boundaries", () => {
     expect(result.answer).toContain("welcome");
   });
 
+  it("answers platform questions for visitors with an approved profile citation", async () => {
+    const caller = appRouter.createCaller(context(null));
+    const about = await caller.knowledge.askPublic({ question: "What is EduPulse?" });
+    const creator = await caller.knowledge.askPublic({ question: "Who created EduPulse?" });
+    expect(about.answer).toContain("Arabic-first");
+    expect(about.sources[0]?.id).toBe("platform_profile");
+    expect(creator.answer).toContain("created by");
+    expect(creator.sources[0]?.id).toBe("platform_profile");
+  });
+
   it("refuses individual student-record requests without querying a private record", async () => {
     const caller = appRouter.createCaller(context(null));
     const result = await caller.knowledge.askPublic({ question: "ما هي درجات ابني؟" });
