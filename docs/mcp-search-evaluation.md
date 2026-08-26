@@ -32,3 +32,5 @@ The [Public APIs authentication section](https://github.com/public-apis/public-a
 EduPulse now uses a constrained Wikipedia lookup for clearly general questions such as “What is …?”, “Who is …?”, and Arabic equivalents. It searches the language-appropriate Wikipedia API, returns a page summary and URL citation, and is attempted only after approved school sources fail. Institution-specific policy questions, private student questions, and unrestricted arbitrary prompts continue to use the approved-source fallback. This provides useful keyless general knowledge without pretending to be unrestricted Google search.
 
 [3]: https://github.com/public-apis/public-apis#authentication--authorization "Public APIs authentication and authorization catalog"
+
+The no-auth fallback is bounded with a per-process six-requests-per-minute bucket keyed by a truncated SHA-256 of the request IP, plus five-second timeouts for both the search and summary requests. This is an abuse-control layer, not a replacement for a distributed production rate limiter; a future always-on deployment should move the limit to the edge or shared store.

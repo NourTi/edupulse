@@ -303,3 +303,5 @@
 - [x] Review the Public APIs authentication section and identify no-auth candidates relevant to public education information, language support, or source discovery; findings saved in `docs/mcp-search-evaluation.md`.
 - [x] Reject candidates that lack stable documentation, have unsuitable licensing, expose sensitive data, or cannot provide trustworthy citations; rejected MailFlat for production chat and the undocumented third-party Brave wrapper.
 - [x] Document the selected free API path and explain why approved EduPulse sources remain safer than a generic public API.
+
+- [x] Add a lightweight per-process rate limit and timeout to the keyless public-source fallback so a public visitor cannot exhaust the external endpoint.

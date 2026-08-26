@@ -58,7 +58,7 @@ import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_
 import { storagePut } from "./storage";
 import { assertSafePublicUrl, chunkText, containsProtectedRecordIntent, conversationReply, detectConversationIntent, detectPlatformIntent, extractTextFromHtml, platformReply, retrieveRelevantChunks, toSourceReferences } from "./knowledge/policy";
 import { createCrawl4AIJob } from "./knowledge/crawl4aiGateway";
-import { fetchWikipediaAnswer, isLikelyGeneralKnowledgeQuestion } from "./knowledge/freeSources";
+import { canUseFreeSource, fetchWikipediaAnswer, isLikelyGeneralKnowledgeQuestion } from "./knowledge/freeSources";
 
 const schoolRoles = ["owner", "admin", "registrar", "finance_admin", "teacher", "counsellor", "student", "guardian"] as const;
 type SchoolRole = (typeof schoolRoles)[number];
@@ -352,7 +352,7 @@ export const appRouter = router({
       if (text.length < 120) throw new Error("The page did not provide enough readable public text.");
       return saveApprovedSource({ title: input.title, content: text, visibility: input.visibility, mimeType: "text/html", sourceUrl: url.toString(), kind: "webpage", userId: ctx.user.id, institutionId });
     }),
-    askPublic: publicProcedure.input(z.object({ question: z.string().trim().min(3).max(800), institutionId: z.string().max(64).optional() })).mutation(async ({ input }) => {
+    askPublic: publicProcedure.input(z.object({ question: z.string().trim().min(3).max(800), institutionId: z.string().max(64).optional() })).mutation(async ({ input, ctx }) => {
       const isArabic = /[\u0600-\u06FF]/.test(input.question);
       const conversationIntent = detectConversationIntent(input.question);
       if (conversationIntent) return { answer: conversationReply(conversationIntent, isArabic), sources: [] as Array<{ id: string; title: string; url: string | null }> };
@@ -360,7 +360,7 @@ export const appRouter = router({
       if (platformIntent) return { answer: platformReply(platformIntent, isArabic, ENV.ownerName), sources: [{ id: "platform_profile", title: "EduPulse platform profile", url: null }] };
       if (containsProtectedRecordIntent(input.question)) return { answer: publicRecordRedirect(isArabic), sources: [] as Array<{ id: string; title: string; url: string | null }> };
       const matches = retrieveRelevantChunks(input.question, await getPublicKnowledgeChunks(input.institutionId));
-      if (!matches.length && isLikelyGeneralKnowledgeQuestion(input.question)) {
+      if (!matches.length && isLikelyGeneralKnowledgeQuestion(input.question) && canUseFreeSource(ctx.req.ip)) {
         try {
           const freeSource = await fetchWikipediaAnswer(input.question, isArabic);
           if (freeSource) return { answer: isArabic ? `${freeSource.extract} [W1]` : `${freeSource.extract} [W1]`, sources: [{ id: "wikipedia", title: freeSource.title, url: freeSource.url }] };
