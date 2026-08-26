@@ -151,7 +151,13 @@
 - [ ] Configure Resend for password-reset delivery and add a secure recovery UI.
 - [ ] Verify the grounded RAG agent is installed, callable, citation-grounded, and privacy-bounded for parent/student questions.
 - [ ] Add and expose the requested scraping/search ingestion gateway with a documented Crawl4AI-compatible path and fallback behavior.
-- [ ] Improve Arabic welcome-page text contrast, weight, and readability across desktop and mobile.
+- [x] Improve Arabic welcome-page text contrast, weight, and readability across desktop and mobile; targeted hero styling and responsive visual checks are complete.
+- [x] Improve the original Arabic hero/welcome text styling directly with stronger contrast, weight, spacing, and desktop/mobile validation; added stronger weight, layered text shadow, readable panel backing, and responsive spacing.
+- [x] Add Arabic-first honeycomb hexagonal feature badges beneath the hero with EduPulse benefits, icons, and metrics.
+- [x] Add a Student Information System explanation section covering unified student, parent, educator, course, and lifecycle data.
+- [x] Add a welcome-page grounded AI assistant entry point with citation-safe policy answers and clear authentication/privacy boundaries.
+- [x] Connect welcome-page source discovery to the existing Crawl4AI-compatible gateway and document that scraped content must be approved/ingested before retrieval; the welcome CTA routes to the existing protected knowledge ingestion surface.
+- [x] Add a visible welcome-page source-discovery/admin ingestion entry point wired to the existing knowledge ingestion flow, with approval-before-retrieval messaging; the CTA opens protected administrator knowledge management or the access screen.
 - [x] Document that native Tauri installer compilation requires a Windows runner; do not claim an installer is present in this Linux environment.
 
 ## GitHub Source and Pages Packaging
