@@ -350,5 +350,5 @@
 - [x] Prevent unrelated model answers when retrieval is empty, weak, or mismatched; stopword-filtered retrieval and citation validation now reject generic or uncited model output.
 - [x] Evaluate the supplied Public APIs and MCP references for useful free patterns that can be implemented inside EduPulse for CRM, search, observability, and scalable agent operation; adopted structured actions, citation-first responses, explicit boundaries, deterministic fallbacks, rate limits, and safe observability.
 - [x] Add server-side agent observability with safe event metadata, intent/result categories, latency, source counts, and no raw private questions or credentials in logs.
-- [x] Add comprehensive regression tests for platform facts, creator facts, enrolment, privacy, thanks, unsupported questions, weak retrieval, citations, and tenant boundaries; the validated suite passes 44 tests.
+- [x] Add comprehensive regression tests for platform facts, creator facts, enrolment, privacy, thanks, unsupported questions, weak retrieval, citations, tenant boundaries, and privacy-safe observability; the validated suite passes 45 tests.
 - [ ] Validate local and deployed agent behavior, then deliver a qualified remediation report only after evidence is complete.
