@@ -310,3 +310,22 @@
 
 - [x] Save the user-provided Glama App Automation catalog as a durable EduPulse project reference in `docs/connector-catalog.md`.
 - [x] Preserve a review-first rule: evaluate each future connector for true free access, security, maintenance, permissions, and EduPulse fit before enabling it.
+
+## Connector Setup
+
+- [ ] Review the Public APIs repository as a reference for useful EduPulse integrations, without treating its entries as automatic dependencies.
+- [ ] Inspect existing Google Workspace and other relevant connector availability.
+- [ ] Define the minimum connector set: Google Sheets first, then only directly useful school operations connectors.
+- [ ] Enable Google Sheets only after confirming its account and permission requirements.
+- [ ] Document connector data boundaries and validate the project integration paths.
+- [ ] Save and deliver the connector setup milestone.
+
+## Floating Corner AI Assistant
+
+- [x] Audit the existing public chat host, landing layout, and reusable chat component before introducing a floating entry point.
+- [x] Build a persistent corner launcher with Arabic-first label, unread/welcome state, keyboard access, and mobile-safe positioning.
+- [x] Add an expandable pop-up panel with close/minimize behavior, suggested prompts, loading state, citations, and clear source boundaries.
+- [x] Connect the pop-up to the existing EduPulse public AI procedure, including conversational replies, platform profile answers, approved school knowledge, and the no-auth general-knowledge fallback.
+- [x] Add regression coverage for public assistant answer routing; launcher behavior is validated through type/build checks and responsive browser screenshots.
+- [x] Verify desktop/mobile appearance, RTL text flow, focus behavior, tests, and production build.
+- [x] Save and deliver the floating assistant milestone.
