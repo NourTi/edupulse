@@ -81,6 +81,8 @@
 - [x] Add invitation token issuance with seven-day expiry, invited-account activation, and membership activation.
 - [ ] Add password reset email delivery and recovery UI after an approved mail provider is selected.
 - [ ] Replace local demo student records with institution-scoped server records across registration, attendance, CEFR, payments, and reports.
+- [x] Connect authenticated web learner registration and payment forms to the institution-scoped server API while preserving desktop local-first mode.
+- [ ] Run an authenticated browser check for server learner registration and payment persistence on Render.
 - [ ] Complete the educator CRM layer: structured tasks, essay pipelines, behavior history, mentorship timelines, resource library, longitudinal language evolution, and client management.
 - [ ] Complete authenticated guardian and student portals with record-level student relationship checks.
 - [ ] Harden the Tauri Windows build with encrypted local credential storage and signed release artifacts.

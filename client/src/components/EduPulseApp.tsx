@@ -194,7 +194,8 @@ function buildReceiptMarkup(payment: Payment, student: Student | undefined, bran
 
 export default function EduPulseApp() {
   const { user: authUser, loading: authLoading, logout: authLogout } = useAuth();
-  const membershipsQuery = trpc.auth.myMemberships.useQuery(undefined, { enabled: Boolean(authUser), retry: false });
+  const desktopRuntime = isDesktopRuntime();
+  const membershipsQuery = trpc.auth.myMemberships.useQuery(undefined, { enabled: Boolean(authUser) && !desktopRuntime, retry: false });
   const [screen, setScreen] = useState<Screen>("landing");
   const [language, setLanguage] = useState<Language>("ar");
   const [role, setRole] = useState<Role>("admin");
@@ -221,8 +222,11 @@ export default function EduPulseApp() {
     if (membershipRole) return "admin";
     return authUser?.role === "admin" ? "admin" : pendingRole;
   }, [authUser?.role, membershipsQuery.data, pendingRole]);
-  const currentStudent = data.students[0];
-  const desktopRuntime = isDesktopRuntime();
+  const serverLearnersQuery = trpc.records.learners.useQuery(undefined, { enabled: Boolean(authUser) && !desktopRuntime && (accountRole === "admin" || accountRole === "teacher"), retry: false });
+  const serverPaymentsQuery = trpc.records.payments.useQuery(undefined, { enabled: Boolean(authUser) && !desktopRuntime && (accountRole === "admin"), retry: false });
+  const createLearnerMutation = trpc.records.createLearner.useMutation();
+  const recordPaymentMutation = trpc.records.recordPayment.useMutation();
+  const currentStudent = data.students[0] ?? { id: "", name: "", nameAr: "لا يوجد طالب مسجل بعد", grade: "—", guardian: "—", phone: "—", level: "—", attendance: 0, subjects: [], status: "New" as const };
   const selectedAssessment = data.assessments.find((assessment) => assessment.studentId === currentStudent.id) ?? data.assessments[0];
   const activeStudents = data.students.filter((student) => student.status === "Active").length;
   const balanceDue = data.payments.filter((payment) => payment.state === "Balance due").reduce((sum, payment) => sum + payment.amount, 0);
@@ -242,6 +246,22 @@ export default function EduPulseApp() {
     document.documentElement.lang = language;
     document.documentElement.dir = direction;
   }, [direction, language]);
+
+  useEffect(() => {
+    if (!authUser || desktopRuntime || !serverLearnersQuery.isSuccess) return;
+    const serverStudents: Student[] = serverLearnersQuery.data.map((learner) => ({ id: learner.id, name: learner.name, nameAr: learner.nameAr, grade: learner.grade, guardian: "—", phone: learner.phone ?? "—", level: "—", attendance: 0, subjects: [], status: learner.status === "active" ? "Active" : learner.status === "archived" ? "Review" : "New" }));
+    setData(current => ({ ...current, students: serverStudents }));
+  }, [authUser, desktopRuntime, serverLearnersQuery.data, serverLearnersQuery.isSuccess]);
+
+  useEffect(() => {
+    if (!authUser || desktopRuntime || !serverPaymentsQuery.isSuccess) return;
+    const serverPayments: Payment[] = serverPaymentsQuery.data.map((payment) => ({ id: payment.id, studentId: payment.learnerId, learner: data.students.find(student => student.id === payment.learnerId)?.nameAr ?? "—", amount: payment.amountMinor, method: payment.method, paidAt: new Date(payment.paidAt).toISOString().slice(0, 10), state: payment.status === "paid" ? "Paid" : "Balance due" }));
+    setData(current => ({ ...current, payments: serverPayments }));
+  }, [authUser, data.students, desktopRuntime, serverPaymentsQuery.data, serverPaymentsQuery.isSuccess]);
+
+  useEffect(() => {
+    if (data.students.length && !data.students.some(student => student.id === paymentForm.studentId)) setPaymentForm(current => ({ ...current, studentId: data.students[0].id }));
+  }, [data.students, paymentForm.studentId]);
 
   useEffect(() => {
     loadData().then(setData).catch(() => toast.error("تعذر فتح السجل المحلي.")).finally(() => setLoading(false));
@@ -298,11 +318,18 @@ export default function EduPulseApp() {
   const submitRegistration = async (event: FormEvent) => {
     event.preventDefault();
     if (!registration.nameAr.trim() || !registration.guardian.trim() || !registration.phone.trim()) return toast.error("يرجى إدخال اسم الطالب وولي الأمر والهاتف.");
-    const newStudent: Student = { id: `s-${Date.now()}`, name: registration.name || registration.nameAr, nameAr: registration.nameAr, grade: registration.grade, guardian: registration.guardian, phone: registration.phone, level: "A1", attendance: 0, subjects: registration.subjects, status: "New" };
-    await updateData({ ...data, students: [newStudent, ...data.students] });
+    if (authUser && !desktopRuntime && accountRole === "admin") {
+      const created = await createLearnerMutation.mutateAsync({ name: registration.name || registration.nameAr, nameAr: registration.nameAr, grade: registration.grade, phone: registration.phone, status: "new" });
+      const serverStudent: Student = { id: created.id, name: created.name, nameAr: created.nameAr, grade: created.grade, guardian: registration.guardian, phone: created.phone ?? registration.phone, level: "A1", attendance: 0, subjects: registration.subjects, status: "New" };
+      setData(current => ({ ...current, students: [serverStudent, ...current.students] }));
+      await serverLearnersQuery.refetch();
+    } else {
+      const newStudent: Student = { id: `s-${Date.now()}`, name: registration.name || registration.nameAr, nameAr: registration.nameAr, grade: registration.grade, guardian: registration.guardian, phone: registration.phone, level: "A1", attendance: 0, subjects: registration.subjects, status: "New" };
+      await updateData({ ...data, students: [newStudent, ...data.students] });
+    }
     setRegistration({ nameAr: "", name: "", guardian: "", phone: "", grade: "Year 7", subjects: ["arabic", "english", "mathematics"] });
     setRegistrationOpen(false);
-    toast.success("تم تسجيل الطالب في السجل المحلي.");
+    toast.success(authUser && !desktopRuntime && accountRole === "admin" ? "تم تسجيل الطالب في قاعدة المؤسسة." : "تم تسجيل الطالب في السجل المحلي.");
   };
 
   const printArabicReceipt = (payment: Payment) => {
@@ -344,9 +371,15 @@ export default function EduPulseApp() {
     if (!amount || amount <= 0) return toast.error("أدخل مبلغًا صحيحًا.");
     const student = data.students.find((item) => item.id === paymentForm.studentId);
     if (!student) return toast.error("اختر طالبًا.");
-    const payment: Payment = { id: `p-${Date.now()}`, studentId: student.id, learner: student.nameAr, amount, method: paymentForm.method, paidAt: new Date().toISOString().slice(0, 10), state: "Paid" };
-    await updateData({ ...data, payments: [payment, ...data.payments] });
-    setPaymentForm({ studentId: student.id, amount: "", method: "Cash" }); setPaymentOpen(false); toast.success("تم تسجيل الدفعة محليًا.");
+    if (authUser && !desktopRuntime && accountRole === "admin") {
+      await recordPaymentMutation.mutateAsync({ learnerId: student.id, amountMinor: amount, currency: "DZD", method: paymentForm.method, status: "paid", paidAt: new Date() });
+      toast.success("تم تسجيل الدفعة في قاعدة المؤسسة.");
+    } else {
+      const payment: Payment = { id: `p-${Date.now()}`, studentId: student.id, learner: student.nameAr, amount, method: paymentForm.method, paidAt: new Date().toISOString().slice(0, 10), state: "Paid" };
+      await updateData({ ...data, payments: [payment, ...data.payments] });
+      toast.success("تم تسجيل الدفعة محليًا.");
+    }
+    setPaymentForm({ studentId: student.id, amount: "", method: "Cash" }); setPaymentOpen(false);
   };
 
   const saveGuardianMessage = async () => {
