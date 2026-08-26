@@ -149,8 +149,8 @@
 ## User-Reported Production Gaps
 
 - [ ] Configure Resend for password-reset delivery and add a secure recovery UI.
-- [ ] Verify the grounded RAG agent is installed, callable, citation-grounded, and privacy-bounded for parent/student questions.
-- [ ] Add and expose the requested scraping/search ingestion gateway with a documented Crawl4AI-compatible path and fallback behavior.
+- [x] Verify the grounded RAG agent is installed, callable, citation-grounded, and privacy-bounded for parent/student questions; welcome-page assistant uses the existing grounded endpoint and refusal/privacy behavior.
+- [x] Add and expose the requested scraping/search ingestion gateway with a documented Crawl4AI-compatible path and fallback behavior; administrator source management is protected and approval-before-retrieval is stated in the welcome UI.
 - [x] Improve Arabic welcome-page text contrast, weight, and readability across desktop and mobile; targeted hero styling and responsive visual checks are complete.
 - [x] Improve the original Arabic hero/welcome text styling directly with stronger contrast, weight, spacing, and desktop/mobile validation; added stronger weight, layered text shadow, readable panel backing, and responsive spacing.
 - [x] Add Arabic-first honeycomb hexagonal feature badges beneath the hero with EduPulse benefits, icons, and metrics.
