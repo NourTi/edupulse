@@ -89,6 +89,28 @@ export async function checkDatabaseHealth() {
   }
 }
 
+export async function checkMigrationHealth() {
+  const db = await getDb();
+  if (!db) return { configured: false, reachable: false, migrationsTable: "unknown" } as const;
+  try {
+    await db.execute(sql`select 1 from __drizzle_migrations limit 1`);
+    return { configured: true, reachable: true, migrationsTable: "present" } as const;
+  } catch (error) {
+    const code = databaseErrorCode(error);
+    if (code.toLowerCase().includes("table") || code.toLowerCase().includes("exist")) {
+      return { configured: true, reachable: true, migrationsTable: "missing" } as const;
+    }
+    try {
+      await db.execute(sql`select 1`);
+      console.warn(`[Database] Migration health check failed while database remained reachable (${code}).`);
+      return { configured: true, reachable: true, migrationsTable: "unknown" } as const;
+    } catch {
+      console.warn(`[Database] Migration health check failed (${code}).`);
+      return { configured: true, reachable: false, migrationsTable: "error" } as const;
+    }
+  }
+}
+
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("OAuth user openId is required for upsert");
   const db = await getDb();

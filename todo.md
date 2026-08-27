@@ -675,3 +675,10 @@
 
 - [x] Verify the private GitHub `main` branch resolves to full commit `757541470480de6e0053918c078e69c2d5cff6c4` after synchronization.
 - [x] Deploy GitHub `main` commit `7575414` on Render and rerun the live health check; migration completeness remains a separate pending check.
+
+## Migration Health Diagnostic Milestone
+
+- [x] Add a non-secret `/api/health/migrations` endpoint separate from basic database connectivity.
+- [x] Report database reachability independently from migration-table presence so migration errors are not misclassified as connection failures.
+- [x] Verify locally that the endpoint returns `reachable: true` with migration readiness unresolved, without exposing database details.
+- [ ] Deploy this diagnostic update to Render and use it to confirm whether the migration table is present.

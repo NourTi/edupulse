@@ -8,7 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { runStartupMigration, shouldRunStartupMigration } from "./startup";
-import { checkDatabaseHealth } from "../db";
+import { checkDatabaseHealth, checkMigrationHealth } from "../db";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -52,6 +52,11 @@ async function startServer() {
   app.get("/api/health/database", async (_req, res) => {
     const health = await checkDatabaseHealth();
     res.status(health.reachable ? 200 : 503).json({ service: "database", ...health });
+  });
+  app.get("/api/health/migrations", async (_req, res) => {
+    const health = await checkMigrationHealth();
+    const ready = health.reachable && health.migrationsTable === "present";
+    res.status(ready ? 200 : 503).json({ service: "migrations", ...health });
   });
   if (process.env.OAUTH_SERVER_URL?.trim()) {
     const { registerOAuthRoutes } = await import("./oauth");
