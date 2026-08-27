@@ -69,6 +69,7 @@ import { loadDesktopWorkspace, saveDesktopWorkspace } from "@/lib/desktopRecords
 import { buildWeeklyProgressMessage } from "@/lib/weeklyProgress";
 import MedusaCommercePanel from "./MedusaCommercePanel";
 import { StudentSupportEvaluationPanel } from "./StudentSupportEvaluationPanel";
+import { InstitutionTeamPanel } from "./InstitutionTeamPanel";
 
 type Screen = "landing" | "access" | "workspace";
 type Role = "admin" | "finance_admin" | "registrar" | "teacher" | "counsellor" | "student" | "guardian";
@@ -257,6 +258,9 @@ export default function EduPulseApp() {
     if (membershipRole === "admin" || membershipRole === "owner") return "admin";
     return authUser?.role === "admin" ? "admin" : pendingRole;
   }, [authUser?.role, membershipsQuery.data, pendingRole]);
+  useEffect(() => {
+    if (authUser && (desktopRuntime || membershipsQuery.isSuccess)) { setRole(accountRole); setActiveView("overview"); }
+  }, [accountRole, authUser, desktopRuntime, membershipsQuery.isSuccess]);
   const serverLearnersQuery = trpc.records.learners.useQuery(undefined, { enabled: Boolean(authUser) && !desktopRuntime && (["admin", "registrar", "teacher", "counsellor"].includes(accountRole)), retry: false });
   const serverPaymentsQuery = trpc.records.payments.useQuery(undefined, { enabled: Boolean(authUser) && !desktopRuntime && (["admin", "finance_admin"].includes(accountRole)), retry: false });
   const createLearnerMutation = trpc.records.createLearner.useMutation();
@@ -378,7 +382,7 @@ export default function EduPulseApp() {
   const submitRegistration = async (event: FormEvent) => {
     event.preventDefault();
     if (!registration.nameAr.trim() || !registration.guardian.trim() || !registration.phone.trim()) return toast.error("يرجى إدخال اسم الطالب وولي الأمر والهاتف.");
-    if (authUser && !desktopRuntime && accountRole === "admin") {
+    if (authUser && !desktopRuntime && (accountRole === "admin" || accountRole === "registrar")) {
       const created = await createLearnerMutation.mutateAsync({ name: registration.name || registration.nameAr, nameAr: registration.nameAr, grade: registration.grade, phone: registration.phone, status: "new" });
       const serverStudent: Student = { id: created.id, name: created.name, nameAr: created.nameAr, grade: created.grade, guardian: registration.guardian, phone: created.phone ?? registration.phone, level: "A1", attendance: 0, subjects: registration.subjects, status: "New" };
       setData(current => ({ ...current, students: [serverStudent, ...current.students] }));
@@ -389,7 +393,7 @@ export default function EduPulseApp() {
     }
     setRegistration({ nameAr: "", name: "", guardian: "", phone: "", grade: "primary", subjects: ["arabic", "english", "mathematics"] });
     setRegistrationOpen(false);
-    toast.success(authUser && !desktopRuntime && accountRole === "admin" ? "تم تسجيل الطالب في قاعدة المؤسسة." : "تم تسجيل الطالب في السجل المحلي.");
+    toast.success(authUser && !desktopRuntime && (accountRole === "admin" || accountRole === "registrar") ? "تم تسجيل الطالب في قاعدة المؤسسة." : "تم تسجيل الطالب في السجل المحلي.");
   };
 
   const printArabicReceipt = (payment: Payment) => {
@@ -431,7 +435,7 @@ export default function EduPulseApp() {
     if (!amount || amount <= 0) return toast.error("أدخل مبلغًا صحيحًا.");
     const student = data.students.find((item) => item.id === paymentForm.studentId);
     if (!student) return toast.error("اختر طالبًا.");
-    if (authUser && !desktopRuntime && accountRole === "admin") {
+    if (authUser && !desktopRuntime && (accountRole === "admin" || accountRole === "finance_admin")) {
       await recordPaymentMutation.mutateAsync({ learnerId: student.id, amountMinor: amount, currency: "DZD", method: paymentForm.method, status: "paid", paidAt: new Date() });
       toast.success("تم تسجيل الدفعة في قاعدة المؤسسة.");
     } else {
@@ -485,6 +489,7 @@ export default function EduPulseApp() {
     { id: "support-evaluation", label: "تقييم الدعم التعليمي", icon: BrainCircuit, roles: ["admin", "teacher", "counsellor"] },
     { id: "search", label: "بحث في السجل", icon: Search, roles: ["admin", "teacher", "student"] },
     { id: "knowledge", label: "مصادر المؤسسة", icon: BookOpen, roles: ["admin"] },
+    { id: "team", label: "فريق المؤسسة", icon: ShieldCheck, roles: ["admin"] },
     { id: "ask", label: "اسأل المؤسسة", icon: MessageCircleQuestion, roles: ["admin", "teacher", "student"] },
     { id: "crm", label: "نظام المعلم", icon: ClipboardCheck, roles: ["admin", "teacher", "counsellor"] },
     { id: "portal", label: role === "guardian" ? "بوابة ولي الأمر" : "بوابة الطالب", icon: UserRoundCheck, roles: ["student", "guardian"] },
@@ -546,10 +551,11 @@ export default function EduPulseApp() {
   }
 
   const visibleNav = navItems.filter((item) => item.roles.includes(role));
-  const navigate = (id: string) => { if (id === "search") { setSearchOpen(true); setMobileMenu(false); return; } const destination = navItems.find(item => item.id === id); if (!destination || !destination.roles.includes(role)) { toast.error(isArabic ? "لا تملك صلاحية فتح هذه الوحدة." : "You do not have permission to open this module."); return; } setActiveView(id); setMobileMenu(false); };
-  const dashboardTitle = ({ overview: "صباح واضح.", registration: "تسجيل طالب جديد.", learners: "سجل الطلاب.", subjects: "مكتبة المواد الدراسية.", attendance: "حضور اليوم.", cefr: "تقدم اللغة الإنجليزية.", guardians: "تواصل إنساني واضح.", payments: "مدفوعات وإيصالات.", commerce: "التجارة والخدمات.", reports: "تقارير التقدم.", knowledge: "دليل المؤسسة.", ask: "اسأل المؤسسة.", crm: "نظام المعلم.", portal: "بوابة الطالب." } as Record<string, string>)[activeView] ?? "EduPulse";
+  const navigate = (id: string) => { const destination = navItems.find(item => item.id === id); if (!destination || !destination.roles.includes(role)) { toast.error(isArabic ? "لا تملك صلاحية فتح هذه الوحدة." : "You do not have permission to open this module."); return; } if (id === "search") { setSearchOpen(true); setMobileMenu(false); return; } setActiveView(id); setMobileMenu(false); };
+  const dashboardTitle = ({ overview: "صباح واضح.", registration: "تسجيل طالب جديد.", learners: "سجل الطلاب.", subjects: "مكتبة المواد الدراسية.", attendance: "حضور اليوم.", cefr: "تقدم اللغة الإنجليزية.", guardians: "تواصل إنساني واضح.", payments: "مدفوعات وإيصالات.", commerce: "التجارة والخدمات.", reports: "تقارير التقدم.", knowledge: "دليل المؤسسة.", team: "فريق المؤسسة.", ask: "اسأل المؤسسة.", crm: "نظام المعلم.", portal: "بوابة الطالب." } as Record<string, string>)[activeView] ?? "EduPulse";
 
   const renderView = () => {
+    if (activeView === "team") return <><SectionHeader eyebrow="Institution administration" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">فريق بصلاحيات واضحة.</em></>} copy="أنشئ دعوات المستخدمين، وراجع حالة كل عضوية، واحتفظ بحدود المؤسسة واضحة." /><InstitutionTeamPanel isArabic={isArabic} institutionId={membershipsQuery.data?.[0]?.institution.id} /></>;
     if (activeView === "crm") return <EducatorCRMPanel isArabic={isArabic} desktopRuntime={desktopRuntime} />;
     if (activeView === "portal") return role === "guardian" ? <GuardianPortalPanel isArabic={isArabic} /> : <StudentPortalPanel isArabic={isArabic} />;
     if (activeView === "support-evaluation") return <><SectionHeader eyebrow="Evidence-based teacher support" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">فهم التقدم قبل اتخاذ القرار.</em></>} copy="يعرض هذا التقييم إشارات تعليمية قابلة للمراجعة، ولا يشخّص حالة نفسية أو طبية." /><StudentSupportEvaluationPanel isArabic={isArabic} /></>;
@@ -572,7 +578,7 @@ export default function EduPulseApp() {
 
     if (activeView === "reports") return <><SectionHeader eyebrow="Approved progress report" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">جهّز نسخة واضحة للطالب وولي الأمر.</em></>} copy="يمكن للمعلم أو المدير طباعة تقرير التقدم بعد مراجعة الدليل. لا ينشئ النظام نتيجة أكاديمية تلقائية." action={<button onClick={printProgressReport} className="liquid-glass rounded-full px-5 py-3 text-sm"><FileText className="ml-2 inline h-4 w-4" />طباعة / حفظ PDF</button>} /><div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]"><article className="surface-panel rounded-2xl p-6"><p className="text-display text-4xl">{currentStudent.nameAr}</p><p className="mt-2 text-sm text-white/55">{currentStudent.grade} · {currentStudent.guardian}</p><div className="my-8 border-t border-white/10" /><p className="text-xs uppercase tracking-[0.15em] text-white/45">الحضور</p><p className="text-display mt-3 text-5xl">{currentStudent.attendance}%</p><p className="mt-5 text-xs text-white/45">مواد مسجلة</p><div className="mt-3 flex flex-wrap gap-2">{currentStudent.subjects.slice(0, 6).map((id) => <StatusPill key={id}>{subjectName(id, "ar")}</StatusPill>)}</div></article><article className="surface-panel rounded-2xl p-6"><div className="flex items-center justify-between"><div><p className="text-display text-3xl">تقدم اللغة الإنجليزية</p><p className="mt-1 text-xs text-white/45">تقييم معتمد في {selectedAssessment.date}</p></div><p className="text-display text-5xl">{selectedAssessment.level}</p></div><div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">{[["التحدث", selectedAssessment.speaking], ["الاستماع", selectedAssessment.listening], ["القراءة", selectedAssessment.reading], ["الكتابة", selectedAssessment.writing]].map(([label, value]) => <div key={String(label)} className="rounded-xl border border-white/10 p-4"><p className="text-xs text-white/45">{label}</p><p className="text-display mt-4 text-3xl">{value}%</p></div>)}</div><div className="mt-5 rounded-xl bg-white/5 p-5 text-sm leading-7 text-white/70">{selectedAssessment.note}</div></article></div></>;
 
-    if (activeView === "knowledge") return <KnowledgeAdministration />;
+    if (activeView === "knowledge") return <KnowledgeAdministration isAuthorized={accountRole === "admin"} />;
     if (activeView === "ask") return <PublicKnowledgeAgent />;
 
     return null;

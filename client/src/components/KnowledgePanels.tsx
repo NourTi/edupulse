@@ -16,15 +16,15 @@ export function PublicKnowledgeAgent() {
   return <ParentPolicyChat />;
 }
 
-export function KnowledgeAdministration() {
-  const { user, isAuthenticated, loading } = useAuth();
+export function KnowledgeAdministration({ isAuthorized }: { isAuthorized?: boolean } = {}) {
+  const { isAuthenticated, loading } = useAuth();
   const utils = trpc.useUtils();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [visibility, setVisibility] = useState<"public" | "staff">("public");
   const [webTitle, setWebTitle] = useState("");
   const [webUrl, setWebUrl] = useState("");
-  const canManage = isAuthenticated && user?.role === "admin";
+  const canManage = isAuthenticated && Boolean(isAuthorized);
   const sources = trpc.knowledge.listSources.useQuery(undefined, { enabled: canManage });
   const ingestText = trpc.knowledge.ingestText.useMutation({ onSuccess: () => { toast.success("تمت فهرسة المصدر المعتمد."); setTitle(""); setContent(""); utils.knowledge.listSources.invalidate(); }, onError: error => toast.error(error.message || "تعذر حفظ المصدر.") });
   const ingestUrl = trpc.knowledge.ingestUrl.useMutation({ onSuccess: () => { toast.success("تم استيراد الصفحة وفهرستها."); setWebTitle(""); setWebUrl(""); utils.knowledge.listSources.invalidate(); }, onError: error => toast.error(error.message || "تعذر استيراد الصفحة.") });
