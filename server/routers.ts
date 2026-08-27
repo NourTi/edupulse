@@ -425,7 +425,7 @@ export const appRouter = router({
       await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "teacher", "counsellor"]);
       return listEducatorRecords(institutionId, input?.category);
     }),
-    createEducatorRecord: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), learnerId: z.string().max(64).optional(), category: z.enum(["essay", "behavior", "mentorship", "resource", "language_evolution", "client"]), title: z.string().trim().min(2).max(255), summary: z.string().trim().min(2).max(8000), stage: z.string().trim().max(80).optional(), score: z.number().int().min(0).max(100).optional() })).mutation(async ({ ctx, input }) => {
+    createEducatorRecord: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), learnerId: z.string().max(64).optional(), category: z.enum(["essay", "behavior", "mentorship", "resource", "language_evolution", "client", "project", "achievement", "intellectual_skill", "supervision"]), title: z.string().trim().min(2).max(255), summary: z.string().trim().min(2).max(8000), stage: z.string().trim().max(80).optional(), score: z.number().int().min(0).max(100).optional() })).mutation(async ({ ctx, input }) => {
       const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
       await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "teacher", "counsellor"]);
       if (input.learnerId && !(await getLearner(institutionId, input.learnerId))) throw new TRPCError({ code: "NOT_FOUND", message: "Learner not found." });

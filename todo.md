@@ -596,3 +596,20 @@
 - [x] Add focused tests and responsive browser validation for the new dashboard, controls, and education taxonomy.
 - [x] Extend the vivid white control system to knowledge administration and school-brand settings so the correction applies beyond the main registration and commerce panels.
 - [x] Re-run TypeScript, the full 60-test suite, and the production build after the global control-style extension.
+
+## Teacher Stage Filters and University Educator Workspace
+
+- [x] Add Algerian education-stage filtering and sorting to the teacher evaluation dashboard.
+- [x] Add university educator tracking for projects, research milestones, learner achievements, intellectual-skill evidence, supervision notes, and follow-up actions.
+- [x] Keep intellectual-skill indicators evidence-based and non-diagnostic; require authorized staff review.
+- [x] Add tests and responsive browser validation for stage filters and university tracking.
+
+## Teacher Stage Filters and University Educator Workspace Milestone
+
+- [x] Add Algerian-stage filtering and name/stage sorting to the teacher evaluation learner selector.
+- [x] Display the correct Arabic and English stage labels from the shared Algeria taxonomy.
+- [x] Extend educator CRM records with project/research, learner achievement, intellectual-skill evidence, and university-supervision categories.
+- [x] Add stage/status options and non-diagnostic guidance for the new university educator modules.
+- [x] Keep the new records institution-scoped, role-gated, auditable, and compatible with existing CRM editing/archive flows.
+- [x] Apply the vivid control system to the educator CRM forms and filters.
+- [x] Apply and validate the schema migration; TypeScript and 14 focused CRM/taxonomy tests pass.

@@ -1,0 +1,1 @@
+ALTER TABLE `educatorRecords` MODIFY COLUMN `category` enum('essay','behavior','mentorship','resource','language_evolution','client','project','achievement','intellectual_skill','supervision') NOT NULL;

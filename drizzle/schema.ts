@@ -285,7 +285,7 @@ export const educatorRecords = mysqlTable("educatorRecords", {
   id: varchar("id", { length: 64 }).primaryKey(),
   institutionId: varchar("institutionId", { length: 64 }).notNull(),
   learnerId: varchar("learnerId", { length: 64 }),
-  category: mysqlEnum("category", ["essay", "behavior", "mentorship", "resource", "language_evolution", "client"]).notNull(),
+  category: mysqlEnum("category", ["essay", "behavior", "mentorship", "resource", "language_evolution", "client", "project", "achievement", "intellectual_skill", "supervision"]).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   summary: text("summary").notNull(),
   stage: varchar("stage", { length: 80 }),
