@@ -231,6 +231,40 @@ export type AttendanceRecord = typeof attendanceRecords.$inferSelect;
 export type CefrAssessment = typeof cefrAssessments.$inferSelect;
 export type PaymentRecord = typeof paymentRecords.$inferSelect;
 
+export const commerceProducts = mysqlTable("commerceProducts", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  institutionId: varchar("institutionId", { length: 64 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  titleAr: varchar("titleAr", { length: 255 }).notNull(),
+  description: text("description"),
+  amountMinor: int("amountMinor").notNull(),
+  currency: varchar("currency", { length: 8 }).notNull().default("DZD"),
+  kind: mysqlEnum("kind", ["fee", "course", "service", "subscription"]).default("fee").notNull(),
+  status: mysqlEnum("status", ["draft", "active", "archived"]).default("active").notNull(),
+  createdById: int("createdById").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({ institutionIdx: index("commerce_products_institution_idx").on(table.institutionId), statusIdx: index("commerce_products_status_idx").on(table.institutionId, table.status) }));
+
+export const commerceInvoices = mysqlTable("commerceInvoices", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  institutionId: varchar("institutionId", { length: 64 }).notNull(),
+  learnerId: varchar("learnerId", { length: 64 }).notNull(),
+  productId: varchar("productId", { length: 64 }).notNull(),
+  invoiceNumber: varchar("invoiceNumber", { length: 80 }).notNull(),
+  amountMinor: int("amountMinor").notNull(),
+  discountMinor: int("discountMinor").default(0).notNull(),
+  currency: varchar("currency", { length: 8 }).notNull().default("DZD"),
+  status: mysqlEnum("status", ["draft", "issued", "partially_paid", "paid", "void", "refunded"]).default("issued").notNull(),
+  dueAt: timestamp("dueAt"),
+  createdById: int("createdById").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({ institutionIdx: index("commerce_invoices_institution_idx").on(table.institutionId), learnerIdx: index("commerce_invoices_learner_idx").on(table.learnerId), productIdx: index("commerce_invoices_product_idx").on(table.productId), numberIdx: uniqueIndex("commerce_invoices_number_idx").on(table.institutionId, table.invoiceNumber) }));
+
+export type CommerceProduct = typeof commerceProducts.$inferSelect;
+export type CommerceInvoice = typeof commerceInvoices.$inferSelect;
+
 export const educatorTasks = mysqlTable("educatorTasks", {
   id: varchar("id", { length: 64 }).primaryKey(),
   institutionId: varchar("institutionId", { length: 64 }).notNull(),

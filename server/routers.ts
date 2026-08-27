@@ -36,6 +36,11 @@ import {
   listCefrAssessments,
   createPaymentRecord,
   listPaymentRecords,
+  createCommerceProduct,
+  listCommerceProducts,
+  createCommerceInvoice,
+  listCommerceInvoices,
+  updateCommerceInvoiceStatus,
   createEducatorTask,
   listEducatorTasks,
   completeEducatorTask,
@@ -192,6 +197,44 @@ export const appRouter = router({
     }),
   }),
   commerce: router({
+    products: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional() }).optional()).query(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input?.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "finance_admin", "registrar", "teacher", "guardian", "student"]);
+      return listCommerceProducts(institutionId);
+    }),
+    createProduct: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), title: z.string().trim().min(2).max(255), titleAr: z.string().trim().min(2).max(255), description: z.string().max(2000).optional(), amountMinor: z.number().int().nonnegative().max(2_000_000_000), currency: z.string().trim().length(3).default("DZD"), kind: z.enum(["fee", "course", "service", "subscription"]).default("fee") })).mutation(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "finance_admin"]);
+      const product = await createCommerceProduct({ id: `product_${nanoid(16)}`, institutionId, title: input.title, titleAr: input.titleAr, description: input.description, amountMinor: input.amountMinor, currency: input.currency, kind: input.kind, status: "active", createdById: ctx.user.id });
+      await writeAuditLog({ id: `audit_${nanoid(16)}`, institutionId, actorUserId: ctx.user.id, action: "commerce.product.created", entityType: "commerce_product", entityId: product?.id, metadata: JSON.stringify({ kind: input.kind, amountMinor: input.amountMinor }) });
+      return product;
+    }),
+    invoices: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), learnerId: z.string().max(64).optional() }).optional()).query(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input?.institutionId);
+      const membership = await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "finance_admin", "registrar", "teacher", "guardian", "student"]);
+      const learnerId = input?.learnerId;
+      if ((membership.role === "guardian" || membership.role === "student") && learnerId) throw new TRPCError({ code: "FORBIDDEN", message: "This account can only view its linked learner invoices." });
+      return listCommerceInvoices(institutionId, learnerId);
+    }),
+    createInvoice: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), learnerId: z.string().max(64), productId: z.string().max(64), dueAt: z.coerce.date().optional(), discountMinor: z.number().int().nonnegative().default(0) })).mutation(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "finance_admin", "registrar"]);
+      const products = await listCommerceProducts(institutionId);
+      const product = products.find(item => item.id === input.productId);
+      if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Commerce product not found." });
+      if (input.discountMinor > product.amountMinor) throw new TRPCError({ code: "BAD_REQUEST", message: "Discount cannot exceed the product amount." });
+      const invoice = await createCommerceInvoice({ id: `invoice_${nanoid(16)}`, institutionId, learnerId: input.learnerId, productId: input.productId, invoiceNumber: `EDU-${new Date().getFullYear()}-${nanoid(8).toUpperCase()}`, amountMinor: product.amountMinor, discountMinor: input.discountMinor, currency: product.currency, status: "issued", dueAt: input.dueAt, createdById: ctx.user.id });
+      await writeAuditLog({ id: `audit_${nanoid(16)}`, institutionId, actorUserId: ctx.user.id, action: "commerce.invoice.created", entityType: "commerce_invoice", entityId: invoice?.id, metadata: JSON.stringify({ learnerId: input.learnerId, productId: input.productId }) });
+      return invoice;
+    }),
+    updateInvoiceStatus: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), invoiceId: z.string().max(64), status: z.enum(["draft", "issued", "partially_paid", "paid", "void", "refunded"]) })).mutation(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "finance_admin"]);
+      const invoice = await updateCommerceInvoiceStatus(institutionId, input.invoiceId, input.status);
+      if (!invoice) throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found." });
+      await writeAuditLog({ id: `audit_${nanoid(16)}`, institutionId, actorUserId: ctx.user.id, action: "commerce.invoice.status_changed", entityType: "commerce_invoice", entityId: invoice.id, metadata: JSON.stringify({ status: input.status }) });
+      return invoice;
+    }),
     status: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional() }).optional()).query(async ({ ctx, input }) => {
       const institutionId = await defaultInstitutionId(ctx.user.id, input?.institutionId);
       await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "finance_admin"]);

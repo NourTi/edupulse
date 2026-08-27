@@ -16,6 +16,8 @@ import {
   attendanceRecords,
   cefrAssessments,
   paymentRecords,
+  commerceProducts,
+  commerceInvoices,
   educatorTasks,
   educatorRecords,
   passwordResetTokens,
@@ -450,6 +452,46 @@ export async function archiveEducatorRecord(institutionId: string, recordId: str
   const archivedAt = new Date();
   await db.update(educatorRecords).set({ archivedAt, updatedAt: archivedAt }).where(and(eq(educatorRecords.institutionId, institutionId), eq(educatorRecords.id, recordId), isNull(educatorRecords.archivedAt)));
   return { ...existing, archivedAt };
+}
+
+export async function createCommerceProduct(input: typeof commerceProducts.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  await db.insert(commerceProducts).values(input);
+  return db.select().from(commerceProducts).where(and(eq(commerceProducts.institutionId, input.institutionId), eq(commerceProducts.id, input.id))).limit(1).then(rows => rows[0]);
+}
+
+export async function listCommerceProducts(institutionId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(commerceProducts).where(and(eq(commerceProducts.institutionId, institutionId), eq(commerceProducts.status, "active"))).orderBy(desc(commerceProducts.createdAt));
+}
+
+export async function createCommerceInvoice(input: typeof commerceInvoices.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  const learner = await db.select({ id: learners.id }).from(learners).where(and(eq(learners.institutionId, input.institutionId), eq(learners.id, input.learnerId))).limit(1);
+  if (!learner[0]) throw new Error("Learner does not belong to this institution.");
+  const product = await db.select({ id: commerceProducts.id }).from(commerceProducts).where(and(eq(commerceProducts.institutionId, input.institutionId), eq(commerceProducts.id, input.productId))).limit(1);
+  if (!product[0]) throw new Error("Commerce product does not belong to this institution.");
+  await db.insert(commerceInvoices).values(input);
+  return db.select().from(commerceInvoices).where(and(eq(commerceInvoices.institutionId, input.institutionId), eq(commerceInvoices.id, input.id))).limit(1).then(rows => rows[0]);
+}
+
+export async function listCommerceInvoices(institutionId: string, learnerId?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const where = learnerId ? and(eq(commerceInvoices.institutionId, institutionId), eq(commerceInvoices.learnerId, learnerId)) : eq(commerceInvoices.institutionId, institutionId);
+  return db.select().from(commerceInvoices).where(where).orderBy(desc(commerceInvoices.createdAt));
+}
+
+export async function updateCommerceInvoiceStatus(institutionId: string, invoiceId: string, status: typeof commerceInvoices.$inferInsert["status"]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  const existing = await db.select().from(commerceInvoices).where(and(eq(commerceInvoices.institutionId, institutionId), eq(commerceInvoices.id, invoiceId))).limit(1).then(rows => rows[0]);
+  if (!existing) return undefined;
+  await db.update(commerceInvoices).set({ status, updatedAt: new Date() }).where(and(eq(commerceInvoices.institutionId, institutionId), eq(commerceInvoices.id, invoiceId)));
+  return db.select().from(commerceInvoices).where(and(eq(commerceInvoices.institutionId, institutionId), eq(commerceInvoices.id, invoiceId))).limit(1).then(rows => rows[0]);
 }
 
 export async function createPaymentRecord(input: typeof paymentRecords.$inferInsert) {

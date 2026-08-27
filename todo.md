@@ -488,3 +488,14 @@
 - [x] Add Medusa adapter regression tests; TypeScript, 53 unit tests, and the production build pass.
 - [ ] Provision or connect a PostgreSQL-backed Medusa service and configure its URL and publishable key.
 - [ ] Implement institution-scoped carts, orders, payment-provider callbacks, invoices, refunds, and optional subscription synchronization after the Medusa service is available.
+- [ ] Reframe the Medusa work as EduPulse-native local-first commerce based on the supplied open-source repository; do not block implementation on a deployed Medusa backend or external credentials.
+- [ ] Add local institution-scoped service catalog, fee plans, invoice states, discounts, refunds, and optional subscription records using the existing EduPulse data boundary.
+
+## Corrected EduPulse-Native Medusa Feature Milestone
+
+- [x] Reframe the Medusa work as EduPulse-native local-first commerce based on the supplied open-source repository; no deployed Medusa backend or external credentials are required for the implemented milestone.
+- [x] Add institution-scoped local commerce products for fees, courses, services, and subscription plans with Arabic and English names, currency, amount, and lifecycle status.
+- [x] Add institution-scoped invoice records with learner/product ownership checks, invoice numbers, due dates, discounts, and lifecycle states including paid, void, and refunded.
+- [x] Add protected procedures for commerce product creation/listing, invoice creation/listing, invoice status changes, audit logging, and role separation.
+- [x] Add an Arabic-first admin commerce panel that creates local fee products and explains the optional Medusa catalog boundary.
+- [ ] Add end-to-end invoice creation UI, payment allocation, discount rules, refund workflow, and optional subscription recurrence after the local product foundation is reviewed.
