@@ -723,3 +723,5 @@
 - [x] Validate TypeScript, Descope configuration reachability, database regression tests, and safe 401 behavior for a missing Descope token.
 - [x] Smoke-test the Descope sign-up-or-in flow in the browser and confirm it renders inside the account portal; a real credentialed sign-in and membership-routing test remains dependent on a user account.
 - [x] Run the full test suite and production build, and document the Descope console redirect/origin settings and rollback path.
+
+- [x] Export the current EduPulse logo as a standalone SVG asset for download and reuse.

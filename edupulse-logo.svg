@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 128" role="img" aria-labelledby="title desc">
+  <title id="title">EduPulse</title>
+  <desc id="desc">EduPulse education management logo</desc>
+  <g transform="translate(8 8)">
+    <rect width="112" height="112" rx="32" fill="#002334" stroke="#B6F2E4" stroke-width="3"/>
+    <path d="M27 72c11-23 21-34 32-34 8 0 14 6 22 19" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+    <path d="M27 86c13-17 24-25 35-25 8 0 14 3 20 11" fill="none" stroke="#B6F2E4" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="30" cy="36" r="6" fill="#F9D58A"/>
+  </g>
+  <g fill="#002334" font-family="Georgia, 'Times New Roman', serif">
+    <text x="148" y="72" font-size="56" font-weight="700" letter-spacing="-1">EduPulse</text>
+    <text x="151" y="101" font-family="Arial, sans-serif" font-size="16" letter-spacing="3" fill="#258A82">LOCAL EDUCATION MANAGEMENT</text>
+  </g>
+</svg>
