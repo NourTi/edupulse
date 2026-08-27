@@ -299,6 +299,41 @@ export const educatorRecords = mysqlTable("educatorRecords", {
 export type EducatorRecord = typeof educatorRecords.$inferSelect;
 export type InsertEducatorRecord = typeof educatorRecords.$inferInsert;
 
+/** Structured academic observations used for progress charts and non-clinical support reviews. */
+export const learningAssessments = mysqlTable("learningAssessments", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  institutionId: varchar("institutionId", { length: 64 }).notNull(),
+  learnerId: varchar("learnerId", { length: 64 }).notNull(),
+  subject: varchar("subject", { length: 120 }).notNull(),
+  score: int("score").notNull(),
+  assessmentType: varchar("assessmentType", { length: 80 }).notNull().default("classwork"),
+  assessedAt: timestamp("assessedAt").notNull(),
+  note: text("note"),
+  recordedById: int("recordedById").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({ institutionIdx: index("learning_assessments_institution_idx").on(table.institutionId), learnerSubjectIdx: index("learning_assessments_learner_subject_idx").on(table.learnerId, table.subject), dateIdx: index("learning_assessments_date_idx").on(table.institutionId, table.assessedAt) }));
+
+export const supportEvaluations = mysqlTable("supportEvaluations", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  institutionId: varchar("institutionId", { length: 64 }).notNull(),
+  learnerId: varchar("learnerId", { length: 64 }).notNull(),
+  stage: varchar("stage", { length: 80 }).notNull(),
+  supportLevel: mysqlEnum("supportLevel", ["progressing", "needs_support", "urgent_review"]).notNull(),
+  evidenceJson: text("evidenceJson").notNull(),
+  factorsJson: text("factorsJson").notNull(),
+  recommendationsJson: text("recommendationsJson").notNull(),
+  aiSummary: text("aiSummary"),
+  status: mysqlEnum("status", ["draft", "reviewed", "shared"]).default("draft").notNull(),
+  reviewedById: int("reviewedById"),
+  reviewedAt: timestamp("reviewedAt"),
+  followUpAt: timestamp("followUpAt"),
+  createdById: int("createdById").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({ institutionIdx: index("support_evaluations_institution_idx").on(table.institutionId), learnerIdx: index("support_evaluations_learner_idx").on(table.learnerId), statusIdx: index("support_evaluations_status_idx").on(table.institutionId, table.status) }));
+
+export type LearningAssessment = typeof learningAssessments.$inferSelect;
+export type SupportEvaluation = typeof supportEvaluations.$inferSelect;
+
 /** Approved, institution-owned information available to the education assistant. */
 export const knowledgeSources = mysqlTable(
   "knowledgeSources",

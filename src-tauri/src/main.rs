@@ -159,7 +159,17 @@ fn open_encrypted_database(app: &AppHandle) -> Result<Connection, String> {
         id TEXT PRIMARY KEY NOT NULL,
         payload TEXT NOT NULL,
         updated_at TEXT NOT NULL
-      );",
+      );
+      CREATE TABLE IF NOT EXISTS local_support_evaluations (
+        id TEXT PRIMARY KEY NOT NULL,
+        institution_id TEXT NOT NULL,
+        learner_id TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        created_by_id INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        review_status TEXT NOT NULL DEFAULT 'draft'
+      );
+      CREATE INDEX IF NOT EXISTS idx_local_support_eval_learner ON local_support_evaluations(institution_id, learner_id, created_at);",
     )
     .map_err(|error| format!("Unable to prepare encrypted workspace storage: {error}"))?;
   Ok(connection)
@@ -197,6 +207,38 @@ fn local_database_save(app: AppHandle, payload: String, updated_at: String) -> R
     )
     .map_err(|error| format!("Unable to save encrypted workspace: {error}"))?;
   Ok(())
+}
+
+fn local_session_identity(connection: &Connection, session_token: &str) -> Result<(i64, String), String> {
+  connection.query_row("SELECT u.id, u.institution_id FROM local_sessions s INNER JOIN local_users u ON u.id=s.user_id WHERE s.token_hash=?1 AND s.revoked_at IS NULL AND s.expires_at>?2 AND u.active=1", params![token_hash(session_token), now_epoch()], |row| Ok((row.get(0)?, row.get(1)?))).map_err(|_| "The local session is invalid or expired.".to_string())
+}
+
+#[tauri::command]
+fn local_support_evaluation_save(app: AppHandle, session_token: String, learner_id: String, payload: String, review_status: Option<String>) -> Result<String, String> {
+  if learner_id.trim().is_empty() || learner_id.len() > 64 || payload.len() > 50_000 { return Err("The local evaluation payload is invalid.".to_string()); }
+  let connection = open_encrypted_database(&app)?;
+  ensure_auth_schema(&connection)?;
+  let (user_id, institution_id) = local_session_identity(&connection, &session_token)?;
+  let status = review_status.unwrap_or_else(|| "draft".to_string());
+  if !["draft", "reviewed", "shared"].contains(&status.as_str()) { return Err("Invalid local evaluation review status.".to_string()); }
+  let id = format!("local_support_{}", &token_hash(&format!("{}{}{}", learner_id, user_id, now_epoch()))[..24]);
+  connection.execute("INSERT INTO local_support_evaluations(id,institution_id,learner_id,payload,created_by_id,created_at,review_status) VALUES(?1,?2,?3,?4,?5,?6,?7)", params![id, institution_id, learner_id.trim(), payload, user_id, now_epoch(), status]).map_err(|error| format!("Unable to save encrypted local evaluation: {error}"))?;
+  connection.execute("INSERT INTO local_audit_events(id,user_id,action,created_at,metadata) VALUES(?1,?2,'local.support_evaluation_saved',?3,?4)", params![audit_id(), user_id, now_epoch(), format!("{{\"evaluation_id\":\"{}\",\"learner_id\":\"{}\"}}", id, learner_id.trim())]).map_err(|error| error.to_string())?;
+  Ok(id)
+}
+
+#[tauri::command]
+fn local_support_evaluation_load(app: AppHandle, session_token: String, learner_id: Option<String>) -> Result<Vec<Value>, String> {
+  let connection = open_encrypted_database(&app)?;
+  ensure_auth_schema(&connection)?;
+  let (_user_id, institution_id) = local_session_identity(&connection, &session_token)?;
+  let mut output = Vec::new();
+  if let Some(learner_id) = learner_id {
+    let mut statement = connection.prepare("SELECT id, learner_id, payload, created_at, review_status FROM local_support_evaluations WHERE institution_id=?1 AND learner_id=?2 ORDER BY created_at DESC LIMIT 50").map_err(|error| error.to_string())?;
+    let rows = statement.query_map(params![institution_id, learner_id], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, String>(2)?, row.get::<_, i64>(3)?, row.get::<_, String>(4)?))).map_err(|error| error.to_string())?;
+    for row in rows { let (id, learner, payload, created_at, review_status) = row.map_err(|error| error.to_string())?; output.push(json!({"id": id, "learner_id": learner, "payload": serde_json::from_str::<Value>(&payload).unwrap_or(Value::String(payload)), "created_at": created_at, "review_status": review_status})); }
+  }
+  Ok(output)
 }
 
 #[derive(Debug, Serialize)]
@@ -270,7 +312,9 @@ fn main() {
       local_auth_status,
       local_register_owner,
       local_login,
-      local_logout
+      local_logout,
+      local_support_evaluation_save,
+      local_support_evaluation_load
     ])
     .run(tauri::generate_context!())
     .expect("error while running EduPulse desktop");

@@ -11,4 +11,7 @@ export const ENV = {
   medusaBackendUrl: process.env.MEDUSA_BACKEND_URL?.replace(/\/+$/, "") ?? "",
   medusaPublishableKey: process.env.MEDUSA_PUBLISHABLE_KEY ?? "",
   medusaAdminToken: process.env.MEDUSA_ADMIN_TOKEN ?? "",
+  veniceInferenceApiKey: process.env.VENICE_INFERENCE_API_KEY ?? "",
+  veniceBaseUrl: process.env.VENICE_BASE_URL ?? "https://api.venice.ai/api/v1",
+  veniceModel: process.env.VENICE_MODEL ?? "llama-3.3-70b",
 };

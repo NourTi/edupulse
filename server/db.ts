@@ -20,6 +20,8 @@ import {
   commerceInvoices,
   educatorTasks,
   educatorRecords,
+  learningAssessments,
+  supportEvaluations,
   passwordResetTokens,
   schoolSettings,
   users,
@@ -396,6 +398,42 @@ export async function listCefrAssessments(institutionId: string, learnerId: stri
   const db = await getDb();
   if (!db) return [];
   return db.select().from(cefrAssessments).where(and(eq(cefrAssessments.institutionId, institutionId), eq(cefrAssessments.learnerId, learnerId))).orderBy(desc(cefrAssessments.assessedAt));
+}
+
+export async function createLearningAssessment(input: typeof learningAssessments.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  await db.insert(learningAssessments).values(input);
+  return db.select().from(learningAssessments).where(eq(learningAssessments.id, input.id)).limit(1).then(rows => rows[0]);
+}
+
+export async function listLearningAssessments(institutionId: string, learnerId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(learningAssessments).where(and(eq(learningAssessments.institutionId, institutionId), eq(learningAssessments.learnerId, learnerId))).orderBy(desc(learningAssessments.assessedAt));
+}
+
+export async function createSupportEvaluation(input: typeof supportEvaluations.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  await db.insert(supportEvaluations).values(input);
+  return db.select().from(supportEvaluations).where(eq(supportEvaluations.id, input.id)).limit(1).then(rows => rows[0]);
+}
+
+export async function listSupportEvaluations(institutionId: string, learnerId?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const where = learnerId ? and(eq(supportEvaluations.institutionId, institutionId), eq(supportEvaluations.learnerId, learnerId)) : eq(supportEvaluations.institutionId, institutionId);
+  return db.select().from(supportEvaluations).where(where).orderBy(desc(supportEvaluations.createdAt));
+}
+
+export async function updateSupportEvaluationReview(institutionId: string, evaluationId: string, status: "draft" | "reviewed" | "shared", reviewedById: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  const existing = await db.select().from(supportEvaluations).where(and(eq(supportEvaluations.institutionId, institutionId), eq(supportEvaluations.id, evaluationId))).limit(1).then(rows => rows[0]);
+  if (!existing) return undefined;
+  await db.update(supportEvaluations).set({ status, reviewedById, reviewedAt: new Date() }).where(and(eq(supportEvaluations.institutionId, institutionId), eq(supportEvaluations.id, evaluationId)));
+  return db.select().from(supportEvaluations).where(eq(supportEvaluations.id, evaluationId)).limit(1).then(rows => rows[0]);
 }
 
 export async function createEducatorTask(input: typeof educatorTasks.$inferInsert) {

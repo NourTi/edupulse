@@ -524,3 +524,35 @@
 - [x] Add a manual recurring-subscription billing simulator with monthly, quarterly, and annual cycles, test-mode output, no-charge guarantee, learner/product ownership checks, and audit logging.
 - [x] Add shared analytics unit coverage; TypeScript, 55 tests, and production build pass.
 - [ ] Add real recurring billing automation only after a separate scheduling/deployment decision; the current simulator is intentionally manual and test-only.
+
+## Analytics Filters, Report Email, and Student Support Evaluation
+
+- [ ] Add date-range and product-type filters to institution-scoped commerce analytics and exports.
+- [ ] Add secure administrator email delivery for filtered invoice and payment reports, with recipient validation and audit logging.
+- [ ] Define evidence-based teacher progress inputs across grades, subjects, attendance, participation, CEFR, behavior, and observations.
+- [ ] Add non-clinical academic and wellbeing support evaluation with explanations, confidence, recommended follow-up approaches, and mandatory teacher review.
+- [ ] Add student learning charts and teacher-facing strengths/difficulties summaries without stigmatizing labels or clinical diagnosis.
+- [ ] Add role/privacy safeguards, tests, responsive validation, documentation, and checkpoint.
+
+## Primary Learning Support Evaluation and Venice AI
+
+- [ ] Implement a primary-school, staff-only academic and wellbeing support evaluation using grades, attendance, lateness, CEFR/language measures when available, assignments, participation, teacher observations, behavior records, and guardian notes.
+- [ ] Generate subject strengths, learning gaps, trend charts, evidence-based contributing factors, support level, recommended intervention, follow-up date, and teacher-review state without clinical diagnosis or stigmatizing labels.
+- [ ] Integrate Venice through a server-side OpenAI-compatible adapter for concise, grounded evaluation explanations and improved public-agent answers.
+- [ ] Store the Venice base URL and replacement API key as server secrets only; revoke the exposed screenshot key before production use.
+- [ ] Add prompt constraints, output validation, privacy boundaries, staff-only authorization, audit events, tests, and documentation.
+- [ ] Correct the evaluation scope from primary-only to all stages: preparatory, primary, middle, secondary, university, and independent educator contexts where applicable.
+- [ ] Add the evaluation surface and encrypted local persistence to the Tauri Windows app using SQLCipher, while retaining the React web surface and server-side tenant controls.
+- [ ] Confirm and document that direct local desktop implementation requires the user to bind/select the EduPulse project folder in Manus Desktop before native testing.
+
+## All-Stage Learning Support and Venice AI Milestone
+
+- [x] Correct evaluation scope to all EduPulse stages from preparatory through primary, middle, secondary, and higher education.
+- [x] Add institution-scoped learning assessment records and staff-review support evaluation records.
+- [x] Add transparent local scoring for subject trends, strengths, gaps, attendance signals, and support levels.
+- [x] Add Venice server-side reasoning with bounded prompts, structured output, no-diagnosis rules, no-stigmatizing labels, and local fallback when Venice is unavailable.
+- [x] Improve the public grounded AI agent by routing its evidence-based generation through Venice when configured, while preserving privacy refusal and citation validation.
+- [x] Add React staff-only evaluation UI with learner selection, learning trend chart, evidence cards, contributing-factor hypotheses, recommendations, and review/share states.
+- [x] Add Tauri SQLCipher commands and encrypted local evaluation storage keyed to active local sessions and institution IDs.
+- [x] Add deterministic evaluation regression tests; TypeScript, full Vitest suite, and production build pass.
+- [ ] Validate native Rust/Tauri compilation and Windows runtime behavior on a Windows development machine; Cargo is not installed in the current Linux sandbox.
