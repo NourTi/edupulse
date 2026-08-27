@@ -2,9 +2,9 @@ import { useState } from "react";
 import { CheckCircle2, MessageCircle, RefreshCw, Send, ShieldCheck } from "lucide-react";
 import { getWhatsAppAuthStatus, sendWhatsAppMessage } from "@/lib/whatsappDesktop";
 
-type Props = { isArabic: boolean; studentName: string; guardianPhone: string; initialMessage: string; guardianConsent: boolean; phoneVerified: boolean; whatsappOptOut: boolean; onSaveDraft: (message: string) => Promise<void> };
+type Props = { isArabic: boolean; studentName: string; guardianPhone: string; initialMessage: string; guardianConsent: boolean; phoneVerified: boolean; whatsappOptOut: boolean; onSaveDraft: (message: string) => Promise<void>; onDeliveryRecorded: (delivery: { guardianPhone: string; status: "sent" | "failed"; createdAt: string; error?: string }) => Promise<void> };
 
-export function WhatsAppDesktopPanel({ isArabic, studentName, guardianPhone, initialMessage, guardianConsent, phoneVerified, whatsappOptOut, onSaveDraft }: Props) {
+export function WhatsAppDesktopPanel({ isArabic, studentName, guardianPhone, initialMessage, guardianConsent, phoneVerified, whatsappOptOut, onSaveDraft, onDeliveryRecorded }: Props) {
   const [message, setMessage] = useState(initialMessage);
   const [status, setStatus] = useState<string>("");
   const [busy, setBusy] = useState(false);
@@ -28,9 +28,12 @@ export function WhatsAppDesktopPanel({ isArabic, studentName, guardianPhone, ini
     try {
       await onSaveDraft(message);
       await sendWhatsAppMessage(guardianPhone, message);
+      await onDeliveryRecorded({ guardianPhone, status: "sent", createdAt: new Date().toISOString() });
       setStatus(isArabic ? "تم إرسال الرسالة بنجاح." : "Message sent successfully.");
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Could not send the message.");
+      const detail = error instanceof Error ? error.message : "Could not send the message.";
+      await onDeliveryRecorded({ guardianPhone, status: "failed", createdAt: new Date().toISOString(), error: detail });
+      setStatus(detail);
     } finally { setBusy(false); }
   };
 
