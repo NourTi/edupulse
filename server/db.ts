@@ -494,6 +494,21 @@ export async function updateCommerceInvoiceStatus(institutionId: string, invoice
   return db.select().from(commerceInvoices).where(and(eq(commerceInvoices.institutionId, institutionId), eq(commerceInvoices.id, invoiceId))).limit(1).then(rows => rows[0]);
 }
 
+export async function recordCommerceInvoicePayment(input: { paymentId: string; invoiceId: string; institutionId: string; learnerId: string; amountMinor: number; method: string; recordedById: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  const invoice = await db.select().from(commerceInvoices).where(and(eq(commerceInvoices.institutionId, input.institutionId), eq(commerceInvoices.id, input.invoiceId), eq(commerceInvoices.learnerId, input.learnerId))).limit(1).then(rows => rows[0]);
+  if (!invoice) throw new Error("Invoice not found for this institution and learner.");
+  const due = Math.max(0, invoice.amountMinor - invoice.discountMinor);
+  if (input.amountMinor <= 0 || input.amountMinor > due) throw new Error("Payment amount must be positive and cannot exceed the invoice balance.");
+  await db.insert(paymentRecords).values({ id: input.paymentId, institutionId: input.institutionId, learnerId: input.learnerId, amountMinor: input.amountMinor, currency: invoice.currency, method: input.method, status: "paid", paidAt: new Date(), recordedById: input.recordedById });
+  const prior = await db.select({ amountMinor: paymentRecords.amountMinor }).from(paymentRecords).where(and(eq(paymentRecords.institutionId, input.institutionId), eq(paymentRecords.learnerId, input.learnerId), eq(paymentRecords.status, "paid")));
+  const totalPaid = prior.reduce((sum, row) => sum + row.amountMinor, 0);
+  const status = totalPaid >= due ? "paid" : "partially_paid";
+  await db.update(commerceInvoices).set({ status, updatedAt: new Date() }).where(and(eq(commerceInvoices.institutionId, input.institutionId), eq(commerceInvoices.id, input.invoiceId)));
+  return db.select().from(commerceInvoices).where(and(eq(commerceInvoices.institutionId, input.institutionId), eq(commerceInvoices.id, input.invoiceId))).limit(1).then(rows => rows[0]);
+}
+
 export async function createPaymentRecord(input: typeof paymentRecords.$inferInsert) {
   const db = await getDb();
   if (!db) throw new Error("Database is unavailable.");

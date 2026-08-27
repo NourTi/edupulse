@@ -41,6 +41,7 @@ import {
   createCommerceInvoice,
   listCommerceInvoices,
   updateCommerceInvoiceStatus,
+  recordCommerceInvoicePayment,
   createEducatorTask,
   listEducatorTasks,
   completeEducatorTask,
@@ -226,6 +227,17 @@ export const appRouter = router({
       const invoice = await createCommerceInvoice({ id: `invoice_${nanoid(16)}`, institutionId, learnerId: input.learnerId, productId: input.productId, invoiceNumber: `EDU-${new Date().getFullYear()}-${nanoid(8).toUpperCase()}`, amountMinor: product.amountMinor, discountMinor: input.discountMinor, currency: product.currency, status: "issued", dueAt: input.dueAt, createdById: ctx.user.id });
       await writeAuditLog({ id: `audit_${nanoid(16)}`, institutionId, actorUserId: ctx.user.id, action: "commerce.invoice.created", entityType: "commerce_invoice", entityId: invoice?.id, metadata: JSON.stringify({ learnerId: input.learnerId, productId: input.productId }) });
       return invoice;
+    }),
+    recordInvoicePayment: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), invoiceId: z.string().max(64), learnerId: z.string().max(64), amountMinor: z.number().int().positive().max(2_000_000_000), method: z.string().trim().min(2).max(60) })).mutation(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "finance_admin", "registrar"]);
+      try {
+        const invoice = await recordCommerceInvoicePayment({ paymentId: `payment_${nanoid(16)}`, invoiceId: input.invoiceId, institutionId, learnerId: input.learnerId, amountMinor: input.amountMinor, method: input.method, recordedById: ctx.user.id });
+        await writeAuditLog({ id: `audit_${nanoid(16)}`, institutionId, actorUserId: ctx.user.id, action: "commerce.invoice.payment_recorded", entityType: "commerce_invoice", entityId: invoice?.id, metadata: JSON.stringify({ amountMinor: input.amountMinor, method: input.method }) });
+        return invoice;
+      } catch (error) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "Could not record invoice payment." });
+      }
     }),
     updateInvoiceStatus: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), invoiceId: z.string().max(64), status: z.enum(["draft", "issued", "partially_paid", "paid", "void", "refunded"]) })).mutation(async ({ ctx, input }) => {
       const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
