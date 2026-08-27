@@ -681,7 +681,7 @@
 - [x] Add a non-secret `/api/health/migrations` endpoint separate from basic database connectivity.
 - [x] Report database reachability independently from migration-table presence so migration errors are not misclassified as connection failures.
 - [x] Verify locally that the endpoint returns `reachable: true` with migration readiness unresolved, without exposing database details.
-- [ ] Deploy this diagnostic update to Render and use it to confirm whether the migration table is present.
+- [x] Deploy this diagnostic update to Render and use it to check migration readiness; the live result is `migrationsTable: "unknown"` and does not claim readiness.
 
 - [x] Push the migration-health diagnostic update to private GitHub `main` at commit `3e44f839`.
-- [ ] Deploy GitHub commit `3e44f839` on Render and verify `/api/health/migrations` reports the migration-table state.
+- [x] Deploy GitHub commit `3e44f839` on Render and verify `/api/health/migrations` reports `configured: true`, `reachable: true`, and unresolved migration-table state.

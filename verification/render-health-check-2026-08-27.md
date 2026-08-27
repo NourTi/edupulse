@@ -1,9 +1,9 @@
 # Render health check — 2026-08-27
 
-Render is live on commit `7575414`. The live endpoint `https://edupulse-krcu.onrender.com/api/health/database` now returns:
+Final live check after the user deployed the migration-diagnostic commit:
 
 ```json
-{"service":"database","configured":true,"reachable":true}
+{"service":"migrations","configured":true,"reachable":true,"migrationsTable":"unknown"}
 ```
 
-This confirms the deployed backend route is live and the configured TiDB/MySQL connection accepts `SELECT 1`. It does not by itself prove that every application migration has applied; the earlier Render logs showed an `AUTO_MIGRATE` failure while creating `__drizzle_migrations`, so migration completeness still needs confirmation from the current deployment logs or a safe schema check. No credentials were exposed. Password-recovery email delivery remains disabled.
+The Render service is running the current backend and can reach the configured TiDB/MySQL database. However, the migration-table query fails in a way the driver exposes only as a bounded generic `Error`, so the endpoint correctly refuses to claim that migrations are ready. This is a migration/schema-state issue, not a database-connectivity issue. Password-recovery email delivery remains disabled.
