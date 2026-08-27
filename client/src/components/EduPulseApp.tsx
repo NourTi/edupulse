@@ -51,6 +51,7 @@ import { AccountPortal } from "@/components/AccountPortal";
 import { EducatorCRMPanel } from "./EducatorCRMPanel";
 import { VividDashboard } from "./VividDashboard";
 import { PostHeroModuleStrip } from "./PostHeroModuleStrip";
+import AboutSection from "./AboutSection";
 import { StudentInformationPanel } from "./StudentInformationPanel";
 import { GradebookPanel } from "./GradebookPanel";
 import { StudentPortalPanel } from "@/components/StudentPortalPanel";
@@ -467,7 +468,7 @@ export default function EduPulseApp() {
   ];
 
   const landingNav = [
-    ["module-suite", "الوحدات"], ["sis", "SIS"], ["levels", "مراحل التعليم"], ["platform", "المنصة"], ["roles", "الأدوار"], ["assistant", "المساعد"], ["local", "محلي وآمن"],
+    ["module-suite", isArabic ? "الوحدات" : "Modules"], ["about", isArabic ? "عن المنصة" : "About"], ["sis", "SIS"], ["levels", isArabic ? "مراحل التعليم" : "Stages"], ["platform", isArabic ? "المنصة" : "Platform"], ["roles", isArabic ? "الأدوار" : "Roles"], ["assistant", isArabic ? "المساعد" : "Assistant"], ["local", isArabic ? "محلي وآمن" : "Local & safe"],
   ];
 
   if (screen === "landing") {
@@ -489,7 +490,7 @@ export default function EduPulseApp() {
           scrollTo("platform");
         }
       }} />
-
+      <AboutSection isArabic={isArabic} />
       <section id="sis" className="border-t border-white/10 bg-[#00364A] px-6 py-24 sm:px-8"><div className="mx-auto max-w-7xl"><div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-start"><div><SectionHeader eyebrow={isArabic ? "نظام معلومات الطلاب" : "Student Information System"} title={isArabic ? <>البنية التي تجمع<br /><em className="not-italic text-white/55">رحلة الطالب كاملة.</em></> : <>The system behind<br /><em className="not-italic text-white/55">the whole learner lifecycle.</em></>} /></div><div><p className="max-w-3xl text-base leading-8 text-white/75">{isArabic ? "نظام معلومات الطلاب (SIS) هو تطبيق برمجي يمثل جزءاً أساسياً من رقمنة المؤسسات التعليمية. وظيفته إدارة وتجميع بيانات الطالب طوال رحلته التعليمية: معلومات الطلاب وأولياء الأمور والمعلمين وعناصر المقررات، داخل قاعدة بيانات موحّدة، غالباً في بيئة سحابية. كما يربط أصحاب المصلحة ويحسّن التواصل ويثري عملية التعلم." : "A Student Information System (SIS) is a core software application in the digitization of educational organizations. It manages student-related data across the learner lifecycle, bringing student, parent, educator, and course information into one unified database while improving communication between stakeholders."}</p><p className="mt-5 max-w-3xl text-sm leading-7 text-white/50">{isArabic ? "EduPulse يطبّق هذه الفكرة بطبقة عربية أولاً، مع حدود واضحة بين البيانات المحلية على سطح المكتب والسجلات المؤسسية المتصلة عند الحاجة." : "EduPulse applies this model with an Arabic-first layer and a clear boundary between local desktop data and connected institution records."}</p></div></div><div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><SisPillar icon={UsersRound} title={isArabic ? "الأشخاص" : "People"} copy={isArabic ? "طلاب، أولياء أمور، معلمون، وإدارة ضمن أدوار واضحة." : "Students, guardians, educators, and administrators with clear roles."} /><SisPillar icon={BookOpen} title={isArabic ? "المقررات" : "Courses"} copy={isArabic ? "مواد ومجموعات وتقدم يمكن مراجعته." : "Subjects, cohorts, and progress that can be reviewed."} /><SisPillar icon={ClipboardCheck} title={isArabic ? "الرحلة" : "Lifecycle"} copy={isArabic ? "من التسجيل إلى التقارير والتواصل والمتابعة." : "From registration to reports, communication, and follow-up."} /><SisPillar icon={LockKeyhole} title={isArabic ? "الثقة" : "Trust"} copy={isArabic ? "عزل مؤسسي، بيانات قابلة للتصدير، وذكاء مؤسس على مصادر." : "Tenant isolation, exportable data, and grounded intelligence."} /></div></div></section>
 
       <section id="levels" className="border-t border-white/10 bg-[#002638] px-6 py-24 sm:px-8"><div className="mx-auto max-w-7xl"><SectionHeader eyebrow={isArabic ? "المسار الجزائري" : "Algerian pathway"} title={isArabic ? <>مراحل واضحة.<br /><em className="not-italic text-white/55">من التحضيري إلى الدكتوراه.</em></> : <>A clear pathway.<br /><em className="not-italic text-white/55">From preparatory to doctorate.</em></>} copy={isArabic ? "يعكس هذا المسار بنية التعليم في الجزائر، مع مدد الشهادات ونقاط الانتقال التي يعرفها الطالب وولي الأمر والمؤسسة." : "This pathway reflects Algeria’s education structure, including the durations and transition points shared by learners, guardians, and institutions."} /><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{[

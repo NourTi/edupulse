@@ -395,3 +395,12 @@
 - [x] Ensure the agent endpoint returns a consistent JSON error envelope for database and upstream failures.
 - [x] Preserve the real database failure signal in server logs while showing a safe retry message in the UI.
 - [x] Add regression coverage and validate the Render deployment instructions after the fix.
+
+## EduPulse About Profile and PDF Knowledge
+
+- [x] Research comparable education-management platforms and capture relevant positioning insights with source links.
+- [x] Draft the Arabic-first and English About narrative for EduPulse, including mission, expected workflow, target clients, educator problems solved, and potential.
+- [x] Create a professional PDF profile containing the platform information and reference section.
+- [x] Add the approved EduPulse profile/PDF content to the grounded AI knowledge source with citation support.
+- [x] Build the About section into the public site without changing the preserved hero.
+- [x] Validate Arabic PDF readability, source citations, AI answers, tests, and production build.
