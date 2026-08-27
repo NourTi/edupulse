@@ -622,3 +622,12 @@
 - [x] Align server data-query activation with role permissions for specialist accounts.
 - [x] Add a client-side route guard preventing hidden modules from being opened by manually changing the active view.
 - [x] Validate the role contract with TypeScript, the full 60-test suite, and the production build.
+
+## RBAC Onboarding and Recovery Clarity Milestone
+
+- [x] Add an administrator-only institution team workspace with explicit invitations for administrator, registrar, finance administrator, teacher, counsellor, student, and guardian roles.
+- [x] Display active, invited, and suspended membership states with institution-scoped member data.
+- [x] Make dashboard modules, shortcuts, learner registration, payment persistence, search, knowledge administration, and post-login routing follow membership roles.
+- [x] Add a client-side route guard as a usability layer while retaining server-side authorization as the security boundary.
+- [x] Make missing Resend password-recovery configuration visible to the caller and cover configured/missing mailer behavior with unit tests.
+- [x] Validate the milestone with TypeScript, the full unit suite, production build, and public landing-page visual verification.

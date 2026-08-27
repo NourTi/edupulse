@@ -159,7 +159,7 @@ export const appRouter = router({
       if (user?.status === "active" && user.passwordHash) {
         const rawToken = createOpaqueToken();
         await createPasswordResetToken({ id: `reset_${nanoid(16)}`, userId: user.id, tokenHash: hashOpaqueToken(rawToken), expiresAt: new Date(Date.now() + 60 * 60 * 1000) });
-        try { await sendPasswordResetEmail({ to: email, token: rawToken }); } catch (error) { console.error("[Auth] Password reset email failed", error); }
+        try { await sendPasswordResetEmail({ to: email, token: rawToken }); } catch (error) { console.error("[Auth] Password reset email failed", error); throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Password recovery email is not configured. An administrator must add RESEND_API_KEY and a verified RESEND_FROM_EMAIL." }); }
       }
       return { success: true } as const;
     }),

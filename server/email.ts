@@ -16,7 +16,7 @@ export async function sendPasswordResetEmail(input: { to: string; token: string 
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM_EMAIL;
   const appUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
-  if (!apiKey || !from) throw new Error("Resend is not configured.");
+  if (!apiKey || !from) throw new Error("Resend is not configured. Add RESEND_API_KEY and RESEND_FROM_EMAIL with a verified sender domain.");
   const resetUrl = `${appUrl.replace(/\/$/, "")}/?reset=${encodeURIComponent(input.token)}`;
   const response = await fetch(RESEND_API_URL, {
     method: "POST",
