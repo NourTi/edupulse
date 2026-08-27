@@ -379,3 +379,19 @@
 - [ ] Inspect GitHub branch and commit configuration relevant to Render.
 - [ ] Identify the exact Render redeploy, branch, build-command, or cache correction required.
 - [ ] Validate that the live Render site contains the latest platform markers and provide simple deployment instructions.
+
+## AgentFetch / Agent Scraper MCP Integration
+
+- [x] Inspect agentfetch-mcp and agent-scraper-mcp repositories, licenses, tools, dependencies, and security posture.
+- [x] Select the safer MCP for EduPulse and document the decision and integration boundary.
+- [x] Integrate the selected MCP through an administrator-controlled retrieval gateway for the public agent.
+- [x] Preserve approved-source priority, tenant isolation, privacy refusal, citation validation, rate limits, and failure fallback.
+- [x] Add configuration guidance and regression tests for the MCP-backed retrieval path.
+- [ ] Validate the agent integration, production build, and published deployment.
+
+## Render Agent JSON Error
+
+- [x] Reproduce or inspect the Render agent response that begins with a plain-text database error.
+- [x] Ensure the agent endpoint returns a consistent JSON error envelope for database and upstream failures.
+- [x] Preserve the real database failure signal in server logs while showing a safe retry message in the UI.
+- [x] Add regression coverage and validate the Render deployment instructions after the fix.
