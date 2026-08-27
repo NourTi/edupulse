@@ -585,3 +585,12 @@
 - [x] Validate the desktop bridge type contract with TypeScript and focused evaluation/report/Venice tests.
 - [x] Use browser verification for the public web shell after the independent desktop changes; landing page renders correctly at desktop size.
 - [x] Document the independent implementation boundary: project code can be built here, while only native Windows compilation, WebView2, keyring, SQLCipher runtime, installer, and signing checks require Windows tooling.
+
+## Teacher Evaluation Dashboard and Visual System Update
+
+- [x] Build a teacher-facing visual dashboard for per-learner AI support evaluations and learning charts.
+- [x] Add an explicit manual Venice evaluation action for a selected learner with loading, error, fallback, and review states.
+- [x] Confirm the admin commerce dashboard exposes date-range and product-type filters plus the email export action.
+- [x] Replace dark glassy toggle/select/form controls with the vivid white post-hero/dashboard design system across the application.
+- [x] Replace incorrect education-level labels and options with Algeria’s preparatory, primary, middle, secondary, and higher-education stages everywhere.
+- [x] Add focused tests and responsive browser validation for the new dashboard, controls, and education taxonomy.
