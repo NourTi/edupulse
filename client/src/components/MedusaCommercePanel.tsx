@@ -9,11 +9,17 @@ export default function MedusaCommercePanel({ isArabic }: Props) {
   const [title, setTitle] = useState("");
   const [titleAr, setTitleAr] = useState("");
   const [amount, setAmount] = useState("");
+  const [learnerId, setLearnerId] = useState("");
+  const [productId, setProductId] = useState("");
+  const [invoiceAmount, setInvoiceAmount] = useState("");
   const status = trpc.commerce.status.useQuery(undefined, { retry: false });
   const catalog = trpc.commerce.catalog.useQuery(undefined, { retry: false });
   const localProducts = trpc.commerce.products.useQuery(undefined, { retry: false });
+  const learners = trpc.records.learners.useQuery(undefined, { retry: false });
+  const invoices = trpc.commerce.invoices.useQuery(undefined, { retry: false });
   const utils = trpc.useUtils();
   const createProduct = trpc.commerce.createProduct.useMutation({ onSuccess: () => { setTitle(""); setTitleAr(""); setAmount(""); toast.success(isArabic ? "تم حفظ الخدمة." : "Service saved."); void utils.commerce.products.invalidate(); }, onError: (error) => toast.error(error.message) });
+  const createInvoice = trpc.commerce.createInvoice.useMutation({ onSuccess: () => { setLearnerId(""); setProductId(""); setInvoiceAmount(""); toast.success(isArabic ? "تم إصدار الفاتورة." : "Invoice issued."); void utils.commerce.invoices.invalidate(); }, onError: (error) => toast.error(error.message) });
 
   return <div className="space-y-6">
     <div className="grid gap-4 md:grid-cols-3">
@@ -49,6 +55,16 @@ export default function MedusaCommercePanel({ isArabic }: Props) {
         <button disabled={createProduct.isPending} className="rounded-xl bg-white px-4 py-3 text-sm text-[#00364A] disabled:opacity-50">{createProduct.isPending ? "…" : (isArabic ? "إضافة" : "Add")}</button>
       </form>
       <div className="mt-6 grid gap-3 md:grid-cols-2">{localProducts.data?.map((product) => <article key={product.id} className="rounded-xl border border-white/10 bg-white/[0.04] p-4"><div className="flex items-start justify-between gap-4"><div><p className="font-medium">{isArabic ? product.titleAr : product.title}</p><p className="mt-1 text-xs text-white/50">{product.kind} · {product.status}</p></div><strong>{(product.amountMinor / 100).toFixed(2)} {product.currency}</strong></div></article>)}</div>
+    </section>
+    <section className="surface-panel rounded-2xl p-6">
+      <p className="text-display text-3xl">{isArabic ? "إصدار فاتورة" : "Issue an invoice"}</p>
+      <p className="mt-2 text-sm leading-7 text-white/55">{isArabic ? "اربط الخدمة بطالب محدد، ثم سجّل الدفعة من سجل المدفوعات المحلي." : "Attach a service to a specific learner, then record payment through the local payment ledger."}</p>
+      <form className="mt-5 grid gap-3 md:grid-cols-[1fr_1fr_auto]" onSubmit={(event) => { event.preventDefault(); if (!learnerId || !productId) return toast.error(isArabic ? "اختر الطالب والخدمة." : "Choose a learner and service."); const product = localProducts.data?.find(item => item.id === productId); createInvoice.mutate({ learnerId, productId, discountMinor: 0 }); setInvoiceAmount(product ? String(product.amountMinor / 100) : invoiceAmount); }}>
+        <select required value={learnerId} onChange={(event) => setLearnerId(event.target.value)} className="rounded-xl border border-white/10 bg-[#07394a] px-3 py-3 text-sm text-white outline-none"><option value="">{isArabic ? "اختر الطالب" : "Choose learner"}</option>{learners.data?.map((item) => <option key={item.id} value={item.id}>{item.nameAr} · {item.grade}</option>)}</select>
+        <select required value={productId} onChange={(event) => setProductId(event.target.value)} className="rounded-xl border border-white/10 bg-[#07394a] px-3 py-3 text-sm text-white outline-none"><option value="">{isArabic ? "اختر الخدمة" : "Choose service"}</option>{localProducts.data?.map((item) => <option key={item.id} value={item.id}>{isArabic ? item.titleAr : item.title} · {(item.amountMinor / 100).toFixed(2)} {item.currency}</option>)}</select>
+        <button disabled={createInvoice.isPending} className="rounded-xl bg-white px-4 py-3 text-sm text-[#00364A] disabled:opacity-50">{createInvoice.isPending ? "…" : (isArabic ? "إصدار" : "Issue")}</button>
+      </form>
+      <div className="mt-6 space-y-3">{invoices.data?.map((invoice) => <article key={invoice.id} className="rounded-xl border border-white/10 bg-white/[0.04] p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-medium">{invoice.invoiceNumber}</p><p className="mt-1 text-xs text-white/50">{invoice.learnerId} · {(Math.max(0, invoice.amountMinor - invoice.discountMinor) / 100).toFixed(2)} {invoice.currency}</p></div><span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/60">{invoice.status}</span></div></article>)}</div>
     </section>
   </div>;
 }
