@@ -20,3 +20,7 @@ Descope will be added as an opt-in authentication path first. Existing password 
 [2]: https://docs.descope.com/client-sdk/descope-components "Descope Components"
 [3]: https://docs.descope.com/client-sdk/initialize-sdk "Descope SDK Initialization"
 [4]: https://www.npmjs.com/package/@descope/node-sdk "@descope/node-sdk package"
+
+## Google OAuth callback clarification
+
+For Descope Social Login using Google, the Google Cloud Console Authorized redirect URI must be the callback URI shown in Descope Console under Settings → Authentication Methods → Social Login → Google → Use my own account. Descope’s official documentation identifies the default callback pattern as `https://api.descope.com/v1/oauth/callback`; if a custom OAuth callback CNAME is configured, the URI changes to that domain’s `/v1/oauth/callback` path. The EduPulse website origin, such as `https://edupulse-krcu.onrender.com`, belongs in the allowed JavaScript origins/origin settings and is not a substitute for the Google callback URI. Sources: https://docs.descope.com/auth-methods/oauth/providers/setting-up-your-own-apps/google and https://docs.descope.com/auth-methods/oauth/settings.

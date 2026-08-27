@@ -725,3 +725,8 @@
 - [x] Run the full test suite and production build, and document the Descope console redirect/origin settings and rollback path.
 
 - [x] Export the current EduPulse logo as a standalone SVG asset for download and reuse.
+
+## OAuth Redirect URI Clarification
+
+- [x] Confirm the exact Descope Google OAuth callback URI and distinguish it from the EduPulse website origin.
+- [x] Provide the user the single URI to paste into Google Cloud, plus the matching Descope origin setting.
