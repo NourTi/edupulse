@@ -692,3 +692,6 @@
 - [x] Add regression coverage for nested `ER_NO_SUCH_TABLE` classification.
 - [x] Confirm the local migration diagnostic now reports `migrationsTable: "missing"` while database reachability remains true.
 - [ ] Push and deploy this classification update on Render, then confirm the live migration-table state explicitly.
+
+- [x] Push the validated migration-error classification checkpoint to private GitHub `main` at commit `61ba6c5`.
+- [ ] Deploy GitHub commit `61ba6c5` on Render and confirm the live migration table is explicitly reported as present or missing.
