@@ -413,3 +413,17 @@
 - [x] Fix response truncation with an explicit output budget and completion validation.
 - [x] Add regression tests for platform accuracy, hallucination rejection, citation validity, response completeness, privacy refusal, and database/upstream failures.
 - [ ] Synchronize the remediation to GitHub and verify the deployed Render build markers.
+
+## LobbyVoices MCP Evaluation and Integration
+
+- [x] Inspect `bodyegypt/lobbyvoices-mcp` capabilities, license, dependencies, tools, and runtime contract.
+- [x] Decide whether it provides concrete value for EduPulse and document the safe boundary.
+- [x] Integrate only a suitable capability with configuration, privacy, tenant, and Arabic platform-answer guardrails.
+- [x] Add focused tests and validate the production build and deployment guidance.
+
+## Relevant Agent Repository Selection
+
+- [x] Re-inventory the previously supplied search, scraping, RAG, MCP, and agent repositories.
+- [x] Compare candidates specifically for hallucination prevention, Arabic/public-web retrieval, citations, and Render compatibility.
+- [x] Select the best relevant component and integrate it into the existing grounded agent.
+- [x] Add guardrails, tests, failure handling, and deployment documentation for the selected component.

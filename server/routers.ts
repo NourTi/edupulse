@@ -57,7 +57,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { storagePut } from "./storage";
 import { assertSafePublicUrl, chunkText, containsProtectedRecordIntent, conversationReply, detectConversationIntent, detectEnrollmentIntent, detectPlatformIntent, enrollmentReply, extractTextFromHtml, platformReply, retrieveRelevantChunks, toSourceReferences, validateGroundedAnswer, isLikelyTruncatedAnswer, type RetrievedChunk } from "./knowledge/policy";
-import { createCrawl4AIJob } from "./knowledge/crawl4aiGateway";
+import { createCrawl4AIJob, crawlPublicPageWithCrawl4AI } from "./knowledge/crawl4aiGateway";
 import { canUseFreeSource, fetchWikipediaAnswer, isLikelyGeneralKnowledgeQuestion } from "./knowledge/freeSources";
 import { searchAndFetchPublicWeb } from "./knowledge/agentScraper";
 import { recordAgentEvent, type AgentIntent, type AgentOutcome } from "./knowledge/observability";
@@ -348,11 +348,22 @@ export const appRouter = router({
       const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
       await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "registrar", "teacher"]);
       const url = assertSafePublicUrl(input.url);
-      const response = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(10_000), headers: { "User-Agent": "EduPulse-Knowledge-Importer/0.1" } });
-      if (!response.ok) throw new Error(`The page could not be imported (HTTP ${response.status}).`);
-      const text = extractTextFromHtml((await response.text()).slice(0, 750_000));
+      let text = "";
+      let sourceUrl = url.toString();
+      let title = input.title;
+      try {
+        const crawled = await crawlPublicPageWithCrawl4AI(sourceUrl);
+        if (crawled) { text = crawled.text; sourceUrl = crawled.sourceUrl; title = crawled.title || title; }
+      } catch (error) {
+        console.warn("[Knowledge] Crawl4AI unavailable; using safe HTML importer", error);
+      }
+      if (!text) {
+        const response = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(10_000), headers: { "User-Agent": "EduPulse-Knowledge-Importer/0.1" } });
+        if (!response.ok) throw new Error(`The page could not be imported (HTTP ${response.status}).`);
+        text = extractTextFromHtml((await response.text()).slice(0, 750_000));
+      }
       if (text.length < 120) throw new Error("The page did not provide enough readable public text.");
-      return saveApprovedSource({ title: input.title, content: text, visibility: input.visibility, mimeType: "text/html", sourceUrl: url.toString(), kind: "webpage", userId: ctx.user.id, institutionId });
+      return saveApprovedSource({ title, content: text, visibility: input.visibility, mimeType: "text/html", sourceUrl, kind: "webpage", userId: ctx.user.id, institutionId });
     }),
     askPublic: publicProcedure.input(z.object({ question: z.string().trim().min(3).max(800), institutionId: z.string().max(64).optional() })).mutation(async ({ input, ctx }) => {
       const startedAt = Date.now();
