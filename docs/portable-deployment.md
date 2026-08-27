@@ -59,3 +59,10 @@ If Google returns `Invalid Google sign-in state`, start a new login from the Edu
 If Google returns `Google sign-in is temporarily unavailable`, check the Render service logs using the reference shown on the error page. If the message says the authentication migration is missing, apply the repository migrations to the same database referenced by Render’s `DATABASE_URL`, then redeploy. The required Google identity table is created by migration `0005_dark_living_tribunal.sql`.
 
 For a safe connection check in a Render Shell, run `node scripts/check-db.mjs` from the repository root. It performs only `SELECT 1`, prints the host and database name, and never prints the username or password. Run this check before applying migrations. A successful check proves that Render can reach TiDB; it does not apply schema changes. Render Free does not provide Shell access, so use `AUTO_MIGRATE=true` instead.
+
+
+### Health and recovery diagnostics
+
+The running service exposes `GET /api/health/database`. It returns HTTP 200 only when `DATABASE_URL` is configured and a lightweight `SELECT 1` succeeds; otherwise it returns HTTP 503. The JSON contains only `service`, `configured`, and `reachable` fields. It never returns the host, username, database name, password, or connection string.
+
+The account portal includes password-recovery request and reset-token states. If Resend is not configured, the request returns an actionable configuration error rather than silently claiming that delivery occurred. To enable delivery, set `APP_BASE_URL`, `RESEND_API_KEY`, and a verified `RESEND_FROM_EMAIL` in the host secret manager. A Resend API key alone is insufficient because the sender domain must be verified.

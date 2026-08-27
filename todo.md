@@ -643,3 +643,8 @@
 - [x] Surface the server’s Resend configuration error in the account portal instead of replacing it with a generic toast.
 - [x] Validate invitation and reset tokens in the browser form and remove consumed reset tokens from the URL.
 - [x] Re-run TypeScript and focused recovery-mailer tests successfully.
+
+## Deployment Diagnostics Documentation Milestone
+
+- [x] Document `/api/health/database`, its HTTP readiness semantics, and its non-secret response contract.
+- [x] Document the password-recovery environment variables and explain why a Resend API key alone is insufficient without a verified sender.
