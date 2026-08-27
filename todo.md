@@ -631,3 +631,9 @@
 - [x] Add a client-side route guard as a usability layer while retaining server-side authorization as the security boundary.
 - [x] Make missing Resend password-recovery configuration visible to the caller and cover configured/missing mailer behavior with unit tests.
 - [x] Validate the milestone with TypeScript, the full unit suite, production build, and public landing-page visual verification.
+
+## Database Readiness Diagnostics Milestone
+
+- [x] Add a non-secret `/api/health/database` endpoint that reports only configured and reachable booleans.
+- [x] Reuse the existing TiDB/MySQL connection parsing and TLS behavior for the readiness check.
+- [x] Verify the endpoint locally returns JSON without exposing the connection string; Render provider verification remains pending.

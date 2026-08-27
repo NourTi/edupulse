@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { runStartupMigration, shouldRunStartupMigration } from "./startup";
+import { checkDatabaseHealth } from "../db";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -48,6 +49,10 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
+  app.get("/api/health/database", async (_req, res) => {
+    const health = await checkDatabaseHealth();
+    res.status(health.reachable ? 200 : 503).json({ service: "database", ...health });
+  });
   if (process.env.OAUTH_SERVER_URL?.trim()) {
     const { registerOAuthRoutes } = await import("./oauth");
     registerOAuthRoutes(app);

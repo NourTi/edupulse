@@ -1,5 +1,6 @@
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import { sql } from "drizzle-orm";
 import type { PoolOptions } from "mysql2";
 import {
   auditLogs,
@@ -74,6 +75,18 @@ export async function getDb() {
     _db = null;
   }
   return _db;
+}
+
+export async function checkDatabaseHealth() {
+  const db = await getDb();
+  if (!db) return { configured: false, reachable: false } as const;
+  try {
+    await db.execute(sql`select 1`);
+    return { configured: true, reachable: true } as const;
+  } catch (error) {
+    console.warn(`[Database] Health check failed (${databaseErrorCode(error)}).`);
+    return { configured: true, reachable: false } as const;
+  }
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {
