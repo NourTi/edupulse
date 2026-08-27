@@ -613,3 +613,4 @@
 - [x] Keep the new records institution-scoped, role-gated, auditable, and compatible with existing CRM editing/archive flows.
 - [x] Apply the vivid control system to the educator CRM forms and filters.
 - [x] Apply and validate the schema migration; TypeScript and 14 focused CRM/taxonomy tests pass.
+- [x] Run the full TypeScript suite, 60 unit tests, and production build after the stage-filter and university educator changes.
