@@ -427,3 +427,22 @@
 - [x] Compare candidates specifically for hallucination prevention, Arabic/public-web retrieval, citations, and Render compatibility.
 - [x] Select the best relevant component and integrate it into the existing grounded agent.
 - [x] Add guardrails, tests, failure handling, and deployment documentation for the selected component.
+
+## WhatsApp Guardian Messaging Automation
+
+- [ ] Inspect the supplied WhatsApp MCP transport, authentication/session model, message capabilities, and licensing.
+- [ ] Confirm whether the connector is suitable for production messaging and document its risks and provider requirements.
+- [ ] Add institution-scoped guardian phone lookup with normalized numbers and explicit messaging consent.
+- [ ] Add department-triggered message preview, approval, send, retry, unsubscribe, and audit flows.
+- [ ] Add weekly progress-summary generation from authorized grades, assessments, attendance, and chart data.
+- [ ] Add idempotent scheduled delivery through the project’s scheduled callback architecture; do not use in-process timers.
+- [ ] Add provider configuration, privacy guards, tests, and deployment documentation.
+
+## Desktop-First WhatsApp Integration
+
+- [x] Confirm the Windows desktop app is the primary WhatsApp runtime and the Render web app cannot access the local WhatsApp session.
+- [x] Integrate the supplied WhatsApp Web MCP bridge with the Tauri desktop runtime and bundled/local Python/Chromium setup boundary.
+- [ ] Add SQLCipher-backed guardian phone, consent, opt-out, message-template, and delivery-audit handling. (Consent, phone verification, opt-out, local draft storage, and send bridge are implemented; delivery-audit schema remains.)
+- [ ] Add department-triggered message preview/approval/send and weekly progress-summary scheduling. (Desktop preview/send and data-derived summary are implemented; unattended scheduler remains.)
+- [ ] Add safe retry/idempotency behavior and tests for institution, guardian, and message isolation.
+- [ ] Validate Windows packaging and document QR login, always-on desktop requirements, and WhatsApp Web limitations. (Workflow and documentation are prepared; Windows CI validation remains.)

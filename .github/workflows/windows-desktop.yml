@@ -36,6 +36,29 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Setup Python for WhatsApp sidecar
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build WhatsApp MCP sidecar
+        shell: pwsh
+        run: |
+          $source = Join-Path $env:RUNNER_TEMP "whatsapp-mcp"
+          git clone --depth 1 https://github.com/ekaksher/whatsapp-mcp.git $source
+          Push-Location $source
+          git fetch --depth 1 origin 29c82d6ccfdbc9215c62b15dd4965a6674d73be9
+          git checkout --detach 29c82d6ccfdbc9215c62b15dd4965a6674d73be9
+          Pop-Location
+          python -m pip install --upgrade pip pyinstaller
+          python -m pip install -r (Join-Path $source "requirements.txt")
+          $env:PLAYWRIGHT_BROWSERS_PATH = "0"
+          python -m playwright install chromium
+          New-Item -ItemType Directory -Force -Path "src-tauri/binaries" | Out-Null
+          Push-Location $source
+          pyinstaller --onefile --name whatsapp-mcp-server --paths src --collect-all whatsapp_mcp --distpath "$env:GITHUB_WORKSPACE/src-tauri/binaries" --workpath "$env:RUNNER_TEMP/whatsapp-build" --specpath "$env:RUNNER_TEMP/whatsapp-spec" src/whatsapp_mcp/main.py
+          Pop-Location
+
       - name: Check and test
         env:
           GOOGLE_CLIENT_ID: "000000000000-ci-validation.apps.googleusercontent.com"

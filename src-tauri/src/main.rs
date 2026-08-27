@@ -3,9 +3,13 @@
 use rand::RngCore;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Serialize;
+use serde_json::{json, Value};
 use std::fs;
+use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
-use tauri::{AppHandle, Manager};
+use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+use std::sync::Mutex;
+use tauri::{AppHandle, Manager, State};
 
 const KEYRING_SERVICE: &str = "com.edupulse.desktop";
 const KEYRING_ACCOUNT: &str = "sqlcipher-local-database";
@@ -15,6 +19,87 @@ const DATABASE_FILENAME: &str = "edupulse-secure.db";
 struct LocalDatabaseStatus {
   encrypted: bool,
   storage: &'static str,
+}
+
+struct WhatsAppProcess {
+  child: Child,
+  stdin: ChildStdin,
+  stdout: BufReader<ChildStdout>,
+  next_id: u64,
+}
+
+#[derive(Default)]
+struct WhatsAppState(Mutex<Option<WhatsAppProcess>>);
+
+fn whatsapp_executable(app: &AppHandle) -> Result<PathBuf, String> {
+  if let Ok(path) = std::env::var("EDUPULSE_WHATSAPP_MCP_PATH") {
+    return Ok(PathBuf::from(path));
+  }
+  let resource_dir = app.path().resource_dir().map_err(|error| format!("Unable to resolve WhatsApp MCP resources: {error}"))?;
+  #[cfg(target_os = "windows")]
+  {
+    let direct = resource_dir.join("whatsapp-mcp-server.exe");
+    return Ok(if direct.exists() { direct } else { resource_dir.join("binaries/whatsapp-mcp-server.exe") });
+  }
+  #[cfg(not(target_os = "windows"))]
+  {
+    let direct = resource_dir.join("whatsapp-mcp-server");
+    Ok(if direct.exists() { direct } else { resource_dir.join("binaries/whatsapp-mcp-server") })
+  }
+}
+
+fn start_whatsapp_process(app: &AppHandle) -> Result<WhatsAppProcess, String> {
+  let executable = whatsapp_executable(app)?;
+  let mut child = Command::new(&executable).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn()
+    .map_err(|error| format!("Unable to start the bundled WhatsApp bridge at {}: {error}", executable.display()))?;
+  let stdin = child.stdin.take().ok_or_else(|| "WhatsApp bridge stdin is unavailable.".to_string())?;
+  let stdout = child.stdout.take().ok_or_else(|| "WhatsApp bridge stdout is unavailable.".to_string())?;
+  Ok(WhatsAppProcess { child, stdin, stdout: BufReader::new(stdout), next_id: 1 })
+}
+
+impl WhatsAppProcess {
+  fn call(&mut self, method: &str, params: Value) -> Result<Value, String> {
+    if self.child.try_wait().map_err(|error| error.to_string())?.is_some() { return Err("The local WhatsApp bridge has stopped. Restart EduPulse and try again.".to_string()); }
+    let id = self.next_id;
+    self.next_id += 1;
+    writeln!(self.stdin, "{}", json!({ "jsonrpc": "2.0", "id": id, "method": method, "params": params })).map_err(|error| format!("Unable to send a request to the WhatsApp bridge: {error}"))?;
+    self.stdin.flush().map_err(|error| format!("Unable to flush the WhatsApp bridge request: {error}"))?;
+    let mut line = String::new();
+    loop {
+      line.clear();
+      if self.stdout.read_line(&mut line).map_err(|error| format!("Unable to read the WhatsApp bridge response: {error}"))? == 0 { return Err("The WhatsApp bridge closed its output.".to_string()); }
+      let response: Value = serde_json::from_str(line.trim()).map_err(|error| format!("Invalid JSON from the WhatsApp bridge: {error}"))?;
+      if response.get("id").and_then(Value::as_u64) != Some(id) { continue; }
+      if let Some(error) = response.get("error") { return Err(error.to_string()); }
+      return Ok(response.get("result").cloned().unwrap_or(Value::Null));
+    }
+  }
+
+  fn initialize(&mut self) -> Result<(), String> {
+    self.call("initialize", json!({ "protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": { "name": "EduPulse", "version": "1.0.0" } }))?;
+    writeln!(self.stdin, "{}", json!({ "jsonrpc": "2.0", "method": "notifications/initialized" })).map_err(|error| error.to_string())?;
+    self.stdin.flush().map_err(|error| error.to_string())?;
+    Ok(())
+  }
+}
+
+fn with_whatsapp_process<T>(app: &AppHandle, state: &WhatsAppState, operation: impl FnOnce(&mut WhatsAppProcess) -> Result<T, String>) -> Result<T, String> {
+  let mut slot = state.0.lock().map_err(|_| "WhatsApp bridge lock is unavailable.".to_string())?;
+  if slot.is_none() { let mut process = start_whatsapp_process(app)?; process.initialize()?; *slot = Some(process); }
+  operation(slot.as_mut().expect("WhatsApp process initialized"))
+}
+
+#[tauri::command]
+fn whatsapp_auth_status(app: AppHandle, state: State<'_, WhatsAppState>) -> Result<Value, String> {
+  with_whatsapp_process(&app, &state, |process| process.call("tools/call", json!({ "name": "get_auth_status", "arguments": {} })))
+}
+
+#[tauri::command]
+fn whatsapp_send_message(app: AppHandle, state: State<'_, WhatsAppState>, phone_number: String, text: String) -> Result<Value, String> {
+  let normalized = phone_number.trim().replace([' ', '-', '(', ')'], "");
+  if normalized.len() < 8 || normalized.len() > 20 || !normalized.chars().all(|character| character.is_ascii_digit() || character == '+') { return Err("The guardian phone number is not valid.".to_string()); }
+  if text.trim().is_empty() || text.len() > 4000 { return Err("The WhatsApp message must contain between 1 and 4000 characters.".to_string()); }
+  with_whatsapp_process(&app, &state, |process| process.call("tools/call", json!({ "name": "send_message", "arguments": { "phone_number": normalized, "text": text } })))
 }
 
 fn database_path(app: &AppHandle) -> Result<PathBuf, String> {
@@ -113,13 +198,16 @@ fn local_database_save(app: AppHandle, payload: String, updated_at: String) -> R
 
 fn main() {
   tauri::Builder::default()
+    .manage(WhatsAppState::default())
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init())
     .plugin(tauri_plugin_store::Builder::default().build())
     .invoke_handler(tauri::generate_handler![
       local_database_status,
       local_database_load,
-      local_database_save
+      local_database_save,
+      whatsapp_auth_status,
+      whatsapp_send_message
     ])
     .run(tauri::generate_context!())
     .expect("error while running EduPulse desktop");
