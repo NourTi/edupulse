@@ -71,7 +71,7 @@ import MedusaCommercePanel from "./MedusaCommercePanel";
 import { StudentSupportEvaluationPanel } from "./StudentSupportEvaluationPanel";
 
 type Screen = "landing" | "access" | "workspace";
-type Role = "admin" | "teacher" | "student" | "guardian";
+type Role = "admin" | "finance_admin" | "registrar" | "teacher" | "counsellor" | "student" | "guardian";
 type Language = "ar" | "en";
 type Subject = { id: string; name: string; nameAr: string; group: string };
 type Student = { id: string; name: string; nameAr: string; grade: string; guardian: string; phone: string; level: string; attendance: number; subjects: string[]; status: "Active" | "New" | "Review"; guardianConsent?: boolean; phoneVerified?: boolean; whatsappOptOut?: boolean };
@@ -137,6 +137,9 @@ const roleInfo: Record<Role, { title: string; arabic: string; summary: string; i
   teacher: { title: "Teacher", arabic: "المعلم", summary: "Cohorts, subjects, attendance, progress, and guardian drafts.", icon: GraduationCap, accent: "text-sky-100" },
   student: { title: "Student", arabic: "الطالب", summary: "A clear view of approved subjects, progress, reports, and messages.", icon: UserRoundCheck, accent: "text-emerald-100" },
   guardian: { title: "Guardian", arabic: "ولي الأمر", summary: "Linked learner progress, attendance, reports, and approved communication.", icon: UsersRound, accent: "text-violet-100" },
+  finance_admin: { title: "Finance administrator", arabic: "مسؤول المالية", summary: "Invoices, payments, refunds, exports, and commerce reporting.", icon: WalletCards, accent: "text-amber-100" },
+  registrar: { title: "Registrar", arabic: "مسجل المؤسسة", summary: "Learner registration, records, and education-stage data.", icon: UserRoundPlus, accent: "text-cyan-100" },
+  counsellor: { title: "Counsellor", arabic: "المستشار", summary: "Authorized learning-support reviews, follow-up, and care notes.", icon: BrainCircuit, accent: "text-rose-100" },
 };
 
 function openDatabase(): Promise<IDBDatabase> {
@@ -248,17 +251,20 @@ export default function EduPulseApp() {
     if (membershipRole === "guardian") return "guardian";
     if (membershipRole === "student") return "student";
     if (membershipRole === "teacher") return "teacher";
-    if (membershipRole) return "admin";
+    if (membershipRole === "finance_admin") return "finance_admin";
+    if (membershipRole === "registrar") return "registrar";
+    if (membershipRole === "counsellor") return "counsellor";
+    if (membershipRole === "admin" || membershipRole === "owner") return "admin";
     return authUser?.role === "admin" ? "admin" : pendingRole;
   }, [authUser?.role, membershipsQuery.data, pendingRole]);
-  const serverLearnersQuery = trpc.records.learners.useQuery(undefined, { enabled: Boolean(authUser) && !desktopRuntime && (accountRole === "admin" || accountRole === "teacher"), retry: false });
-  const serverPaymentsQuery = trpc.records.payments.useQuery(undefined, { enabled: Boolean(authUser) && !desktopRuntime && (accountRole === "admin"), retry: false });
+  const serverLearnersQuery = trpc.records.learners.useQuery(undefined, { enabled: Boolean(authUser) && !desktopRuntime && (["admin", "registrar", "teacher", "counsellor"].includes(accountRole)), retry: false });
+  const serverPaymentsQuery = trpc.records.payments.useQuery(undefined, { enabled: Boolean(authUser) && !desktopRuntime && (["admin", "finance_admin"].includes(accountRole)), retry: false });
   const createLearnerMutation = trpc.records.createLearner.useMutation();
   const recordPaymentMutation = trpc.records.recordPayment.useMutation();
   const currentStudent = data.students[0] ?? { id: "", name: "", nameAr: "لا يوجد طالب مسجل بعد", grade: "—", guardian: "—", phone: "—", level: "—", attendance: 0, subjects: [], status: "New" as const };
   const learnerRecordInput = useMemo(() => ({ learnerId: currentStudent.id }), [currentStudent.id]);
-  const serverAttendanceQuery = trpc.records.attendance.useQuery(learnerRecordInput, { enabled: Boolean(authUser) && !desktopRuntime && (accountRole === "admin" || accountRole === "teacher") && currentStudent.id.startsWith("learner_"), retry: false });
-  const serverCefrQuery = trpc.records.cefr.useQuery(learnerRecordInput, { enabled: Boolean(authUser) && !desktopRuntime && (accountRole === "admin" || accountRole === "teacher") && currentStudent.id.startsWith("learner_"), retry: false });
+  const serverAttendanceQuery = trpc.records.attendance.useQuery(learnerRecordInput, { enabled: Boolean(authUser) && !desktopRuntime && (["admin", "registrar", "teacher", "counsellor"].includes(accountRole)) && currentStudent.id.startsWith("learner_"), retry: false });
+  const serverCefrQuery = trpc.records.cefr.useQuery(learnerRecordInput, { enabled: Boolean(authUser) && !desktopRuntime && (["admin", "registrar", "teacher", "counsellor"].includes(accountRole)) && currentStudent.id.startsWith("learner_"), retry: false });
   const selectedAssessment = data.assessments.find((assessment) => assessment.studentId === currentStudent.id) ?? data.assessments[0];
   const activeStudents = data.students.filter((student) => student.status === "Active").length;
   const balanceDue = data.payments.filter((payment) => payment.state === "Balance due").reduce((sum, payment) => sum + payment.amount, 0);
@@ -466,21 +472,21 @@ export default function EduPulseApp() {
 
   const navItems = [
     { id: "overview", label: "نظرة عامة", icon: LayoutDashboard, roles: ["admin", "teacher", "student"] },
-    { id: "registration", label: "تسجيل الطالب", icon: UserRoundPlus, roles: ["admin"] },
-    { id: "learners", label: "الطلاب", icon: UsersRound, roles: ["admin", "teacher"] },
+    { id: "registration", label: "تسجيل الطالب", icon: UserRoundPlus, roles: ["admin", "registrar"] },
+    { id: "learners", label: "الطلاب", icon: UsersRound, roles: ["admin", "registrar", "teacher", "counsellor"] },
     { id: "subjects", label: "المواد الدراسية", icon: LibraryBig, roles: ["admin", "teacher", "student"] },
-    { id: "attendance", label: "الحضور", icon: ClipboardCheck, roles: ["admin", "teacher"] },
+    { id: "attendance", label: "الحضور", icon: ClipboardCheck, roles: ["admin", "registrar", "teacher", "counsellor"] },
     { id: "cefr", label: "تقييم CEFR", icon: BarChart3, roles: ["admin", "teacher", "student"] },
-    { id: "guardians", label: "التواصل مع الأولياء", icon: MessageCircle, roles: ["admin", "teacher"] },
-    { id: "payments", label: "المدفوعات والإيصالات", icon: WalletCards, roles: ["admin"] },
+    { id: "guardians", label: "التواصل مع الأولياء", icon: MessageCircle, roles: ["admin", "teacher", "counsellor"] },
+    { id: "payments", label: "المدفوعات والإيصالات", icon: WalletCards, roles: ["admin", "finance_admin"] },
     { id: "commerce", label: "التجارة والخدمات", icon:   PackageOpen,
- roles: ["admin"] },
+    roles: ["admin", "finance_admin"] },
     { id: "reports", label: "تقارير التقدم", icon: FileText, roles: ["admin", "teacher", "student"] },
-    { id: "support-evaluation", label: "تقييم الدعم التعليمي", icon: BrainCircuit, roles: ["admin", "teacher"] },
+    { id: "support-evaluation", label: "تقييم الدعم التعليمي", icon: BrainCircuit, roles: ["admin", "teacher", "counsellor"] },
     { id: "search", label: "بحث في السجل", icon: Search, roles: ["admin", "teacher", "student"] },
     { id: "knowledge", label: "مصادر المؤسسة", icon: BookOpen, roles: ["admin"] },
     { id: "ask", label: "اسأل المؤسسة", icon: MessageCircleQuestion, roles: ["admin", "teacher", "student"] },
-    { id: "crm", label: "نظام المعلم", icon: ClipboardCheck, roles: ["admin", "teacher"] },
+    { id: "crm", label: "نظام المعلم", icon: ClipboardCheck, roles: ["admin", "teacher", "counsellor"] },
     { id: "portal", label: role === "guardian" ? "بوابة ولي الأمر" : "بوابة الطالب", icon: UserRoundCheck, roles: ["student", "guardian"] },
   ];
 
@@ -540,7 +546,7 @@ export default function EduPulseApp() {
   }
 
   const visibleNav = navItems.filter((item) => item.roles.includes(role));
-  const navigate = (id: string) => { if (id === "search") { setSearchOpen(true); setMobileMenu(false); return; } setActiveView(id); setMobileMenu(false); };
+  const navigate = (id: string) => { if (id === "search") { setSearchOpen(true); setMobileMenu(false); return; } const destination = navItems.find(item => item.id === id); if (!destination || !destination.roles.includes(role)) { toast.error(isArabic ? "لا تملك صلاحية فتح هذه الوحدة." : "You do not have permission to open this module."); return; } setActiveView(id); setMobileMenu(false); };
   const dashboardTitle = ({ overview: "صباح واضح.", registration: "تسجيل طالب جديد.", learners: "سجل الطلاب.", subjects: "مكتبة المواد الدراسية.", attendance: "حضور اليوم.", cefr: "تقدم اللغة الإنجليزية.", guardians: "تواصل إنساني واضح.", payments: "مدفوعات وإيصالات.", commerce: "التجارة والخدمات.", reports: "تقارير التقدم.", knowledge: "دليل المؤسسة.", ask: "اسأل المؤسسة.", crm: "نظام المعلم.", portal: "بوابة الطالب." } as Record<string, string>)[activeView] ?? "EduPulse";
 
   const renderView = () => {

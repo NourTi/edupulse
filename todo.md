@@ -614,3 +614,11 @@
 - [x] Apply the vivid control system to the educator CRM forms and filters.
 - [x] Apply and validate the schema migration; TypeScript and 14 focused CRM/taxonomy tests pass.
 - [x] Run the full TypeScript suite, 60 unit tests, and production build after the stage-filter and university educator changes.
+
+## Working Role Differentiation Milestone
+
+- [x] Preserve authenticated membership roles for finance administrator, registrar, counsellor, teacher, guardian, student, administrator, and owner instead of collapsing specialist roles into admin.
+- [x] Add role-specific dashboard labels and navigation visibility for registration, learners, attendance, support evaluation, payments, commerce, CRM, and portals.
+- [x] Align server data-query activation with role permissions for specialist accounts.
+- [x] Add a client-side route guard preventing hidden modules from being opened by manually changing the active view.
+- [x] Validate the role contract with TypeScript, the full 60-test suite, and the production build.

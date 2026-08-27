@@ -25,7 +25,7 @@ type DashboardStudent = { id: string; nameAr: string; grade: string; guardian: s
 type CurrentStudent = { nameAr: string; grade: string; level: string; attendance: number; subjects: string[] };
 
 type Props = {
-  role: "admin" | "teacher" | "student" | "guardian";
+  role: "admin" | "finance_admin" | "registrar" | "teacher" | "counsellor" | "student" | "guardian";
   roleLabel: string;
   dateLabel: string;
   activeStudents: number;
