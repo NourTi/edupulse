@@ -61,7 +61,7 @@ import {
 } from "./db";
 import { clearPasswordSession, clearPasswordSessionCookie, establishPasswordSession, setPasswordSessionCookie } from "./auth/session";
 import { createOpaqueToken, hashOpaqueToken, hashPassword, normalizeEmail, verifyPassword } from "./auth/password";
-import { sendPasswordResetEmail } from "./email";
+import { sendCommerceReportEmail, sendPasswordResetEmail } from "./email";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { ENV } from "./_core/env";
 import { invokeLLM } from "./_core/llm";
@@ -75,7 +75,7 @@ import { searchAndFetchPublicWeb } from "./knowledge/agentScraper";
 import { recordAgentEvent, type AgentIntent, type AgentOutcome } from "./knowledge/observability";
 import { invokeVenice, veniceConfigured } from "./ai/venice";
 import { getMedusaStatus, listMedusaProducts } from "./commerce/medusa";
-import { subscriptionCycleDays } from "./commerce/reporting";
+import { commerceReportCsv, subscriptionCycleDays } from "./commerce/reporting";
 import { buildSupportEvaluation } from "./ai/evaluation";
 
 const schoolRoles = ["owner", "admin", "registrar", "finance_admin", "teacher", "counsellor", "student", "guardian"] as const;
@@ -256,10 +256,24 @@ export const appRouter = router({
       await writeAuditLog({ id: `audit_${nanoid(16)}`, institutionId, actorUserId: ctx.user.id, action: "commerce.invoice.status_changed", entityType: "commerce_invoice", entityId: invoice.id, metadata: JSON.stringify({ status: input.status }) });
       return invoice;
     }),
-    report: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional() }).optional()).query(async ({ ctx, input }) => {
+    report: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), from: z.coerce.date().optional(), to: z.coerce.date().optional(), productKind: z.enum(["fee", "course", "service", "subscription"]).optional() }).optional()).query(async ({ ctx, input }) => {
       const institutionId = await defaultInstitutionId(ctx.user.id, input?.institutionId);
       await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "finance_admin"]);
-      return getCommerceReport(institutionId);
+      if (input?.from && input?.to && input.from > input.to) throw new TRPCError({ code: "BAD_REQUEST", message: "The report start date must be before the end date." });
+      return getCommerceReport(institutionId, { from: input?.from, to: input?.to, productKind: input?.productKind });
+    }),
+    emailReport: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), recipient: z.string().email().max(320), from: z.coerce.date().optional(), to: z.coerce.date().optional(), productKind: z.enum(["fee", "course", "service", "subscription"]).optional() })).mutation(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "finance_admin"]);
+      if (input.from && input.to && input.from > input.to) throw new TRPCError({ code: "BAD_REQUEST", message: "The report start date must be before the end date." });
+      const report = await getCommerceReport(institutionId, { from: input.from, to: input.to, productKind: input.productKind });
+      try {
+        await sendCommerceReportEmail({ to: input.recipient.trim().toLowerCase(), subject: "EduPulse commerce report", csv: commerceReportCsv(report), summary: `${report.invoices.length} invoices · ${(report.metrics.revenueMinor / 100).toFixed(2)} DZD revenue · ${report.metrics.refundRate}% refund rate` });
+      } catch (error) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: error instanceof Error ? error.message : "Could not send the commerce report." });
+      }
+      await writeAuditLog({ id: `audit_${nanoid(16)}`, institutionId, actorUserId: ctx.user.id, action: "commerce.report.emailed", entityType: "commerce_report", entityId: institutionId, metadata: JSON.stringify({ recipient: input.recipient.trim().toLowerCase(), invoiceCount: report.invoices.length, productKind: input.productKind || "all" }) });
+      return { sent: true, recipient: input.recipient.trim().toLowerCase(), invoiceCount: report.invoices.length } as const;
     }),
     simulateSubscriptionBilling: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), productId: z.string().max(64), learnerId: z.string().max(64), cycle: z.enum(["monthly", "quarterly", "annual"]).default("monthly") })).mutation(async ({ ctx, input }) => {
       const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);

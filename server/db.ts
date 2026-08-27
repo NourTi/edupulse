@@ -561,10 +561,15 @@ export async function listPaymentRecords(institutionId: string, learnerId?: stri
   return db.select().from(paymentRecords).where(where).orderBy(desc(paymentRecords.paidAt));
 }
 
-export async function getCommerceReport(institutionId: string) {
+export async function getCommerceReport(institutionId: string, filters?: { from?: Date; to?: Date; productKind?: "fee" | "course" | "service" | "subscription" }) {
   const db = await getDb();
   if (!db) return { invoices: [], payments: [], metrics: { revenueMinor: 0, discountsMinor: 0, refundedMinor: 0, refundRate: 0, invoiceCount: 0, paidInvoiceCount: 0 } };
-  const [invoices, payments] = await Promise.all([listCommerceInvoices(institutionId), listPaymentRecords(institutionId)]);
+  const [allInvoices, allPayments, products] = await Promise.all([listCommerceInvoices(institutionId), listPaymentRecords(institutionId), listCommerceProducts(institutionId)]);
+  const productIds = filters?.productKind ? new Set(products.filter(product => product.kind === filters.productKind).map(product => product.id)) : undefined;
+  const inRange = (value: Date | null) => (!value || (!filters?.from || value >= filters.from) && (!filters?.to || value <= filters.to));
+  const invoices = allInvoices.filter(invoice => (!productIds || productIds.has(invoice.productId)) && inRange(invoice.createdAt));
+  const learnerIds = new Set(invoices.map(invoice => invoice.learnerId));
+  const payments = allPayments.filter(payment => learnerIds.has(payment.learnerId) && inRange(payment.paidAt));
   const metrics = calculateCommerceMetrics(invoices, payments);
   return { invoices, payments, metrics };
 }

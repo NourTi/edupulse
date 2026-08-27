@@ -17,6 +17,12 @@ export function calculateCommerceMetrics(invoices: ReportInvoice[], payments: Re
   };
 }
 
+export function commerceReportCsv(report: { invoices: Array<{ id: string; learnerId: string; invoiceNumber: string; amountMinor: number; discountMinor: number; currency: string; status: string; createdAt: Date | string | null }>; payments: Array<{ id: string; learnerId: string; amountMinor: number; currency: string; method: string; status: string; paidAt: Date | string }> }) {
+  const cell = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+  const rows = [["type", "id", "learner_id", "invoice_number", "amount_minor", "discount_minor", "currency", "status", "method", "date"], ...report.invoices.map(item => ["invoice", item.id, item.learnerId, item.invoiceNumber, item.amountMinor, item.discountMinor, item.currency, item.status, "", new Date(item.createdAt ?? Date.now()).toISOString()]), ...report.payments.map(item => ["payment", item.id, item.learnerId, "", item.amountMinor, "", item.currency, item.status, item.method, new Date(item.paidAt).toISOString()])];
+  return rows.map(row => row.map(cell).join(",")).join("\n");
+}
+
 export function subscriptionCycleDays(cycle: "monthly" | "quarterly" | "annual") {
   return cycle === "annual" ? 365 : cycle === "quarterly" ? 90 : 30;
 }

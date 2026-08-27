@@ -556,3 +556,15 @@
 - [x] Add Tauri SQLCipher commands and encrypted local evaluation storage keyed to active local sessions and institution IDs.
 - [x] Add deterministic evaluation regression tests; TypeScript, full Vitest suite, and production build pass.
 - [ ] Validate native Rust/Tauri compilation and Windows runtime behavior on a Windows development machine; Cargo is not installed in the current Linux sandbox.
+
+## Confirmed All-Stage AI and Reporting Extension
+
+- [x] Expand the evaluation scope from primary-only to all stages from preparatory through higher education.
+- [x] Add staff-only React evaluation UI with trend chart, evidence, possible contributing factors, recommendations, support level, and review/share controls.
+- [x] Add institution-scoped learning assessment and support-evaluation persistence on the server.
+- [x] Add Venice OpenAI-compatible server adapter for grounded agent and evaluation summaries, with bounded prompts, structured output, and deterministic fallback.
+- [x] Add Tauri SQLCipher save/load commands for local evaluation payloads with active-session and institution isolation.
+- [x] Add date-range and product-type filters to commerce analytics and filtered browser exports.
+- [x] Add administrator report-email procedure and panel control with recipient validation, CSV attachment, Resend server-side credentials, and audit logging.
+- [x] Add focused evaluation and Venice adapter tests; full test suite and production build pass.
+- [ ] Validate the Tauri Rust commands on Windows with Cargo and a native SQLCipher runtime; the current Linux sandbox cannot perform that verification.

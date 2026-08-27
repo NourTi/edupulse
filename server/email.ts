@@ -1,5 +1,17 @@
 const RESEND_API_URL = "https://api.resend.com/emails";
 
+export async function sendCommerceReportEmail(input: { to: string; subject: string; csv: string; summary: string }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM_EMAIL;
+  if (!apiKey || !from) throw new Error("Report email is not configured. Add RESEND_API_KEY and RESEND_FROM_EMAIL.");
+  const response = await fetch(RESEND_API_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from, to: [input.to], subject: input.subject, html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.8"><h2>EduPulse — تقرير التجارة</h2><p>${input.summary}</p><p>أُرفق التقرير بصيغة CSV. يحتوي على بيانات المؤسسة المحددة فقط.</p></div>`, attachments: [{ filename: "edupulse-commerce-report.csv", content: Buffer.from(input.csv, "utf8").toString("base64") }] }),
+  });
+  if (!response.ok) throw new Error(`Resend report request failed with status ${response.status}.`);
+}
+
 export async function sendPasswordResetEmail(input: { to: string; token: string }) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM_EMAIL;
