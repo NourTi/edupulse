@@ -568,3 +568,10 @@
 - [x] Add administrator report-email procedure and panel control with recipient validation, CSV attachment, Resend server-side credentials, and audit logging.
 - [x] Add focused evaluation and Venice adapter tests; full test suite and production build pass.
 - [ ] Validate the Tauri Rust commands on Windows with Cargo and a native SQLCipher runtime; the current Linux sandbox cannot perform that verification.
+
+## Commerce Filters and Report Delivery Extension
+
+- [x] Add server-validated date-range and product-type filters to commerce analytics.
+- [x] Apply the same filters to browser CSV/PDF exports and expose them in the admin toolbar.
+- [x] Add administrator email delivery with recipient validation, CSV attachment, server-only Resend credentials, clear configuration errors, and audit logging.
+- [x] Re-run TypeScript and focused analytics, evaluation, Medusa, and Venice adapter tests successfully.
