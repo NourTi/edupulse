@@ -1,3 +1,3 @@
 # Render health check — 2026-08-27
 
-The first request reached Render while the service was waking. A retry after wake-up returned EduPulse's application-level 404 page for `/api/health/database`, not the expected JSON. This indicates the Render deployment is not running the checkpoint that contains the new endpoint, or its route was not redeployed. No credentials or secrets were exposed. Local verification remains successful.
+The user reported that Render started deploying commit `1e17ba7`. A poll during deployment still returned EduPulse’s application-level 404 page for `/api/health/database`; the deployment was not live yet at that moment. The endpoint works locally. No credentials or secrets were exposed. Password-recovery email delivery remains disabled.
