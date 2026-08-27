@@ -446,3 +446,45 @@
 - [ ] Add department-triggered message preview/approval/send and weekly progress-summary scheduling. (Desktop preview/send and data-derived summary are implemented; unattended scheduler remains.)
 - [ ] Add safe retry/idempotency behavior and tests for institution, guardian, and message isolation.
 - [ ] Validate Windows packaging and document QR login, always-on desktop requirements, and WhatsApp Web limitations. (Workflow and documentation are prepared; Windows CI validation remains.)
+
+## Authentication Journey Audit
+
+- [ ] Verify manager registration and first sign-in for the downloaded desktop app and web app.
+- [ ] Verify teacher/staff invitation acceptance, password setup, and sign-in journey.
+- [ ] Verify ordinary user, guardian, and student sign-in and role routing.
+- [ ] Verify Google OAuth readiness and explain its dependency on deployment configuration.
+- [ ] Verify session persistence and local desktop/web differences; document any gaps without overstating readiness.
+
+## SQLCipher Local Authentication and Parent WhatsApp Accounts
+
+- [ ] Define a local SQLCipher schema for institution, user, role, learner, guardian relationship, consent, session, and audit records.
+- [ ] Implement first-run school-manager registration with a strong local password and secure key lifecycle.
+- [ ] Implement local password login, logout, session timeout/lock, failed-attempt throttling, and recovery boundary.
+- [ ] Implement local staff/teacher invitation and parent/student account linking with role-aware access.
+- [ ] Connect the authenticated parent relationship to normalized guardian phone data and explicit WhatsApp consent.
+- [ ] Integrate the supplied WhatsApp MCP sidecar for reviewed department messages and parent progress summaries.
+- [ ] Add delivery audit, retry/idempotency, opt-out, and weekly scheduling safeguards.
+- [ ] Add security tests and Windows packaging documentation for the independent desktop application.
+- [ ] Enforce mandatory administrator fields: first name, family name, birthplace, date of birth, sex, institution name, designation/title, email or username, password, and password confirmation.
+
+## Medusa Commerce Integration
+
+- [ ] Inspect the official Medusa repository, license, modules, and deployment requirements.
+- [ ] Map Medusa to EduPulse services, school fees, invoices, subscriptions, and client workflows.
+- [ ] Define ownership and synchronization boundaries between EduPulse education records and Medusa commerce records.
+- [ ] Decide whether Medusa should be a separate service or a bounded module rather than replacing EduPulse’s core backend.
+- [ ] Implement only suitable commerce capabilities with institution isolation, role permissions, auditability, and payment safeguards.
+- [ ] Add tests and deployment documentation.
+- [ ] Implement the confirmed separate Medusa commerce boundary for fees, course/service packages, invoices, discounts, refunds, and optional subscriptions.
+- [ ] Keep EduPulse as the source of truth for institution, learner, guardian, identity, academic, SQLCipher, and AI data while synchronizing only approved commerce identifiers and statuses.
+
+## Medusa Commerce Foundation
+
+- [x] Define and document a separate Medusa commerce boundary with EduPulse as the source of truth for education, identity, privacy, SQLCipher, and AI data.
+- [x] Add optional server-side Medusa configuration fields without committing credentials or breaking deployments where Medusa is not configured.
+- [x] Add an institution-authorized tRPC commerce status procedure for owners, administrators, and finance administrators.
+- [x] Add an institution-authorized Medusa catalog procedure for owners, administrators, finance administrators, and registrars with bounded requests and safe upstream errors.
+- [x] Add an Arabic-first commerce workspace panel showing connection readiness, catalog state, and the local-payment fallback.
+- [x] Add Medusa adapter regression tests; TypeScript, 53 unit tests, and the production build pass.
+- [ ] Provision or connect a PostgreSQL-backed Medusa service and configure its URL and publishable key.
+- [ ] Implement institution-scoped carts, orders, payment-provider callbacks, invoices, refunds, and optional subscription synchronization after the Medusa service is available.

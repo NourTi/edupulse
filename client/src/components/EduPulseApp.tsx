@@ -25,6 +25,7 @@ import {
   FileText,
   GraduationCap,
   MessageCircleQuestion,
+  PackageOpen,
   LayoutDashboard,
   LibraryBig,
   Loader2,
@@ -64,6 +65,7 @@ import { escapeReceiptHtml, formatReceiptContent } from "@/lib/receiptFormatting
 import { isDesktopRuntime, saveDesktopBackup } from "@/lib/desktopRuntime";
 import { loadDesktopWorkspace, saveDesktopWorkspace } from "@/lib/desktopRecords";
 import { buildWeeklyProgressMessage } from "@/lib/weeklyProgress";
+import MedusaCommercePanel from "./MedusaCommercePanel";
 
 type Screen = "landing" | "access" | "workspace";
 type Role = "admin" | "teacher" | "student" | "guardian";
@@ -439,7 +441,7 @@ export default function EduPulseApp() {
 
   const recordWhatsAppDelivery = async (delivery: Omit<WhatsAppDelivery, "id" | "studentId">) => {
     const record: WhatsAppDelivery = { ...delivery, id: `wa-${Date.now()}`, studentId: currentStudent.id };
-    await updateData({ ...data, whatsappDeliveries: [record, ...data.whatsappDeliveries] });
+    await updateData({ ...data, whatsappDeliveries: [record, ...(data.whatsappDeliveries ?? [])] });
   };
 
   const printProgressReport = () => {
@@ -468,6 +470,8 @@ export default function EduPulseApp() {
     { id: "cefr", label: "تقييم CEFR", icon: BarChart3, roles: ["admin", "teacher", "student"] },
     { id: "guardians", label: "التواصل مع الأولياء", icon: MessageCircle, roles: ["admin", "teacher"] },
     { id: "payments", label: "المدفوعات والإيصالات", icon: WalletCards, roles: ["admin"] },
+    { id: "commerce", label: "التجارة والخدمات", icon:   PackageOpen,
+ roles: ["admin"] },
     { id: "reports", label: "تقارير التقدم", icon: FileText, roles: ["admin", "teacher", "student"] },
     { id: "search", label: "بحث في السجل", icon: Search, roles: ["admin", "teacher", "student"] },
     { id: "knowledge", label: "مصادر المؤسسة", icon: BookOpen, roles: ["admin"] },
@@ -492,7 +496,7 @@ export default function EduPulseApp() {
       </section>
 
       <PostHeroModuleStrip isArabic={isArabic} onSelect={(view) => {
-        if (["overview", "registration", "payments", "learners", "attendance", "cefr", "guardians", "subjects", "crm", "reports", "portal", "ask"].includes(view)) {
+        if (["overview", "registration", "payments", "commerce", "learners", "attendance", "cefr", "guardians", "subjects", "crm", "reports", "portal", "ask"].includes(view)) {
           enterWorkspace(view === "portal" ? (role === "guardian" ? "guardian" : "student") : role);
           setActiveView(view);
         } else {
@@ -533,11 +537,12 @@ export default function EduPulseApp() {
 
   const visibleNav = navItems.filter((item) => item.roles.includes(role));
   const navigate = (id: string) => { if (id === "search") { setSearchOpen(true); setMobileMenu(false); return; } setActiveView(id); setMobileMenu(false); };
-  const dashboardTitle = ({ overview: "صباح واضح.", registration: "تسجيل طالب جديد.", learners: "سجل الطلاب.", subjects: "مكتبة المواد الدراسية.", attendance: "حضور اليوم.", cefr: "تقدم اللغة الإنجليزية.", guardians: "تواصل إنساني واضح.", payments: "مدفوعات وإيصالات.", reports: "تقارير التقدم.", knowledge: "دليل المؤسسة.", ask: "اسأل المؤسسة.", crm: "نظام المعلم.", portal: "بوابة الطالب." } as Record<string, string>)[activeView] ?? "EduPulse";
+  const dashboardTitle = ({ overview: "صباح واضح.", registration: "تسجيل طالب جديد.", learners: "سجل الطلاب.", subjects: "مكتبة المواد الدراسية.", attendance: "حضور اليوم.", cefr: "تقدم اللغة الإنجليزية.", guardians: "تواصل إنساني واضح.", payments: "مدفوعات وإيصالات.", commerce: "التجارة والخدمات.", reports: "تقارير التقدم.", knowledge: "دليل المؤسسة.", ask: "اسأل المؤسسة.", crm: "نظام المعلم.", portal: "بوابة الطالب." } as Record<string, string>)[activeView] ?? "EduPulse";
 
   const renderView = () => {
     if (activeView === "crm") return <EducatorCRMPanel isArabic={isArabic} desktopRuntime={desktopRuntime} />;
     if (activeView === "portal") return role === "guardian" ? <GuardianPortalPanel isArabic={isArabic} /> : <StudentPortalPanel isArabic={isArabic} />;
+    if (activeView === "commerce") return <><SectionHeader eyebrow="Medusa commerce boundary" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">خدمات مدفوعة، بحدود واضحة.</em></>} copy="Medusa يدير الكتالوج وحالة التجارة. EduPulse يحتفظ بالمؤسسة وسياق الطالب والصلاحيات." /><MedusaCommercePanel isArabic={isArabic} /></>;
     if (activeView === "overview") return <VividDashboard role={role} roleLabel={roleInfo[role].arabic} dateLabel={new Date().toLocaleDateString("ar-DZ", { weekday: "long", day: "numeric", month: "long" })} activeStudents={activeStudents} balanceDue={balanceDue} students={data.students} currentStudent={{ nameAr: currentStudent.nameAr, grade: currentStudent.grade, level: currentStudent.level, attendance: currentStudent.attendance, subjects: currentStudent.subjects.map(subject => subjectName(subject, "ar")) }} onNavigate={navigate} onRegister={() => setRegistrationOpen(true)} />;
 
     if (activeView === "registration") return <><SectionHeader eyebrow="Arabic-first registration" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">ابدأ بالمعلومات التي تحتاجها فقط.</em></>} copy="يتضمن النموذج الطالب وولي الأمر والصف والمواد. يمكن إضافة الحقول الخاصة بالمؤسسة في نسخة قاعدة البيانات المحلية المشفرة." action={<button onClick={() => setRegistrationOpen(true)} className="liquid-glass rounded-full px-5 py-3 text-sm">فتح النموذج</button>} /><RegistrationPanel registration={registration} setRegistration={setRegistration} toggleSubject={toggleSubject} submitRegistration={submitRegistration} /></>;

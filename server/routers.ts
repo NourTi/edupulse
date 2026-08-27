@@ -61,6 +61,7 @@ import { createCrawl4AIJob, crawlPublicPageWithCrawl4AI } from "./knowledge/craw
 import { canUseFreeSource, fetchWikipediaAnswer, isLikelyGeneralKnowledgeQuestion } from "./knowledge/freeSources";
 import { searchAndFetchPublicWeb } from "./knowledge/agentScraper";
 import { recordAgentEvent, type AgentIntent, type AgentOutcome } from "./knowledge/observability";
+import { getMedusaStatus, listMedusaProducts } from "./commerce/medusa";
 
 const schoolRoles = ["owner", "admin", "registrar", "finance_admin", "teacher", "counsellor", "student", "guardian"] as const;
 type SchoolRole = (typeof schoolRoles)[number];
@@ -188,6 +189,23 @@ export const appRouter = router({
       const token = await establishPasswordSession(invitedUser.id, ctx.req);
       setPasswordSessionCookie(ctx.res, ctx.req, token);
       return { success: true } as const;
+    }),
+  }),
+  commerce: router({
+    status: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional() }).optional()).query(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input?.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "finance_admin"]);
+      return getMedusaStatus();
+    }),
+    catalog: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional() }).optional()).query(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input?.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "finance_admin", "registrar"]);
+      try {
+        return { configured: getMedusaStatus().configured, products: await listMedusaProducts() };
+      } catch (error) {
+        console.error("[Commerce] Medusa catalog unavailable", error instanceof Error ? error.message : "unknown error");
+        throw new TRPCError({ code: "BAD_GATEWAY", message: "The commerce catalog is temporarily unavailable." });
+      }
     }),
   }),
   records: router({

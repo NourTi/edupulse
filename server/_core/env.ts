@@ -8,4 +8,7 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  medusaBackendUrl: process.env.MEDUSA_BACKEND_URL?.replace(/\/+$/, "") ?? "",
+  medusaPublishableKey: process.env.MEDUSA_PUBLISHABLE_KEY ?? "",
+  medusaAdminToken: process.env.MEDUSA_ADMIN_TOKEN ?? "",
 };

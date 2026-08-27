@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use argon2::{password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString}, Argon2};
 use rand::RngCore;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Serialize;
@@ -8,7 +9,9 @@ use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+use sha2::{Digest, Sha256};
 use std::sync::Mutex;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager, State};
 
 const KEYRING_SERVICE: &str = "com.edupulse.desktop";
@@ -196,6 +199,62 @@ fn local_database_save(app: AppHandle, payload: String, updated_at: String) -> R
   Ok(())
 }
 
+#[derive(Debug, Serialize)]
+struct LocalAuthUser {
+  id: i64,
+  institution_id: String,
+  first_name: String,
+  family_name: String,
+  email: String,
+  designation: String,
+  role: String,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct OwnerRegistration {
+  first_name: String,
+  family_name: String,
+  birthplace: String,
+  date_of_birth: String,
+  sex: String,
+  institution_name: String,
+  designation: String,
+  email: String,
+  password: String,
+}
+
+fn now_epoch() -> i64 { SystemTime::now().duration_since(UNIX_EPOCH).map(|duration| duration.as_secs() as i64).unwrap_or_default() }
+fn normalized_email(value: &str) -> String { value.trim().to_lowercase() }
+fn token_hash(value: &str) -> String { let mut digest = Sha256::new(); digest.update(value.as_bytes()); format!("{:x}", digest.finalize()) }
+fn audit_id() -> String { let mut bytes = [0_u8; 12]; rand::rng().fill_bytes(&mut bytes); format!("audit_{}", bytes.iter().map(|byte| format!("{byte:02x}")).collect::<String>()) }
+fn validate_owner(input: &OwnerRegistration) -> Result<(), String> {
+  for (label, value) in [("first name", &input.first_name), ("family name", &input.family_name), ("birthplace", &input.birthplace), ("date of birth", &input.date_of_birth), ("sex", &input.sex), ("institution name", &input.institution_name), ("designation", &input.designation), ("email", &input.email), ("password", &input.password)] {
+    if value.trim().is_empty() { return Err(format!("The {label} field is required.")); }
+  }
+  if !input.email.contains('@') { return Err("Enter a valid email address.".to_string()); }
+  if input.password.len() < 10 || !input.password.chars().any(|c| c.is_ascii_uppercase()) || !input.password.chars().any(|c| c.is_ascii_lowercase()) || !input.password.chars().any(|c| c.is_ascii_digit()) { return Err("Password must contain at least 10 characters, including uppercase, lowercase, and a number.".to_string()); }
+  Ok(())
+}
+
+fn ensure_auth_schema(connection: &Connection) -> Result<(), String> {
+  connection.execute_batch("CREATE TABLE IF NOT EXISTS local_institutions (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, created_at INTEGER NOT NULL); CREATE TABLE IF NOT EXISTS local_users (id INTEGER PRIMARY KEY AUTOINCREMENT, institution_id TEXT NOT NULL, first_name TEXT NOT NULL, family_name TEXT NOT NULL, birthplace TEXT NOT NULL, date_of_birth TEXT NOT NULL, sex TEXT NOT NULL, designation TEXT NOT NULL, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, role TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, created_at INTEGER NOT NULL, FOREIGN KEY(institution_id) REFERENCES local_institutions(id)); CREATE TABLE IF NOT EXISTS local_sessions (id TEXT PRIMARY KEY NOT NULL, user_id INTEGER NOT NULL, token_hash TEXT NOT NULL UNIQUE, expires_at INTEGER NOT NULL, last_seen_at INTEGER NOT NULL, revoked_at INTEGER, FOREIGN KEY(user_id) REFERENCES local_users(id)); CREATE TABLE IF NOT EXISTS local_audit_events (id TEXT PRIMARY KEY NOT NULL, user_id INTEGER, action TEXT NOT NULL, created_at INTEGER NOT NULL, metadata TEXT NOT NULL); CREATE INDEX IF NOT EXISTS idx_local_sessions_token ON local_sessions(token_hash); CREATE INDEX IF NOT EXISTS idx_local_users_email ON local_users(email);").map_err(|error| format!("Unable to prepare local authentication schema: {error}"))
+}
+
+fn auth_user_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<LocalAuthUser> { Ok(LocalAuthUser { id: row.get(0)?, institution_id: row.get(1)?, first_name: row.get(2)?, family_name: row.get(3)?, email: row.get(4)?, designation: row.get(5)?, role: row.get(6)? }) }
+fn issue_local_session(connection: &Connection, user_id: i64) -> Result<String, String> { let mut bytes = [0_u8; 32]; rand::rng().fill_bytes(&mut bytes); let raw = bytes.iter().map(|byte| format!("{byte:02x}")).collect::<String>(); connection.execute("INSERT INTO local_sessions (id,user_id,token_hash,expires_at,last_seen_at) VALUES (?1,?2,?3,?4,?5)", params![format!("session_{}", &raw[..16]), user_id, token_hash(&raw), now_epoch() + 60 * 60 * 12, now_epoch()]).map_err(|error| format!("Unable to create local session: {error}"))?; Ok(raw) }
+
+#[tauri::command]
+fn local_auth_status(app: AppHandle) -> Result<bool, String> { let connection = open_encrypted_database(&app)?; ensure_auth_schema(&connection)?; connection.query_row("SELECT EXISTS(SELECT 1 FROM local_users WHERE role = 'owner' AND active = 1)", [], |row| row.get(0)).map_err(|error| format!("Unable to read local authentication status: {error}")) }
+
+#[tauri::command]
+fn local_register_owner(app: AppHandle, input: OwnerRegistration) -> Result<LocalAuthUser, String> { validate_owner(&input)?; let connection = open_encrypted_database(&app)?; ensure_auth_schema(&connection)?; let exists: bool = connection.query_row("SELECT EXISTS(SELECT 1 FROM local_users WHERE role = 'owner' AND active = 1)", [], |row| row.get(0)).map_err(|error| error.to_string())?; if exists { return Err("A school manager account already exists on this computer.".to_string()); } let email = normalized_email(&input.email); let salt = SaltString::generate(&mut rand::rng()); let password_hash = Argon2::default().hash_password(input.password.as_bytes(), &salt).map_err(|error| format!("Unable to hash the local password: {error}"))?.to_string(); let institution_id = format!("local_inst_{}", &token_hash(&format!("{}{}", input.institution_name, now_epoch()))[..16]); let transaction = connection.unchecked_transaction().map_err(|error| error.to_string())?; transaction.execute("INSERT INTO local_institutions (id,name,created_at) VALUES (?1,?2,?3)", params![institution_id, input.institution_name.trim(), now_epoch()]).map_err(|error| format!("Unable to create local institution: {error}"))?; transaction.execute("INSERT INTO local_users (institution_id,first_name,family_name,birthplace,date_of_birth,sex,designation,email,password_hash,role,created_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,'owner',?10)", params![institution_id, input.first_name.trim(), input.family_name.trim(), input.birthplace.trim(), input.date_of_birth.trim(), input.sex.trim(), input.designation.trim(), email, password_hash, now_epoch()]).map_err(|error| format!("Unable to create local owner account: {error}"))?; let user_id = transaction.last_insert_rowid(); transaction.execute("INSERT INTO local_audit_events (id,user_id,action,created_at,metadata) VALUES (?1,?2,'local.owner_registered',?3,?4)", params![audit_id(), user_id, now_epoch(), "{}"] ).map_err(|error| error.to_string())?; transaction.commit().map_err(|error| error.to_string())?; connection.query_row("SELECT id,institution_id,first_name,family_name,email,designation,role FROM local_users WHERE id=?1", params![user_id], auth_user_from_row).map_err(|error| error.to_string()) }
+
+#[tauri::command]
+fn local_login(app: AppHandle, email: String, password: String) -> Result<(LocalAuthUser, String), String> { let connection = open_encrypted_database(&app)?; ensure_auth_schema(&connection)?; let email = normalized_email(&email); let result = connection.query_row("SELECT id,institution_id,first_name,family_name,email,password_hash,designation,role FROM local_users WHERE email=?1 AND active=1", params![email], |row| { Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?, row.get::<_, String>(2)?, row.get::<_, String>(3)?, row.get::<_, String>(4)?, row.get::<_, String>(5)?, row.get::<_, String>(6)?, row.get::<_, String>(7)?)) }); let (id, institution_id, first_name, family_name, email, stored_hash, designation, role) = result.map_err(|_| "Email or password is incorrect.".to_string())?; let parsed = PasswordHash::new(&stored_hash).map_err(|_| "The local password record is invalid.".to_string())?; Argon2::default().verify_password(password.as_bytes(), &parsed).map_err(|_| "Email or password is incorrect.".to_string())?; let session = issue_local_session(&connection, id)?; connection.execute("INSERT INTO local_audit_events (id,user_id,action,created_at,metadata) VALUES (?1,?2,'local.login',?3,?4)", params![audit_id(), id, now_epoch(), "{}"] ).map_err(|error| error.to_string())?; Ok((LocalAuthUser { id, institution_id, first_name, family_name, email, designation, role }, session)) }
+
+#[tauri::command]
+fn local_logout(app: AppHandle, session_token: String) -> Result<(), String> { let connection = open_encrypted_database(&app)?; ensure_auth_schema(&connection)?; connection.execute("UPDATE local_sessions SET revoked_at=?1 WHERE token_hash=?2 AND revoked_at IS NULL", params![now_epoch(), token_hash(&session_token)]).map_err(|error| format!("Unable to close local session: {error}"))?; Ok(()) }
+
 fn main() {
   tauri::Builder::default()
     .manage(WhatsAppState::default())
@@ -207,7 +266,11 @@ fn main() {
       local_database_load,
       local_database_save,
       whatsapp_auth_status,
-      whatsapp_send_message
+      whatsapp_send_message,
+      local_auth_status,
+      local_register_owner,
+      local_login,
+      local_logout
     ])
     .run(tauri::generate_context!())
     .expect("error while running EduPulse desktop");
