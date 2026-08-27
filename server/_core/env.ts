@@ -14,4 +14,5 @@ export const ENV = {
   veniceInferenceApiKey: process.env.VENICE_INFERENCE_API_KEY ?? "",
   veniceBaseUrl: process.env.VENICE_BASE_URL ?? "https://api.venice.ai/api/v1",
   veniceModel: process.env.VENICE_MODEL ?? "llama-3.3-70b",
+  descopeProjectId: process.env.VITE_DESCOPE_PROJECT_ID ?? "",
 };

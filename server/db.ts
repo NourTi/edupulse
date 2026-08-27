@@ -182,10 +182,10 @@ export async function getUserByEmail(email: string) {
   return result[0];
 }
 
-export async function createExternalUser(input: { name: string; email: string }) {
+export async function createExternalUser(input: { name: string; email: string; loginMethod?: string }) {
   const db = await getDb();
   if (!db) throw new Error("Database is unavailable.");
-  const result = await db.insert(users).values({ name: input.name, email: input.email, passwordHash: null, loginMethod: "google", role: "user", status: "active", mustChangePassword: false });
+  const result = await db.insert(users).values({ name: input.name, email: input.email, passwordHash: null, loginMethod: input.loginMethod ?? "google", role: "user", status: "active", mustChangePassword: false });
   return getUserById(Number(result[0].insertId));
 }
 

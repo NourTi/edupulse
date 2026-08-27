@@ -702,3 +702,24 @@
 - [x] Separate the optional migration diagnostic deployment from the required live EduPulse application.
 - [ ] Configure or verify Render Auto-Deploy from the private GitHub `main` branch so future changes deploy automatically without repeated manual instructions.
 - [x] Provide one concise operating guide covering when the user needs to take action and when the system handles deployment automatically.
+
+## Descope Authentication Integration
+
+- [ ] Add Descope project configuration using the supplied project ID without committing secrets.
+- [ ] Integrate the Descope sign-up-or-in Web Component into the existing React/Vite account portal with Arabic-first presentation.
+- [ ] Add a secure backend verification path for Descope sessions before trusting authenticated identity data.
+- [ ] Preserve institution membership roles and existing password/Google authentication during staged rollout.
+- [ ] Add focused authentication regression tests and validate TypeScript, unit tests, production build, and browser behavior.
+- [ ] Document the Descope dashboard configuration, redirect origins, and rollback path.
+
+## Descope Staged Integration Milestone
+
+- [x] Add `VITE_DESCOPE_PROJECT_ID` using the supplied Descope project identifier without adding a management key or sender credential.
+- [x] Install the official `@descope/react-sdk` and `@descope/node-sdk` packages.
+- [x] Wrap the Vite React application in Descope `AuthProvider` when configuration is present.
+- [x] Add the Arabic/English `sign-up-or-in` flow to the existing account portal and exchange its verified session for an EduPulse HttpOnly session.
+- [x] Validate Descope audience and verified token identity server-side before linking or creating a local account.
+- [x] Preserve existing password and Google authentication paths.
+- [x] Validate TypeScript, Descope configuration reachability, database regression tests, and safe 401 behavior for a missing Descope token.
+- [x] Smoke-test the Descope sign-up-or-in flow in the browser and confirm it renders inside the account portal; a real credentialed sign-in and membership-routing test remains dependent on a user account.
+- [x] Run the full test suite and production build; document the Descope console redirect/origin settings and rollback path remains to be completed.
