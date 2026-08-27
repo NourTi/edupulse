@@ -34,8 +34,15 @@ import { calculateCommerceMetrics } from "./commerce/reporting";
 let _db: ReturnType<typeof drizzle> | null = null;
 
 export function databaseErrorCode(error: unknown) {
-  if (error && typeof error === "object" && "code" in error) return String((error as { code?: unknown }).code).slice(0, 80);
-  if (error instanceof Error) return error.name;
+  let current: unknown = error;
+  for (let depth = 0; depth < 4 && current; depth += 1) {
+    if (typeof current === "object" && "code" in current) {
+      const code = (current as { code?: unknown }).code;
+      if (typeof code === "string" || typeof code === "number") return String(code).slice(0, 80);
+    }
+    if (current instanceof Error && current.name !== "Error") return current.name.slice(0, 80);
+    current = typeof current === "object" && current !== null && "cause" in current ? (current as { cause?: unknown }).cause : undefined;
+  }
   return "unknown_error";
 }
 

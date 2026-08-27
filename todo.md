@@ -685,3 +685,10 @@
 
 - [x] Push the migration-health diagnostic update to private GitHub `main` at commit `3e44f839`.
 - [x] Deploy GitHub commit `3e44f839` on Render and verify `/api/health/migrations` reports `configured: true`, `reachable: true`, and unresolved migration-table state.
+
+## Migration Error Classification Milestone
+
+- [x] Extract nested MySQL/TiDB driver error codes in a bounded way without exposing private error messages.
+- [x] Add regression coverage for nested `ER_NO_SUCH_TABLE` classification.
+- [x] Confirm the local migration diagnostic now reports `migrationsTable: "missing"` while database reachability remains true.
+- [ ] Push and deploy this classification update on Render, then confirm the live migration-table state explicitly.

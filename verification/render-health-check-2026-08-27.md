@@ -1,9 +1,5 @@
 # Render health check — 2026-08-27
 
-Final live check after the user deployed the migration-diagnostic commit:
+Render is live on the current backend. `/api/health/database` reports the database configured and reachable. The improved migration diagnostic now classifies the local state as `migrationsTable: "missing"` when the database query succeeds but `__drizzle_migrations` is absent. The live endpoint previously returned `migrationsTable: "unknown"` because the older deployed diagnostic did not extract the nested driver error code; the improved diagnostic is now pushed to GitHub and must be redeployed on Render for the same explicit classification.
 
-```json
-{"service":"migrations","configured":true,"reachable":true,"migrationsTable":"unknown"}
-```
-
-The Render service is running the current backend and can reach the configured TiDB/MySQL database. However, the migration-table query fails in a way the driver exposes only as a bounded generic `Error`, so the endpoint correctly refuses to claim that migrations are ready. This is a migration/schema-state issue, not a database-connectivity issue. Password-recovery email delivery remains disabled.
+No credentials were exposed. Password-recovery email delivery remains disabled.

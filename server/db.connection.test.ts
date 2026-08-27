@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { databaseConnectionOptions } from "./db";
+import { databaseConnectionOptions, databaseErrorCode } from "./db";
 
 describe("database connection options", () => {
   it("enables TLS automatically for TiDB Cloud URLs", () => {
@@ -20,5 +20,10 @@ describe("database connection options", () => {
 
   it("rejects incomplete URLs before the database driver starts", () => {
     expect(() => databaseConnectionOptions("mysql://user:password@db.example.com/")).toThrow("DATABASE_URL must include");
+  });
+
+  it("extracts a bounded driver code from nested errors", () => {
+    const error = new Error("query failed", { cause: { code: "ER_NO_SUCH_TABLE", message: "private details" } });
+    expect(databaseErrorCode(error)).toBe("ER_NO_SUCH_TABLE");
   });
 });
