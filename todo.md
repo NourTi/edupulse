@@ -501,3 +501,5 @@
 - [ ] Add end-to-end invoice creation UI, payment allocation, discount rules, refund workflow, and optional subscription recurrence after the local product foundation is reviewed.
 - [x] Add protected invoice payment allocation that validates learner/institution ownership, prevents overpayment, writes the existing payment record, transitions invoice status to partially paid or paid, and audits the action.
 - [x] Add a reviewed admin payment action for open local invoices that records the outstanding balance through the protected invoice-payment workflow and refreshes invoice status.
+- [x] Add explicit discount entry with server-side maximum validation when issuing local invoices.
+- [x] Add a reviewed admin refund-status action for paid invoices with audit logging and safe lifecycle state handling.
