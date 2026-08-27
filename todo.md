@@ -578,9 +578,9 @@
 
 ## Independent Desktop Implementation Boundary
 
-- [ ] Build and complete the Tauri/SQLCipher desktop implementation in the EduPulse project without requiring access to the user’s computer.
-- [ ] Add or complete the web-to-native bridge for evaluation storage and local authentication using the existing desktop conventions.
-- [ ] Use Playwright/browser checks for web behavior and document that only native Windows compilation, WebView2 runtime behavior, and installer execution require Windows tooling.
+- [x] Build and complete the Tauri/SQLCipher desktop implementation in the EduPulse project without requiring access to the user’s computer.
+- [x] Add or complete the web-to-native bridge for evaluation storage and local authentication using the existing desktop conventions.
+- [x] Use Playwright/browser checks for web behavior and document that only native Windows compilation, WebView2 runtime behavior, and installer execution require Windows tooling.
 - [x] Add a browser-safe React-to-Tauri bridge for SQLCipher-backed support-evaluation save/load operations using the active local session token.
 - [x] Validate the desktop bridge type contract with TypeScript and focused evaluation/report/Venice tests.
 - [x] Use browser verification for the public web shell after the independent desktop changes; landing page renders correctly at desktop size.
