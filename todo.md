@@ -242,9 +242,9 @@
 - [x] Diagnose the production Google callback failure from Render logs: `createExternalUser` reports `Database is unavailable`, meaning the deployed service lacks a usable `DATABASE_URL` connection.
 - [ ] Configure and verify the Render service `DATABASE_URL` against the intended MySQL/TiDB database.
 - [ ] Diagnose the repeated Render database connection failure after `DATABASE_URL` was added; the user still receives the same temporary-unavailable response.
-- [ ] Add a safe public database health probe that reports configuration or connection status without revealing secrets.
+- [x] Add a safe public database health probe that reports configuration or connection status without revealing secrets.
 - [x] Add TiDB-compatible URL parsing and automatic TLS configuration without exposing secret values.
-- [ ] Verify the TiDB connection string, credentials, endpoint, port, and TLS settings on Render without exposing secret values.
+- [x] Verify the Render TiDB connection is configured, TLS-enabled, and reachable through the live non-secret health endpoint; credentials remain unexposed.
 - [x] Confirm from Render logs that no database exists or is connected to the web service.
 - [x] Select TiDB Cloud Starter as the MySQL-compatible database provider for the Render deployment.
 - [ ] Apply migration `0005_dark_living_tribunal.sql` to the same database used by Render and verify the callback no longer returns `Google sign-in is temporarily unavailable`.
