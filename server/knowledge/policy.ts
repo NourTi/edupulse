@@ -59,8 +59,11 @@ export function detectPlatformIntent(question: string): PlatformIntent {
   const normalized = normalizeIntentText(question);
   const creatorTerms = ["who created edupulse", "who is the creator", "who is the founder", "creator of edupulse", "founder of edupulse", "who built edupulse", "who made edupulse", "who is behind edupulse", "من أنشأ edupulse", "من أسس edupulse", "من مؤسس edupulse", "من هو المؤسس", "من صنع edupulse", "من أنشأ هذه المنصة", "صاحب المنصة", "مطور المنصة"];
   if (creatorTerms.some(term => normalized.includes(term))) return "creator";
-  const aboutTerms = ["what is edupulse", "tell me about edupulse", "about edupulse", "what does edupulse do", "منصة edupulse", "عن edupulse", "ما هي edupulse", "ما هي المنصة", "من أنت"];
+  const aboutTerms = ["what is edupulse", "tell me about edupulse", "about edupulse", "what does edupulse do", "what can edupulse do", "how does edupulse work", "features of edupulse", "benefits of edupulse", "what is this platform", "tell me about the platform", "what does this platform do", "how does this platform work", "منصة edupulse", "عن edupulse", "ما هي edupulse", "ما هي المنصة", "ماذا تقدم المنصة", "كيف تعمل المنصة", "مزايا المنصة", "فوائد المنصة", "من أنت"];
   if (aboutTerms.some(term => normalized.includes(term))) return "about";
+  const platformMarkers = ["edupulse", "المنصة", "platform"];
+  const platformQuestionWords = ["feature", "features", "benefit", "benefits", "work", "use", "do", "مزايا", "فوائد", "تعمل", "تقدم"];
+  if (platformMarkers.some(marker => normalized.includes(marker)) && platformQuestionWords.some(word => normalized.includes(word))) return "about";
   return null;
 }
 
@@ -123,6 +126,13 @@ export function validateGroundedAnswer(answer: string, sourceCount: number) {
   const citations = Array.from(answer.matchAll(/\[S(\d+)\]/g)).map(match => Number(match[1]));
   if (!answer.trim() || citations.length === 0) return false;
   return citations.every(citation => citation >= 1 && citation <= sourceCount);
+}
+
+export function isLikelyTruncatedAnswer(answer: string, finishReason?: string | null) {
+  if (finishReason === "length" || finishReason === "max_tokens") return true;
+  const trimmed = answer.trim();
+  if (!trimmed) return true;
+  return /(?:\.{3}|…|[,،:]|\b(and|or|with|to|و|أو|مع|إلى))$/i.test(trimmed);
 }
 
 export function toSourceReferences(chunks: RetrievedChunk[]) {

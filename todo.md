@@ -404,3 +404,12 @@
 - [x] Add the approved EduPulse profile/PDF content to the grounded AI knowledge source with citation support.
 - [x] Build the About section into the public site without changing the preserved hero.
 - [x] Validate Arabic PDF readability, source citations, AI answers, tests, and production build.
+
+## Complete AI Agent Remediation
+
+- [x] Audit the live and local agent response paths, model limits, source selection, and deployed build version.
+- [x] Define one grounded response contract that requires complete answers, valid citations, and no unsupported claims.
+- [x] Remove or isolate any path that can send unrelated retrieval evidence to platform questions.
+- [x] Fix response truncation with an explicit output budget and completion validation.
+- [x] Add regression tests for platform accuracy, hallucination rejection, citation validity, response completeness, privacy refusal, and database/upstream failures.
+- [ ] Synchronize the remediation to GitHub and verify the deployed Render build markers.
