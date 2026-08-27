@@ -695,3 +695,10 @@
 
 - [x] Push the validated migration-error classification checkpoint to private GitHub `main` at commit `61ba6c5`.
 - [ ] Deploy GitHub commit `61ba6c5` on Render and confirm the live migration table is explicitly reported as present or missing.
+
+## Deployment Workflow Simplification
+
+- [x] Clarify that the user does not need to create commits manually; the implementation uses repository commits/checkpoints internally.
+- [x] Separate the optional migration diagnostic deployment from the required live EduPulse application.
+- [ ] Configure or verify Render Auto-Deploy from the private GitHub `main` branch so future changes deploy automatically without repeated manual instructions.
+- [x] Provide one concise operating guide covering when the user needs to take action and when the system handles deployment automatically.

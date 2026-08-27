@@ -66,3 +66,10 @@ For a safe connection check in a Render Shell, run `node scripts/check-db.mjs` f
 The running service exposes `GET /api/health/database`. It returns HTTP 200 only when `DATABASE_URL` is configured and a lightweight `SELECT 1` succeeds; otherwise it returns HTTP 503. The JSON contains only `service`, `configured`, and `reachable` fields. It never returns the host, username, database name, password, or connection string.
 
 The account portal includes password-recovery request and reset-token states. If Resend is not configured, the request returns an actionable configuration error rather than silently claiming that delivery occurred. To enable delivery, set `APP_BASE_URL`, `RESEND_API_KEY`, and a verified `RESEND_FROM_EMAIL` in the host secret manager. A Resend API key alone is insufficient because the sender domain must be verified.
+
+
+## Render auto-deploy once
+
+In the Render Web Service connected to `NourTi/edupulse`, open **Settings → Build & Deploy**, set the branch to `main`, and enable **Auto-Deploy**. Save this once. After that, a push to private GitHub `main` triggers Render automatically; the user does not need to create a separate deployment manually. The only required user action is to check the Render event if a deployment fails.
+
+EduPulse implementation checkpoints are repository commits created by the development workflow. The user should not manually create additional commits for each requested change. The optional `/api/health/migrations` endpoint is a diagnostic aid and is not required for the normal application to load.
