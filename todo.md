@@ -660,3 +660,15 @@
 - [x] Retry the live health endpoint after Render wake-up.
 - [x] Confirm the live Render service returned EduPulse’s application 404 page for the new endpoint, indicating the deployed service is older than the current checkpoint or was not redeployed.
 - [ ] Redeploy the current checkpoint to Render, then repeat the health check and authenticated persistence tests.
+
+## Render Log Diagnosis
+
+- [x] Confirm from the supplied logs that Render is running a Node Web Service with `node dist/index.js` and the expected primary URL.
+- [x] Confirm the deployed build is older than the current checkpoint, explaining why the new health endpoint returns 404.
+- [x] Confirm the configured TiDB connection is reached far enough to attempt startup migration, but the migration fails while creating `__drizzle_migrations`.
+- [ ] Deploy the current checkpoint that contains the health endpoint, then resolve the TiDB migration compatibility/permissions error and rerun live database checks.
+
+## GitHub Synchronization Milestone
+
+- [x] Push the current EduPulse `main` branch from commit `1e17ba7` to commit `7575414` on the private GitHub repository `NourTi/edupulse`.
+- [ ] Trigger Render deployment from the updated GitHub `main` branch and verify `/api/health/database` returns JSON.
