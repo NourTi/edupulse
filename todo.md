@@ -654,3 +654,9 @@
 - [x] Attempt the non-secret database health endpoint on the live Render URL.
 - [x] Record that Render was still waking and returned its application-loading interstitial; no secret or credential was exposed.
 - [ ] Re-run the live health check after the Render service finishes deploying and waking.
+
+## Render Deployment Mismatch Finding
+
+- [x] Retry the live health endpoint after Render wake-up.
+- [x] Confirm the live Render service returned EduPulse’s application 404 page for the new endpoint, indicating the deployed service is older than the current checkpoint or was not redeployed.
+- [ ] Redeploy the current checkpoint to Render, then repeat the health check and authenticated persistence tests.
