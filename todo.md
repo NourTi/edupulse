@@ -583,3 +583,5 @@
 - [ ] Use Playwright/browser checks for web behavior and document that only native Windows compilation, WebView2 runtime behavior, and installer execution require Windows tooling.
 - [x] Add a browser-safe React-to-Tauri bridge for SQLCipher-backed support-evaluation save/load operations using the active local session token.
 - [x] Validate the desktop bridge type contract with TypeScript and focused evaluation/report/Venice tests.
+- [x] Use browser verification for the public web shell after the independent desktop changes; landing page renders correctly at desktop size.
+- [x] Document the independent implementation boundary: project code can be built here, while only native Windows compilation, WebView2, keyring, SQLCipher runtime, installer, and signing checks require Windows tooling.
