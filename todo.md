@@ -682,3 +682,6 @@
 - [x] Report database reachability independently from migration-table presence so migration errors are not misclassified as connection failures.
 - [x] Verify locally that the endpoint returns `reachable: true` with migration readiness unresolved, without exposing database details.
 - [ ] Deploy this diagnostic update to Render and use it to confirm whether the migration table is present.
+
+- [x] Push the migration-health diagnostic update to private GitHub `main` at commit `3e44f839`.
+- [ ] Deploy GitHub commit `3e44f839` on Render and verify `/api/health/migrations` reports the migration-table state.
