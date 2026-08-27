@@ -73,3 +73,10 @@ The account portal includes password-recovery request and reset-token states. If
 In the Render Web Service connected to `NourTi/edupulse`, open **Settings → Build & Deploy**, set the branch to `main`, and enable **Auto-Deploy**. Save this once. After that, a push to private GitHub `main` triggers Render automatically; the user does not need to create a separate deployment manually. The only required user action is to check the Render event if a deployment fails.
 
 EduPulse implementation checkpoints are repository commits created by the development workflow. The user should not manually create additional commits for each requested change. The optional `/api/health/migrations` endpoint is a diagnostic aid and is not required for the normal application to load.
+
+### Descope authentication
+EduPulse uses the React SDK with the Descope project ID supplied for this deployment and the `sign-up-or-in` flow. In the Descope console, configure the flow and add each actual EduPulse origin under the project’s allowed origins/redirect settings: the local development origin, the Render service origin, and any future custom domain. Keep the flow’s post-success behavior on the EduPulse origin; the backend exchange endpoint is `POST /api/auth/descope/session` and accepts only a verified Descope Bearer session.
+
+The server validates the Descope session audience against `VITE_DESCOPE_PROJECT_ID`, maps the verified subject and email to an EduPulse account, then issues the normal EduPulse HttpOnly session. It does not accept frontend-supplied identity fields or Descope management keys. Existing password and Google login remain available during rollout.
+
+To roll back, unset `VITE_DESCOPE_PROJECT_ID` in the deployment environment and redeploy the existing application; the Descope provider and flow are then omitted while password and Google authentication continue. This rollback does not delete Descope users or EduPulse accounts.
