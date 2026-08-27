@@ -648,3 +648,9 @@
 
 - [x] Document `/api/health/database`, its HTTP readiness semantics, and its non-secret response contract.
 - [x] Document the password-recovery environment variables and explain why a Resend API key alone is insufficient without a verified sender.
+
+## Live Render Health Check Attempt
+
+- [x] Attempt the non-secret database health endpoint on the live Render URL.
+- [x] Record that Render was still waking and returned its application-loading interstitial; no secret or credential was exposed.
+- [ ] Re-run the live health check after the Render service finishes deploying and waking.
