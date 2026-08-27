@@ -637,3 +637,9 @@
 - [x] Add a non-secret `/api/health/database` endpoint that reports only configured and reachable booleans.
 - [x] Reuse the existing TiDB/MySQL connection parsing and TLS behavior for the readiness check.
 - [x] Verify the endpoint locally returns JSON without exposing the connection string; Render provider verification remains pending.
+
+## Recovery UX Clarity Milestone
+
+- [x] Surface the server’s Resend configuration error in the account portal instead of replacing it with a generic toast.
+- [x] Validate invitation and reset tokens in the browser form and remove consumed reset tokens from the URL.
+- [x] Re-run TypeScript and focused recovery-mailer tests successfully.

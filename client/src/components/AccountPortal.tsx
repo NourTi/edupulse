@@ -38,12 +38,12 @@ export function AccountPortal({ language, onBack, onAuthenticated, onLanguageCha
     event.preventDefault();
     try {
       if (mode === "forgot") { await requestReset.mutateAsync({ email }); toast.success(t.sent); setMode("login"); return; }
-      if (mode === "reset") { await resetPassword.mutateAsync({ token, newPassword: password }); toast.success(t.resetDone); setPassword(""); setToken(""); setMode("login"); return; }
+      if (mode === "reset") { await resetPassword.mutateAsync({ token, newPassword: password }); toast.success(t.resetDone); setPassword(""); setToken(""); window.history.replaceState({}, "", window.location.pathname); setMode("login"); return; }
       if (mode === "login") { await login.mutateAsync({ email, password }); toast.success(t.success); }
       else if (mode === "register") { await register.mutateAsync({ name, institutionName, email, password }); toast.success(t.created); }
       else { await acceptInvite.mutateAsync({ token, name, password }); toast.success(t.activated); }
       await utils.auth.me.invalidate(); onAuthenticated();
-    } catch { toast.error(t.error); }
+    } catch (caught) { toast.error(caught instanceof Error && caught.message ? caught.message : t.error); }
   };
   const heading = mode === "login" ? t.login : mode === "register" ? t.register : mode === "invite" ? t.invite : mode === "forgot" ? t.forgot : t.reset;
   const title = language === "ar"
@@ -55,7 +55,7 @@ export function AccountPortal({ language, onBack, onAuthenticated, onLanguageCha
     <form onSubmit={submit} className="space-y-4">
       {mode !== "login" && mode !== "forgot" && mode !== "reset" && <label className="block"><span className="mb-2 block text-xs text-white/70">{t.name}</span><input required value={name} onChange={event => setName(event.target.value)} className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white outline-none transition focus:border-white/60" /></label>}
       {mode === "register" && <label className="block"><span className="mb-2 block text-xs text-white/70">{t.institution}</span><input required value={institutionName} onChange={event => setInstitutionName(event.target.value)} className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white outline-none transition focus:border-white/60" /></label>}
-      {mode === "invite" && <label className="block"><span className="mb-2 block text-xs text-white/70">{t.token}</span><input required value={token} onChange={event => setToken(event.target.value)} className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white outline-none transition focus:border-white/60" /></label>}
+      {mode === "invite" && <label className="block"><span className="mb-2 block text-xs text-white/70">{t.token}</span><input required minLength={20} value={token} onChange={event => setToken(event.target.value)} className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white outline-none transition focus:border-white/60" /></label>}
       {(mode === "login" || mode === "register" || mode === "forgot") && <label className="block"><span className="mb-2 block text-xs text-white/70">{t.email}</span><span className="relative block"><Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/55" /><input required type="email" value={email} onChange={event => setEmail(event.target.value)} className="w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-11 pr-4 text-sm text-white outline-none transition focus:border-white/60" /></span></label>}
       {(mode === "login" || mode === "register" || mode === "invite" || mode === "reset") && <label className="block"><span className="mb-2 block text-xs text-white/70">{t.password}</span><span className="relative block"><KeyRound className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/55" /><input required minLength={10} type="password" value={password} onChange={event => setPassword(event.target.value)} className="w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-11 pr-4 text-sm text-white outline-none transition focus:border-white/60" /></span><span className="mt-2 block text-[11px] leading-5 text-white/55">{t.strength}</span></label>}
       {error && <p role="alert" className="rounded-xl border border-amber-200/30 bg-amber-200/15 px-4 py-3 text-xs leading-6 text-amber-50">{error.message}</p>}
