@@ -504,3 +504,4 @@
 - [x] Add explicit discount entry with server-side maximum validation when issuing local invoices.
 - [x] Add a reviewed admin refund-status action for paid invoices with audit logging and safe lifecycle state handling.
 - [x] Complete the local invoice workflow UI for product selection, learner selection, invoice issuance, discount entry, outstanding-balance payment, and reviewed refund status; recurring subscription recurrence remains a separate scheduled-work phase.
+- [x] Rewrite the Medusa evaluation as the final corrected architecture record, documenting EduPulse-native local-first commerce, optional adapter boundaries, implemented workflows, limitations, validation, and references.
