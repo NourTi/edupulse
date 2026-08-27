@@ -42,6 +42,7 @@ import {
   listCommerceInvoices,
   updateCommerceInvoiceStatus,
   recordCommerceInvoicePayment,
+  getCommerceReport,
   createEducatorTask,
   listEducatorTasks,
   completeEducatorTask,
@@ -68,6 +69,7 @@ import { canUseFreeSource, fetchWikipediaAnswer, isLikelyGeneralKnowledgeQuestio
 import { searchAndFetchPublicWeb } from "./knowledge/agentScraper";
 import { recordAgentEvent, type AgentIntent, type AgentOutcome } from "./knowledge/observability";
 import { getMedusaStatus, listMedusaProducts } from "./commerce/medusa";
+import { subscriptionCycleDays } from "./commerce/reporting";
 
 const schoolRoles = ["owner", "admin", "registrar", "finance_admin", "teacher", "counsellor", "student", "guardian"] as const;
 type SchoolRole = (typeof schoolRoles)[number];
@@ -246,6 +248,23 @@ export const appRouter = router({
       if (!invoice) throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found." });
       await writeAuditLog({ id: `audit_${nanoid(16)}`, institutionId, actorUserId: ctx.user.id, action: "commerce.invoice.status_changed", entityType: "commerce_invoice", entityId: invoice.id, metadata: JSON.stringify({ status: input.status }) });
       return invoice;
+    }),
+    report: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional() }).optional()).query(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input?.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "finance_admin"]);
+      return getCommerceReport(institutionId);
+    }),
+    simulateSubscriptionBilling: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), productId: z.string().max(64), learnerId: z.string().max(64), cycle: z.enum(["monthly", "quarterly", "annual"]).default("monthly") })).mutation(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "finance_admin"]);
+      const products = await listCommerceProducts(institutionId);
+      const product = products.find(item => item.id === input.productId && item.kind === "subscription");
+      if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "An active subscription product was not found." });
+      const learners = await listLearners(institutionId);
+      if (!learners.some(learner => learner.id === input.learnerId)) throw new TRPCError({ code: "NOT_FOUND", message: "Learner does not belong to this institution." });
+      const simulationId = `sim_${nanoid(16)}`;
+      await writeAuditLog({ id: `audit_${nanoid(16)}`, institutionId, actorUserId: ctx.user.id, action: "commerce.subscription.billing_simulated", entityType: "commerce_subscription_simulation", entityId: simulationId, metadata: JSON.stringify({ productId: product.id, learnerId: input.learnerId, cycle: input.cycle, testMode: true }) });
+      return { simulationId, testMode: true, charged: false, cycle: input.cycle, learnerId: input.learnerId, productId: product.id, amountMinor: product.amountMinor, currency: product.currency, nextAttemptAt: new Date(Date.now() + subscriptionCycleDays(input.cycle) * 24 * 60 * 60 * 1000) };
     }),
     status: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional() }).optional()).query(async ({ ctx, input }) => {
       const institutionId = await defaultInstitutionId(ctx.user.id, input?.institutionId);

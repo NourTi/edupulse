@@ -505,3 +505,22 @@
 - [x] Add a reviewed admin refund-status action for paid invoices with audit logging and safe lifecycle state handling.
 - [x] Complete the local invoice workflow UI for product selection, learner selection, invoice issuance, discount entry, outstanding-balance payment, and reviewed refund status; recurring subscription recurrence remains a separate scheduled-work phase.
 - [x] Rewrite the Medusa evaluation as the final corrected architecture record, documenting EduPulse-native local-first commerce, optional adapter boundaries, implemented workflows, limitations, validation, and references.
+
+## Commerce Reporting and Billing Simulation
+
+- [ ] Add institution-scoped CSV export for learner-linked invoices and payment allocations.
+- [ ] Add institution-scoped PDF export for learner-linked invoices and payment allocations with Arabic-friendly layout.
+- [ ] Add commerce analytics for revenue, discounts applied, and refund rates without exposing cross-institution data.
+- [ ] Add visual charts to the admin commerce panel for revenue, discounts, and refunds.
+- [ ] Add a manual recurring-subscription billing simulator that creates only test-mode billing results and never charges real money.
+- [ ] Add role checks, audit events, regression tests, responsive validation, and a checkpoint for the reporting milestone.
+
+## Commerce Reporting Milestone
+
+- [x] Add institution-scoped CSV export for learner-linked invoices and payment allocations.
+- [x] Add institution-scoped PDF export for learner-linked invoices and payment allocations with Arabic-friendly labels and DZD formatting.
+- [x] Add commerce analytics for revenue, discounts applied, refunded totals, and refund rates from existing local records.
+- [x] Add vivid responsive dashboard charts and KPI cards to the admin commerce panel.
+- [x] Add a manual recurring-subscription billing simulator with monthly, quarterly, and annual cycles, test-mode output, no-charge guarantee, learner/product ownership checks, and audit logging.
+- [x] Add shared analytics unit coverage; TypeScript, 55 tests, and production build pass.
+- [ ] Add real recurring billing automation only after a separate scheduling/deployment decision; the current simulator is intentionally manual and test-only.

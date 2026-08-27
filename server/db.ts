@@ -26,6 +26,7 @@ import {
   userAuthAccounts,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
+import { calculateCommerceMetrics } from "./commerce/reporting";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -520,6 +521,14 @@ export async function listPaymentRecords(institutionId: string, learnerId?: stri
   if (!db) return [];
   const where = learnerId ? and(eq(paymentRecords.institutionId, institutionId), eq(paymentRecords.learnerId, learnerId)) : eq(paymentRecords.institutionId, institutionId);
   return db.select().from(paymentRecords).where(where).orderBy(desc(paymentRecords.paidAt));
+}
+
+export async function getCommerceReport(institutionId: string) {
+  const db = await getDb();
+  if (!db) return { invoices: [], payments: [], metrics: { revenueMinor: 0, discountsMinor: 0, refundedMinor: 0, refundRate: 0, invoiceCount: 0, paidInvoiceCount: 0 } };
+  const [invoices, payments] = await Promise.all([listCommerceInvoices(institutionId), listPaymentRecords(institutionId)]);
+  const metrics = calculateCommerceMetrics(invoices, payments);
+  return { invoices, payments, metrics };
 }
 
 export async function linkLearnerStudent(input: typeof learnerUsers.$inferInsert) {
