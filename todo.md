@@ -594,3 +594,5 @@
 - [x] Replace dark glassy toggle/select/form controls with the vivid white post-hero/dashboard design system across the application.
 - [x] Replace incorrect education-level labels and options with Algeria’s preparatory, primary, middle, secondary, and higher-education stages everywhere.
 - [x] Add focused tests and responsive browser validation for the new dashboard, controls, and education taxonomy.
+- [x] Extend the vivid white control system to knowledge administration and school-brand settings so the correction applies beyond the main registration and commerce panels.
+- [x] Re-run TypeScript, the full 60-test suite, and the production build after the global control-style extension.
