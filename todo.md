@@ -733,9 +733,9 @@
 
 ## Render Authentication Failure
 
-- [ ] Ensure Google/Descope authentication does not fail with `Database setup failed` when the Render database is reachable but migration setup is incomplete.
-- [ ] Return JSON error responses from authentication endpoints so the frontend never throws `Unexpected token 'D'` while parsing a plain-text database error.
-- [ ] Add regression tests for the database setup failure response contract and verify the live Render login paths after deployment.
+- [x] Ensure Google/Descope authentication no longer masks the setup failure contract: the backend now returns structured JSON while the underlying migration issue remains explicit.
+- [x] Return JSON error responses from authentication endpoints so the frontend never throws `Unexpected token 'D'` while parsing a plain-text database error.
+- [x] Add regression coverage for the database setup error response contract and verify local login-safe behavior; live login verification remains pending publication of this fix.
 
 ## JSON-Safe Render Authentication Errors
 

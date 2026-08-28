@@ -12,6 +12,10 @@ import { checkDatabaseHealth, checkMigrationHealth } from "../db";
 import { exchangeDescopeSession } from "../auth/descope";
 import { setPasswordSessionCookie } from "../auth/session";
 
+export function databaseSetupErrorPayload() {
+  return { error: "Database setup failed. Check the Render service logs.", code: "DATABASE_SETUP_FAILED" as const };
+}
+
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
     const server = net.createServer();
@@ -45,7 +49,7 @@ async function startServer() {
   const migrationGate: RequestHandler = async (_req, res, next) => {
     if (!shouldRunStartupMigration()) return next();
     if (await startupMigration) return next();
-    res.status(503).json({ error: "Database setup failed. Check the Render service logs.", code: "DATABASE_SETUP_FAILED" });
+    res.status(503).json(databaseSetupErrorPayload());
   };
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
