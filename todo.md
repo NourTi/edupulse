@@ -730,3 +730,16 @@
 
 - [x] Confirm the exact Descope Google OAuth callback URI and distinguish it from the EduPulse website origin.
 - [x] Provide the user the single URI to paste into Google Cloud, plus the matching Descope origin setting.
+
+## Render Authentication Failure
+
+- [ ] Ensure Google/Descope authentication does not fail with `Database setup failed` when the Render database is reachable but migration setup is incomplete.
+- [ ] Return JSON error responses from authentication endpoints so the frontend never throws `Unexpected token 'D'` while parsing a plain-text database error.
+- [ ] Add regression tests for the database setup failure response contract and verify the live Render login paths after deployment.
+
+## JSON-Safe Render Authentication Errors
+
+- [x] Change the startup migration gate from plain-text `Database setup failed` to JSON `{ error, code }` so tRPC clients do not throw `Unexpected token 'D'`.
+- [x] Keep Descope exchange failures JSON-safe and preserve the existing Google redirect flow.
+- [x] Validate TypeScript and focused database, Descope, and recovery tests: 7 tests passed.
+- [ ] Push and deploy this fix once through the configured GitHub-to-Render auto-deploy workflow, then verify both login paths live.

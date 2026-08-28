@@ -45,7 +45,7 @@ async function startServer() {
   const migrationGate: RequestHandler = async (_req, res, next) => {
     if (!shouldRunStartupMigration()) return next();
     if (await startupMigration) return next();
-    res.status(503).type("text").send("Database setup failed. Check the Render service logs.");
+    res.status(503).json({ error: "Database setup failed. Check the Render service logs.", code: "DATABASE_SETUP_FAILED" });
   };
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
