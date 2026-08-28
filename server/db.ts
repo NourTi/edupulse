@@ -62,7 +62,7 @@ export function databaseConnectionOptions(connectionUrl: string): PoolOptions {
     waitForConnections: true,
     connectionLimit: 5,
     enableKeepAlive: true,
-    ssl: sslRequested ? { minVersion: "TLSv1.2" } : undefined,
+    ssl: sslRequested ? { minVersion: "TLSv1.2", rejectUnauthorized: false } : undefined,
   };
 }
 
