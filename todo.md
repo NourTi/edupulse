@@ -743,3 +743,12 @@
 - [x] Keep Descope exchange failures JSON-safe and preserve the existing Google redirect flow.
 - [x] Validate TypeScript and focused database, Descope, and recovery tests: 7 tests passed.
 - [ ] Push and deploy this fix once through the configured GitHub-to-Render auto-deploy workflow, then verify both login paths live.
+
+- [x] Push the validated JSON-safe authentication fix to private GitHub `main` at commit `c11fd326` for the configured Render Auto-Deploy workflow.
+- [ ] Verify Render has deployed `c11fd326` and retest Google and EduPulse login without requesting manual commit creation from the user.
+
+## Render Descope Deployment Diagnosis
+
+- [x] Confirm from the supplied Render logs that source `3e44f83` predates Descope, so that deployment cannot show the Descope flow.
+- [x] Confirm Render reaches the TiDB host but startup migration fails creating `__drizzle_migrations`, which blocks authentication.
+- [ ] Publish a later `main` commit containing Descope and JSON-safe authentication errors through Render’s configured auto-deploy; do not ask the user to create a new commit.
