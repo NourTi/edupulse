@@ -91,7 +91,6 @@
     "wouter": "^3.3.5",
     "zod": "^4.1.12",
     "@tidbcloud/serverless": "^0.1.1",
-    "drizzle-orm": "^0.31.2"
   },
   "devDependencies": {
     "@builder.io/vite-plugin-jsx-loc": "^0.1.1",
