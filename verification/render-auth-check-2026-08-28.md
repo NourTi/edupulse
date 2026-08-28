@@ -11,3 +11,7 @@ The private GitHub `main` branch now points to `3f7ef6ff`, a descendant of the D
 ## Latest probe
 
 GitHub `main` is confirmed at `3f7ef6ffbb3f0e072f58f2a734ec792813d921d9`. Render still returns HTTP 503 with `content-type: text/plain` and the legacy body `Database setup failed. Check the Render service logs.` The database endpoint returns `{"service":"database","configured":true,"reachable":true}`. The code repository is updated; the live service is not yet serving that revision.
+
+## Managed database comparison
+
+The managed project SQL connection is a separate database named `3UaxdFE52RLkhAN4mHJ6Kw`, with an application user that has `GRANT ALL PRIVILEGES` on that database. It is not the Render TiDB database shown in the deployment evidence, which uses the `sys` database. Therefore, executing grants or migrations through the managed project connection would not repair Render’s TiDB schema; the Render database must be repaired through the TiDB/Render connection configured in Render.
