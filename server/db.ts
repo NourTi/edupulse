@@ -73,11 +73,12 @@ export async function getDb() {
     console.warn("[Database] DATABASE_URL is missing.");
     return null;
   }
-  try {
-    const options = databaseConnectionOptions(connectionUrl);
-    console.log(`[Database] Configured for ${options.host}:${options.port}/${options.database}; TLS ${options.ssl ? "enabled" : "disabled"}.`);
-    _db = drizzle({ connection: options });
-  } catch (error) {
+ try {
+  const client = connect({ url: connectionUrl });
+  const parsed = new URL(connectionUrl);
+  console.log(`[Database] Configured for TiDB Serverless at ${parsed.hostname}/${parsed.pathname.replace(/^\//, "")}.`);
+  _db = drizzle({ client });
+ } catch (error) {
     console.warn(`[Database] Failed to initialize connection (${databaseErrorCode(error)}).`);
     _db = null;
   }
