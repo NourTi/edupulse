@@ -1,7 +1,7 @@
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { sql } from "drizzle-orm";
-import type { PoolOptions } from "mysql2";
+import { drizzle } from "drizzle-orm/tidb-serverless";
+import { connect } from "@tidbcloud/serverless";
 import {
   auditLogs,
   authSessions,
