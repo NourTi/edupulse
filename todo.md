@@ -790,3 +790,14 @@
 
 - [x] Keep TiDB as the web database; do not convert EduPulse to Render PostgreSQL.
 - [ ] Fix the TiDB migration failure and verify Google login plus the public AI agent.
+
+## Render Still Running Legacy Migration SQL
+
+- [ ] Verify why Render’s latest startup log still shows `id serial primary key` instead of the published TiDB-compatible `INT AUTO_INCREMENT` preflight.
+- [ ] Confirm the active Render deployment source and branch after the latest GitHub push.
+- [ ] Recheck migration readiness after the correct revision is active.
+
+## Corrected TiDB SQL Still Fails
+
+- [ ] Capture the underlying TiDB driver code/message for the corrected `INT AUTO_INCREMENT` migration-table statement.
+- [ ] Apply the final permission or SQL compatibility correction based on that verified error.

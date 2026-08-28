@@ -8,7 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { runStartupMigration, shouldRunStartupMigration } from "./startup";
-import { checkDatabaseHealth, checkMigrationHealth } from "../db";
+import { checkDatabaseHealth, checkMigrationHealth, databaseErrorCode } from "../db";
 import { exchangeDescopeSession } from "../auth/descope";
 import { setPasswordSessionCookie } from "../auth/session";
 
@@ -42,7 +42,8 @@ async function startServer() {
   const startupMigration = runStartupMigration().then(
     () => true,
     error => {
-      console.error("[Database] Startup migration failed:", error instanceof Error ? error.message : "unknown error");
+      const message = error instanceof Error ? error.message.slice(0, 600) : "unknown error";
+      console.error("[Database] Startup migration failed:", JSON.stringify({ code: databaseErrorCode(error), message }));
       return false;
     }
   );
