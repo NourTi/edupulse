@@ -7,3 +7,7 @@ The service starts with Google sign-in enabled and reaches the TiDB host, but `A
 ## Follow-up after agent-managed push
 
 The private GitHub `main` branch now points to `3f7ef6ff`, a descendant of the Descope and JSON-safe commit `c11fd326`. This was pushed by the build workflow so the user did not need to create a commit. After a deployment wait, the live Descope session probe still returns HTTP 503 with `content-type: text/plain` and body `Database setup failed. Check the Render service logs.` Therefore Render has not yet switched the live service to the new revision, or its configured source/auto-deploy settings are not connected to this GitHub branch. The live database health endpoint remains HTTP 200 and reports the database reachable.
+
+## Latest probe
+
+GitHub `main` is confirmed at `3f7ef6ffbb3f0e072f58f2a734ec792813d921d9`. Render still returns HTTP 503 with `content-type: text/plain` and the legacy body `Database setup failed. Check the Render service logs.` The database endpoint returns `{"service":"database","configured":true,"reachable":true}`. The code repository is updated; the live service is not yet serving that revision.
