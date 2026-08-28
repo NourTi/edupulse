@@ -765,3 +765,28 @@
 
 - [x] Fix `TypeError: Cannot destructure property 'projectId' of useContext(...) as it is undefined` by correcting Descope React provider placement around the sign-up flow.
 - [x] Add regression coverage and verify the sign-up page in the production build.
+
+## Live Descope and Google Auth Findings
+
+- [ ] Confirm Render serves the latest frontend build and whether `VITE_DESCOPE_PROJECT_ID` was present during the build.
+- [ ] Ensure Descope is visible when configured while remaining crash-safe when the public project ID is absent.
+- [ ] Resolve the TiDB migration gate that returns `DATABASE_SETUP_FAILED` on Google authentication.
+- [ ] Re-test Descope and Google authentication after the Render build and database schema are ready.
+
+## Live AI Agent Server Error
+
+- [x] Reproduce and identify the live agent route/server error.
+- [ ] Verify database, Venice, and retrieval fallback behavior on the deployed path.
+- [ ] Harden the agent response so configuration failures return a useful JSON-safe answer instead of a generic server error.
+- [ ] Add regression coverage and publish the validated fix.
+
+## TiDB Manual Migration and Local Venice Test Guide
+
+- [ ] Document the safe manual Drizzle migration procedure against the exact Render TiDB database.
+- [ ] Document a temporary migration-gate bypass for diagnosis only and its risks.
+- [ ] Document a local Venice-backed public agent test with expected responses and failure modes.
+
+## TiDB Decision Confirmed
+
+- [x] Keep TiDB as the web database; do not convert EduPulse to Render PostgreSQL.
+- [ ] Fix the TiDB migration failure and verify Google login plus the public AI agent.
