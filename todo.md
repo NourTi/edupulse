@@ -752,3 +752,16 @@
 - [x] Confirm from the supplied Render logs that source `3e44f83` predates Descope, so that deployment cannot show the Descope flow.
 - [x] Confirm Render reaches the TiDB host but startup migration fails creating `__drizzle_migrations`, which blocks authentication.
 - [ ] Publish a later `main` commit containing Descope and JSON-safe authentication errors through Render’s configured auto-deploy; do not ask the user to create a new commit.
+
+## TiDB Migration Permission Investigation
+
+- [ ] Identify why the Render TiDB user cannot create `__drizzle_migrations` and verify the exact database/schema used by `DATABASE_URL`.
+- [ ] Verify required TiDB privileges and migration prerequisites without destructive SQL.
+- [ ] Apply the safest migration path and verify `/api/health/migrations` plus authentication.
+
+- [ ] Provide an exact TiDB permission command without inventing or exposing an unknown Render username; use only verified connection details.
+
+## Descope Sign-up Provider Crash
+
+- [x] Fix `TypeError: Cannot destructure property 'projectId' of useContext(...) as it is undefined` by correcting Descope React provider placement around the sign-up flow.
+- [x] Add regression coverage and verify the sign-up page in the production build.
