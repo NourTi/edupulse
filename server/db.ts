@@ -1,7 +1,8 @@
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { drizzle } from "drizzle-orm/tidb-serverless";
-import { connect } from "@tidbcloud/serverless";
+import { drizzle } from "drizzle-orm/mysql2";
+import type { PoolOptions } from "mysql2";
+
 import {
   auditLogs,
   authSessions,
@@ -73,12 +74,12 @@ export async function getDb() {
     console.warn("[Database] DATABASE_URL is missing.");
     return null;
   }
- try {
-  const client = connect({ url: connectionUrl });
-  const parsed = new URL(connectionUrl);
-  console.log(`[Database] Configured for TiDB Serverless at ${parsed.hostname}/${parsed.pathname.replace(/^\//, "")}.`);
-  _db = drizzle({ client });
- } catch (error) {
+  try {
+     const options = databaseConnectionOptions(connectionUrl);
+     options.ssl = { rejectUnauthorized: false }; // Force SSL to bypass Render cert issue
+     console.log(`[Database] Configured for ${options.host}:${options.port}/${options.database}; TLS enabled.`);
+     _db = drizzle({ connection: options });
+   } catch (error) {
     console.warn(`[Database] Failed to initialize connection (${databaseErrorCode(error)}).`);
     _db = null;
   }
