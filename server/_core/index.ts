@@ -39,7 +39,14 @@ async function startServer() {
   const app = express();
   app.set("trust proxy", 1);
   const server = createServer(app);
-    const startupMigration = Promise.resolve(true);
+      const startupMigration = runStartupMigration().then(
+    () => true,
+    error => {
+      const message = error instanceof Error ? error.message.slice(0, 600) : "unknown error";
+      console.error("[Database] Startup migration failed:", JSON.stringify({ code: databaseErrorCode(error), message }));
+      return false;
+    }
+  );
   const migrationGate: RequestHandler = async (_req, res, next) => {
     if (!shouldRunStartupMigration()) return next();
     if (await startupMigration) return next();
