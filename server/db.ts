@@ -1,7 +1,6 @@
-import { and, desc, eq, gt, isNull } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
-import { drizzle } from "drizzle-orm/mysql2";
-import type { PoolOptions } from "mysql2";
+import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/tidb-serverless";
+import { connect } from "@tidbcloud/serverless";
 
 import {
   auditLogs,
@@ -47,26 +46,6 @@ export function databaseErrorCode(error: unknown) {
   return "unknown_error";
 }
 
-export function databaseConnectionOptions(connectionUrl: string): PoolOptions {
-  const parsed = new URL(connectionUrl);
-  const hostname = parsed.hostname.toLowerCase();
-  const sslRequested = process.env.DATABASE_SSL === "true" || parsed.searchParams.get("sslaccept") === "strict" || hostname.endsWith(".tidbcloud.com") || hostname.endsWith(".aivencloud.com");
-  const database = decodeURIComponent(parsed.pathname.replace(/^\//, ""));
-  if (!parsed.hostname || !parsed.username || !database) throw new Error("DATABASE_URL must include a host, username, and database name.");
-  return {
-    host: parsed.hostname,
-    port: parsed.port ? Number(parsed.port) : 3306,
-    user: decodeURIComponent(parsed.username),
-    password: decodeURIComponent(parsed.password),
-    database,
-    connectTimeout: 15_000,
-    waitForConnections: true,
-    connectionLimit: 5,
-    enableKeepAlive: true,
-    ssl: sslRequested ? { minVersion: "TLSv1.2", rejectUnauthorized: false } : undefined,
-  };
-}
-
 export async function getDb() {
   if (_db) return _db;
   const connectionUrl = process.env.DATABASE_URL?.trim();
@@ -75,11 +54,10 @@ export async function getDb() {
     return null;
   }
   try {
-     const options = databaseConnectionOptions(connectionUrl);
-     options.ssl = { rejectUnauthorized: false }; // Force SSL to bypass Render cert issue
-     console.log(`[Database] Configured for ${options.host}:${options.port}/${options.database}; TLS enabled.`);
-     _db = drizzle({ connection: options });
-   } catch (error) {
+    const client = connect({ url: connectionUrl });
+    _db = drizzle({ client });
+    console.log("[Database] Connected via TiDB Serverless.");
+  } catch (error) {
     console.warn(`[Database] Failed to initialize connection (${databaseErrorCode(error)}).`);
     _db = null;
   }
