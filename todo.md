@@ -805,3 +805,7 @@
 ## Project History Handoff
 
 - [x] Write a complete history of EduPulse requirements, design layers, role panels, resources, integrations, deployment decisions, and remaining blockers.
+
+## Screenshot-Referenced White Dashboard Clarification
+
+- [x] Explicitly record that the user-provided white CRM screenshot is the design reference for the post-hero object navigation and all role dashboards, including cards, filters, tables, forms, and panels.

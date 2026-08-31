@@ -40,19 +40,24 @@ The cinematic hero section was preserved as a major visual identity element. It 
 
 The hero was explicitly not to be replaced when the later dashboard redesign was requested.
 
-### 3.2 Post-hero visual system
+### 3.2 Screenshot-referenced white CRM system
 
-The user rejected a dark, anxious, pale, or old-looking interface beneath the hero. The required replacement is a **vivid white education CRM interface** with colourful accents, soft layered panels, clear cards, rounded surfaces, and strong Arabic readability.
+The user supplied a specific CRM platform screenshot and explicitly instructed that its **white, vivid, object-oriented visual language** be used as the design reference. This is not limited to the public landing page. It applies to the entire interface beneath the hero and to every role dashboard.
 
-The visual direction was influenced by the education CRM presentation on Zoho’s education page, especially the idea of placing institutional objects and metrics into a visual workspace. The design should remain EduPulse’s own design rather than copying Zoho.
+The required replacement for the dark, anxious, pale, or old-looking interface is a **vivid white education CRM system** with colourful accents, soft layered panels, clear cards, rounded surfaces, strong Arabic readability, and a visible information hierarchy. The screenshot reference applies to the dashboard shell, object navigation, cards, filters, tables, forms, toggles, dropdowns, charts, learner panels, teacher panels, administrator panels, finance panels, guardian views, and student views.
+
+The implementation rule is: preserve the cinematic hero, then transition into the white CRM workspace. Do not create a dark glassy dashboard beside a white landing section. The same white surface language, spacing system, colourful accents, shadows, controls, and panel treatment must continue through the authenticated application.
+
+The visual direction was influenced by the education CRM presentation on Zoho’s education page and, more importantly, by the user-provided screenshot showing white CRM object navigation and dashboard panels. The design should remain EduPulse’s own design rather than copying the external platform. The reference is for structure, lightness, object grouping, and dashboard clarity—not for branding or literal duplication.
 
 The requested interface hierarchy is:
 
 1. A preserved cinematic hero.
-2. A light, vivid feature/object navigation area beneath it.
+2. A light, vivid feature/object navigation area beneath it, shaped by the supplied white CRM screenshot.
 3. Visual object cards for students, teachers, grades, attendance, courses, communication, finance, library, and reports.
-4. A role-specific dashboard with a persistent navigation structure.
-5. Detail panels for student information, grades, evaluations, progress, payments, and communications.
+4. A role-specific dashboard using the same white CRM shell and visual language.
+5. Detail panels for student information, grades, evaluations, progress, payments, and communications, with no return to the previous dark control style.
+6. Consistent white CRM controls across administrator, finance, registrar, teacher, counsellor, student, and guardian workspaces.
 
 ### 3.3 Hexagonal feature badges
 
