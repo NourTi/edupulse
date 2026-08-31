@@ -53,8 +53,8 @@ export async function getDb() {
     console.warn("[Database] DATABASE_URL is missing.");
     return null;
   }
-  try {
-    const client = connect({ url: connectionUrl });
+    try {
+    const client = await connect({ url: connectionUrl });
     _db = drizzle({ client });
     console.log("[Database] Connected via TiDB Serverless.");
   } catch (error) {
