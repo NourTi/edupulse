@@ -809,3 +809,7 @@
 ## Screenshot-Referenced White Dashboard Clarification
 
 - [x] Explicitly record that the user-provided white CRM screenshot is the design reference for the post-hero object navigation and all role dashboards, including cards, filters, tables, forms, and panels.
+
+## Copyable White CRM Design Prompt
+
+- [x] Create a standalone prompt another AI agent can use to reproduce the screenshot-inspired white CRM layout beneath the hero and across all EduPulse dashboards.
