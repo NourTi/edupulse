@@ -801,3 +801,7 @@
 
 - [ ] Capture the underlying TiDB driver code/message for the corrected `INT AUTO_INCREMENT` migration-table statement.
 - [ ] Apply the final permission or SQL compatibility correction based on that verified error.
+
+## Project History Handoff
+
+- [x] Write a complete history of EduPulse requirements, design layers, role panels, resources, integrations, deployment decisions, and remaining blockers.
