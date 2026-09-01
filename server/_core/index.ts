@@ -86,7 +86,6 @@ async function startServer() {
   }
   app.use("/api/auth", migrationGate);
   app.use("/api/trpc", migrationGate);
-  
   app.use(
     "/api/trpc",
     createExpressMiddleware({
