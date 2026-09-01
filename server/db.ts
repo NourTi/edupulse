@@ -53,10 +53,18 @@ export async function getDb() {
     console.warn("[Database] DATABASE_URL is missing.");
     return null;
   }
-    try {
-    const client = await connect({ url: connectionUrl });
+     try {
+    // We parse the URL manually to prevent the driver from dropping the username prefix
+    const parsed = new URL(connectionUrl);
+    const client = await connect({
+      host: parsed.hostname,
+      port: parsed.port ? Number(parsed.port) : 4000,
+      username: decodeURIComponent(parsed.username),
+      password: decodeURIComponent(parsed.password),
+      database: parsed.pathname.replace(/^\//, ""),
+    });
     _db = drizzle({ client });
-    console.log("[Database] Connected via TiDB Serverless.");
+    console.log("[Database] Connected via TiDB Serverless (Explicit Credentials).");
   } catch (error) {
     console.warn(`[Database] Failed to initialize connection (${databaseErrorCode(error)}).`);
     _db = null;
