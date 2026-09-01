@@ -53,18 +53,20 @@ export async function getDb() {
     console.warn("[Database] DATABASE_URL is missing.");
     return null;
   }
-       try {
+         try {
     const parsed = new URL(connectionUrl);
-    const connection = await mysql.createConnection({
+    const pool = mysql.createPool({
       host: parsed.hostname,
       port: parsed.port ? Number(parsed.port) : 4000,
       user: decodeURIComponent(parsed.username),
       password: decodeURIComponent(parsed.password),
       database: parsed.pathname.replace(/^\//, ""),
       ssl: { rejectUnauthorized: false },
+      waitForConnections: true,
+      connectionLimit: 5,
     });
-    _db = drizzle({ connection });
-    console.log("[Database] Connected via mysql2.");
+    _db = drizzle(pool); // Pass the pool directly, not inside an object
+    console.log("[Database] Connected via mysql2 Pool.");
   } catch (error) {
     console.warn(`[Database] Failed to initialize connection (${databaseErrorCode(error)}).`);
     _db = null;
