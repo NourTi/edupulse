@@ -86,10 +86,7 @@ async function startServer() {
   }
   app.use("/api/auth", migrationGate);
   app.use("/api/trpc", migrationGate);
-  const { registerGoogleRoutes } = await import("../auth/google");
-  registerGoogleRoutes(app);
-  console.log(process.env.GOOGLE_CLIENT_ID?.trim() && process.env.GOOGLE_CLIENT_SECRET?.trim() ? "[Auth] Google sign-in enabled." : "[Auth] Google sign-in route registered; provider variables are missing.");
-  // tRPC API
+  
   app.use(
     "/api/trpc",
     createExpressMiddleware({
