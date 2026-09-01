@@ -191,6 +191,7 @@ export async function createPasswordUser(input: { name: string; email: string; p
     status: "active",
     mustChangePassword: false,
     passwordChangedAt: new Date(),
+    openId: null, // Explicitly pass null so TiDB doesn't fail on 'default'
   });
   return getUserById(Number(result[0].insertId));
 }
