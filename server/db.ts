@@ -53,18 +53,18 @@ export async function getDb() {
     console.warn("[Database] DATABASE_URL is missing.");
     return null;
   }
-     try {
-    // We parse the URL manually to prevent the driver from dropping the username prefix
+       try {
     const parsed = new URL(connectionUrl);
-    const client = await connect({
+    const connection = await mysql.createConnection({
       host: parsed.hostname,
       port: parsed.port ? Number(parsed.port) : 4000,
-      username: decodeURIComponent(parsed.username),
+      user: decodeURIComponent(parsed.username),
       password: decodeURIComponent(parsed.password),
       database: parsed.pathname.replace(/^\//, ""),
+      ssl: { rejectUnauthorized: false },
     });
-    _db = drizzle({ client });
-    console.log("[Database] Connected via TiDB Serverless (Explicit Credentials).");
+    _db = drizzle({ connection });
+    console.log("[Database] Connected via mysql2.");
   } catch (error) {
     console.warn(`[Database] Failed to initialize connection (${databaseErrorCode(error)}).`);
     _db = null;
