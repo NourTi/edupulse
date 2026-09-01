@@ -1,6 +1,6 @@
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/tidb-serverless";
-import { connect } from "@tidbcloud/serverless";
+import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 
 import {
   auditLogs,
