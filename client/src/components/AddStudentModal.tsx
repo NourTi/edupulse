@@ -29,10 +29,10 @@ export function AddStudentModal({ isOpen, onClose, isArabic }: { isOpen: boolean
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // This triggers the database save
-    createLearner.mutate({ name, phone, grade: stage });
+    // The backend expects both name and nameAr. We will pass the same value to both.
+    createLearner.mutate({ name, nameAr: name, phone, grade: stage });
   };
 
   return (
