@@ -71,7 +71,7 @@ export default function MedusaCommercePanel({ isArabic }: Props) {
         <div><p className="text-display text-3xl">{isArabic ? "خدمات ورسوم المؤسسة" : "Institution services and fees"}</p><p className="mt-2 max-w-2xl text-sm leading-7 text-white/55">{isArabic ? "اعرض باقات التسجيل، الدروس، والخدمات المدفوعة من Medusa. تبقى أهلية الطالب وسياق المؤسسة داخل EduPulse." : "View registration packages, lessons, and paid services from Medusa. Learner eligibility and institution context remain inside EduPulse."}</p></div>
         {status.isLoading && <Loader2 className="h-5 w-5 animate-spin text-white/50" />}
       </div>
-      {!status.data?.configured ?       <div className="mt-6 rounded-xl border border-dashed border-white/15 bg-white/[0.03] p-5 text-sm leading-7 text-white/60">{isArabic ? "لم يتم إعداد Medusa بعد. أضف عنوان خدمة Medusa ومفتاحها العام في إعدادات الخادم لعرض الكتالوج. لا تتأثر المدفوعات المحلية الحالية." : "Medusa is not configured yet. Add the Medusa service URL and publishable key to the server settings to display the catalog. Existing local payments remain available."}</div> : catalog.isError ? <div className="mt-6 rounded-xl border border-rose-300/20 bg-rose-300/10 p-5 text-sm text-rose-100">{isArabic ? "تعذر تحميل الكتالوج مؤقتاً." : "The catalog is temporarily unavailable."}</div> : <div className="mt-6 grid gap-3 md:grid-cols-2">{catalog.data?.products.map((product) => <article key={product.id} className="rounded-xl border border-white/10 bg-white/[0.04] p-4"><p className="font-medium">{product.title}</p><p className="mt-1 line-clamp-2 text-xs leading-5 text-white/50">{product.description || (isArabic ? "خدمة تعليمية قابلة للشراء." : "Purchasable education service.")}</p><div className="mt-4 flex items-center justify-between text-xs text-white/45"><span>{product.variants.length} {isArabic ? "خيارات" : "variants"}</span><span className="rounded-full border border-white/10 px-2 py-1">{isArabic ? "من Medusa" : "From Medusa"}</span></div></article>)}</div>}
+      {!status.data?.configured ?       <div className="mt-6 rounded-xl border border-dashed border-white/15 bg-white/[0.03] p-5 text-sm leading-7 text-white/60">{isArabic ? "لم يتم إعداد Medusa بعد. أضف عنوان خدمة Medusa ومفتاحها العامة في إعدادات الخادم لعرض الكتالوج. لا تتأثر المدفوعات المحلية الحالية." : "Medusa is not configured yet. Add the Medusa service URL and publishable key to the server settings to display the catalog. Existing local payments remain available."}</div> : catalog.isError ? <div className="mt-6 rounded-xl border border-rose-300/20 bg-rose-300/10 p-5 text-sm text-rose-100">{isArabic ? "تعذر تحميل الكتالوج مؤقتاً." : "The catalog is temporarily unavailable."}</div> : <div className="mt-6 grid gap-3 md:grid-cols-2">{catalog.data?.products.map((product) => <article key={product.id} className="rounded-xl border border-white/10 bg-white/[0.04] p-4"><p className="font-medium">{product.title}</p><p className="mt-1 line-clamp-2 text-xs leading-5 text-white/50">{product.description || (isArabic ? "خدمة تعليمية قابلة للشراء." : "Purchasable education service.")}</p><div className="mt-4 flex items-center justify-between text-xs text-white/45"><span>{product.variants.length} {isArabic ? "خيارات" : "variants"}</span><span className="rounded-full border border-white/10 px-2 py-1">{isArabic ? "من Medusa" : "From Medusa"}</span></div></article>)}</div>}
     </section>
     <section className="surface-panel rounded-2xl p-6">
       <div className="flex items-center justify-between"><div><p className="text-display text-3xl">{isArabic ? "كتالوج EduPulse المحلي" : "EduPulse local catalog"}</p><p className="mt-2 text-sm text-white/55">{isArabic ? "أنشئ رسوم التسجيل أو باقات الدروس داخل قاعدة المؤسسة، حتى دون Medusa خارجي." : "Create registration fees or lesson packages inside the institution database, even without external Medusa."}</p></div><Plus className="h-5 w-5 text-white/45" /></div>
@@ -88,7 +88,20 @@ export default function MedusaCommercePanel({ isArabic }: Props) {
       <p className="text-display text-3xl">{isArabic ? "إصدار فاتورة" : "Issue an invoice"}</p>
       <p className="mt-2 text-sm leading-7 text-white/55">{isArabic ? "اربط الخدمة بطالب محدد، ثم سجّل الدفعة من سجل المدفوعات المحلي." : "Attach a service to a specific learner, then record payment through the local payment ledger."}</p>
       <form className="mt-5 grid gap-3 md:grid-cols-[1fr_1fr_0.7fr_auto]" onSubmit={(event) => { event.preventDefault(); if (!learnerId || !productId) return toast.error(isArabic ? "اختر الطالب والخدمة." : "Choose a learner and service."); const product = localProducts.data?.find(item => item.id === productId); const discountMinor = Math.round(Number(discount || 0) * 100); if (product && discountMinor > product.amountMinor) return toast.error(isArabic ? "الخصم أكبر من قيمة الخدمة." : "Discount exceeds service amount."); createInvoice.mutate({ learnerId, productId, discountMinor }); setInvoiceAmount(product ? String(product.amountMinor / 100) : invoiceAmount); }}>
-        <select required value={learnerId} onChange={(event) => setLearnerId(event.target.value)} className="control-light px-4 py-3 text-sm"><option value="">{isArabic ? "اختر الطالب" : "Choose learner"}</option>{learners.data?.map((item) => <option key={item.id} value={item.id}>{item.nameAr} · {item.grade}</option>)}</select>
+        
+        {/* FIX: Changed from select to input with datalist to allow free typing */}
+        <input 
+          list="learners-list" 
+          required 
+          value={learnerId} 
+          onChange={(event) => setLearnerId(event.target.value)} 
+          placeholder={isArabic ? "اسم أو رقم الطالب" : "Learner name/ID"} 
+          className="control-light px-4 py-3 text-sm" 
+        />
+        <datalist id="learners-list">
+          {learners.data?.map((item) => <option key={item.id} value={item.id}>{item.nameAr} · {item.grade}</option>)}
+        </datalist>
+
         <select required value={productId} onChange={(event) => setProductId(event.target.value)} className="control-light px-4 py-3 text-sm"><option value="">{isArabic ? "اختر الخدمة" : "Choose service"}</option>{localProducts.data?.map((item) => <option key={item.id} value={item.id}>{isArabic ? item.titleAr : item.title} · {(item.amountMinor / 100).toFixed(2)} {item.currency}</option>)}</select>
         <input min="0" step="0.01" type="number" value={discount} onChange={(event) => setDiscount(event.target.value)} placeholder={isArabic ? "خصم دج" : "Discount DZD"} className="control-light px-4 py-3 text-sm" />
         <button disabled={createInvoice.isPending} className="rounded-xl bg-white px-4 py-3 text-sm text-[#00364A] disabled:opacity-50">{createInvoice.isPending ? "…" : (isArabic ? "إصدار" : "Issue")}</button>
@@ -98,7 +111,20 @@ export default function MedusaCommercePanel({ isArabic }: Props) {
     <section className="surface-panel rounded-2xl p-6">
       <div className="flex items-start justify-between gap-4"><div><p className="text-display text-3xl">{isArabic ? "محاكاة الفوترة المتكررة" : "Recurring billing simulator"}</p><p className="mt-2 max-w-2xl text-sm leading-7 text-white/55">{isArabic ? "اختبر دورة الاشتراك يدوياً. هذه العملية تجريبية فقط ولا تنشئ دفعة أو تحصيلًا حقيقياً." : "Manually test a subscription cycle. This is test-only and never creates a payment or real charge."}</p></div><Play className="h-5 w-5 text-amber-200" /></div>
       <form className="mt-5 grid gap-3 md:grid-cols-[1fr_1fr_0.7fr_auto]" onSubmit={(event) => { event.preventDefault(); if (!learnerId || !productId) return toast.error(isArabic ? "اختر الطالب والاشتراك." : "Choose a learner and subscription."); simulateBilling.mutate({ learnerId, productId, cycle }); }}>
-        <select required value={learnerId} onChange={(event) => setLearnerId(event.target.value)} className="control-light px-4 py-3 text-sm"><option value="">{isArabic ? "اختر الطالب" : "Choose learner"}</option>{learners.data?.map((item) => <option key={item.id} value={item.id}>{item.nameAr} · {item.grade}</option>)}</select>
+        
+        {/* FIX: Changed from select to input with datalist to allow free typing */}
+        <input 
+          list="learners-list" 
+          required 
+          value={learnerId} 
+          onChange={(event) => setLearnerId(event.target.value)} 
+          placeholder={isArabic ? "اسم أو رقم الطالب" : "Learner name/ID"} 
+          className="control-light px-4 py-3 text-sm" 
+        />
+        <datalist id="learners-list">
+          {learners.data?.map((item) => <option key={item.id} value={item.id}>{item.nameAr} · {item.grade}</option>)}
+        </datalist>
+
         <select required value={productId} onChange={(event) => setProductId(event.target.value)} className="control-light px-4 py-3 text-sm"><option value="">{isArabic ? "اختر الاشتراك" : "Choose subscription"}</option>{localProducts.data?.filter(item => item.kind === "subscription").map((item) => <option key={item.id} value={item.id}>{isArabic ? item.titleAr : item.title} · {(item.amountMinor / 100).toFixed(2)} {item.currency}</option>)}</select>
         <select value={cycle} onChange={(event) => setCycle(event.target.value as typeof cycle)} className="control-light px-4 py-3 text-sm"><option value="monthly">{isArabic ? "شهري" : "Monthly"}</option><option value="quarterly">{isArabic ? "ربع سنوي" : "Quarterly"}</option><option value="annual">{isArabic ? "سنوي" : "Annual"}</option></select>
         <button disabled={simulateBilling.isPending} className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-200 px-4 py-3 text-sm text-[#00364A] disabled:opacity-50">{simulateBilling.isPending ? "…" : <><Play className="h-3.5 w-3.5" />{isArabic ? "تشغيل" : "Simulate"}</>}</button>
