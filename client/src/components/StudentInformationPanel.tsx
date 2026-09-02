@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { AddStudentModal } from "./AddStudentModal";
 import { Download, Filter, MoreHorizontal, Plus, Search, UsersRound } from "lucide-react";
 
 type StudentRecord = { id: string; name: string; nameAr: string; grade: string; guardian: string; phone: string; level: string; attendance: number; subjects: string[]; status: string };
