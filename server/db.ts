@@ -191,11 +191,10 @@ export async function createPasswordUser(input: { name: string; email: string; p
     status: "active",
     mustChangePassword: false,
     passwordChangedAt: new Date(),
-    openId: null, // Explicitly pass null so TiDB doesn't fail on 'default'
+    openId: `pwd-${Date.now()}`, // Generate a unique openId to avoid duplicate entry errors
   });
   return getUserById(Number(result[0].insertId));
 }
-
 export async function updateUserPassword(userId: number, passwordHash: string) {
   const db = await getDb();
   if (!db) throw new Error("Database is unavailable.");
