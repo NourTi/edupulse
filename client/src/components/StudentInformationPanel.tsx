@@ -2,8 +2,7 @@ import { useState } from "react";
 import { AddStudentModal } from "./AddStudentModal";
 import { Download, Filter, MoreHorizontal, Plus, Search, UsersRound } from "lucide-react";
 
-type StudentRecord = { id: string; name: string; nameAr: string; grade: string; guardian: string; phone: string; level: string; attendance: number; subjects: string[]; status: string };
-
+type StudentRecord = { id: string; name: string; nameAr: string; grade: string; guardian: string; phone: string; level: string; attendance: number; subjects: string[]; status: string; avatarUrl?: string };
 type Props = { students: StudentRecord[]; onAdd: () => void; isArabic: boolean };
 
 const statusLabel = (status: string, isArabic: boolean) => isArabic ? (status === "Review" ? "مراجعة" : status === "New" ? "جديد" : "نشط") : (status === "Review" ? "Review" : status === "New" ? "New" : "Active");
