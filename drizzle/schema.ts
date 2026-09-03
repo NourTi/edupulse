@@ -162,6 +162,7 @@ export const learners = mysqlTable("learners", {
   grade: varchar("grade", { length: 80 }).notNull(),
   phone: varchar("phone", { length: 40 }),
   status: mysqlEnum("status", ["active", "new", "review", "archived"]).default("active").notNull(),
+  avatarUrl: text("avatarUrl"), // <--- AVATAR URL ADDED HERE
   createdById: int("createdById").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

@@ -2,12 +2,12 @@
 
 #show: report-theme.with(
   title: "EduPulse Platform Profile",
-  author: "Manus AI",
+  author: "Nour Mohammed Abdessamed",
   rhythm: "report",
   running-header: true,
 )
 
-#set text(font: ("Noto Naskh Arabic", "Libertinus Serif"), size: 10.5pt)
+#set text(font: ("Noto Naskh Arabic", "Times New Roman"), size: 11.5pt)
 #set par(justify: true, leading: 0.82em, spacing: 0.72em, first-line-indent: 0em)
 #show link: set text(fill: report-accent)
 
