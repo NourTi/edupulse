@@ -3,6 +3,7 @@ import { AddStudentModal } from "./AddStudentModal";
 import { Download, Filter, MoreHorizontal, Plus, Search, UsersRound } from "lucide-react";
 
 type StudentRecord = { id: string; name: string; nameAr: string; grade: string; guardian: string; phone: string; level: string; attendance: number; subjects: string[]; status: string; avatarUrl?: string };
+
 type Props = { students: StudentRecord[]; onAdd: () => void; isArabic: boolean };
 
 const statusLabel = (status: string, isArabic: boolean) => isArabic ? (status === "Review" ? "مراجعة" : status === "New" ? "جديد" : "نشط") : (status === "Review" ? "Review" : status === "New" ? "New" : "Active");
@@ -69,7 +70,12 @@ export function StudentInformationPanel({ students, isArabic }: Props) {
                   <tr key={student.id} className="border-t border-slate-100 transition hover:bg-indigo-50/30">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <span className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-cyan-400 font-black text-white">{student.nameAr.slice(0, 1)}</span>
+                        {/* Avatar Logic: Shows image if available, otherwise shows initials */}
+                        {student.avatarUrl ? (
+                          <img src={student.avatarUrl} alt={student.name} className="h-9 w-9 rounded-full object-cover" />
+                        ) : (
+                          <span className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-cyan-400 font-black text-white">{student.nameAr.slice(0, 1)}</span>
+                        )}
                         <div>
                           <p className="font-black text-slate-800">{isArabic ? student.nameAr : student.name}</p>
                           <p className="mt-1 text-[10px] text-slate-400">{student.id.toUpperCase()}</p>
