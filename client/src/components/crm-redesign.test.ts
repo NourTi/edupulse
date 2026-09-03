@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { postHeroModules } from "./PostHeroModuleStrip";
 import { gradebookAverage } from "./GradebookPanel";
+import { dashboardModules, dashboardStageLabel } from "./VividDashboard";
 
 describe("post-hero CRM redesign", () => {
   it("exposes the core school workflows as visible modules", () => {
@@ -11,6 +12,20 @@ describe("post-hero CRM redesign", () => {
 
   it("keeps Arabic labels available for every module", () => {
     expect(postHeroModules.every(module => module.ar.trim().length > 0)).toBe(true);
+  });
+
+  it("keeps the interior dashboard modules role-aware", () => {
+    expect(dashboardModules.map(module => module.id)).toEqual(expect.arrayContaining(["overview", "learners", "attendance", "subjects", "cefr", "payments", "crm", "portal"]));
+    expect(dashboardModules.find(module => module.id === "payments")?.roles).toEqual(expect.arrayContaining(["admin", "finance_admin"]));
+    expect(dashboardModules.find(module => module.id === "portal")?.roles).toEqual(expect.arrayContaining(["student", "guardian"]));
+  });
+
+  it("uses the Algerian education taxonomy in the interior dashboard", () => {
+    expect(dashboardStageLabel("preparatory")).toBe("التحضيري");
+    expect(dashboardStageLabel("primary")).toBe("الابتدائي");
+    expect(dashboardStageLabel("middle")).toBe("المتوسط");
+    expect(dashboardStageLabel("secondary")).toBe("الثانوي");
+    expect(dashboardStageLabel("higher")).toBe("التعليم العالي");
   });
 
   it("calculates a gradebook average only from recorded skills", () => {

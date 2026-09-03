@@ -813,3 +813,17 @@
 ## Copyable White CRM Design Prompt
 
 - [x] Create a standalone prompt another AI agent can use to reproduce the screenshot-inspired white CRM layout beneath the hero and across all EduPulse dashboards.
+
+## Full Render/TiDB Root-Cause Audit
+
+- [ ] Audit the supplied Render/TiDB connection configuration without exposing the credential and record the required password rotation.
+- [ ] Audit Drizzle migrations, startup ordering, TiDB SQL, and database-name handling end to end.
+- [ ] Audit authentication gates, Descope/Google configuration, and Render build/runtime environment boundaries.
+- [ ] Implement evidence-based corrections, run non-destructive validation, and document the complete root cause.
+
+## Hero Restoration and Gentelella Interior Dashboard
+
+- [x] Identify and restore the last intact cinematic hero version without overwriting unrelated current work.
+- [x] Review Gentelella’s interior dashboard structure and adapt its useful sections to EduPulse.
+- [x] Implement the interior dashboard in EduPulse’s Arabic-first white CRM visual system for the role-specific workspaces.
+- [x] Verify the hero remains intact and validate dashboard behavior, responsiveness, tests, and build.

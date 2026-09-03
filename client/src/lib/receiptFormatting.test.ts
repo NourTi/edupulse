@@ -19,7 +19,7 @@ describe("receiptFormatting", () => {
     expect(receipt.rows).toEqual([
       ["اسم الطالب", "أمل بن يحيى"],
       ["ولي الأمر", "نادية بن يحيى"],
-      ["طريقة الدفع", "Cash"],
+      ["طريقة الدفع", "نقداً"],
       ["الحالة", "مدفوع"],
     ]);
     expect(receipt.logoDataUrl).toContain("data:image/png");
