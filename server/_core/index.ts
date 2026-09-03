@@ -9,7 +9,6 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { runStartupMigration, shouldRunStartupMigration } from "./startup";
 import { checkDatabaseHealth, checkMigrationHealth, databaseErrorCode } from "../db";
-import { exchangeDescopeSession } from "../auth/descope";
 import { setPasswordSessionCookie } from "../auth/session";
 
 export function databaseSetupErrorPayload() {
@@ -64,19 +63,6 @@ async function startServer() {
     const health = await checkMigrationHealth();
     const ready = health.reachable && health.migrationsTable === "present";
     res.status(ready ? 200 : 503).json({ service: "migrations", ...health });
-  });
-  app.post("/api/auth/descope/session", async (req, res) => {
-    const authorization = req.headers.authorization;
-    const sessionToken = typeof authorization === "string" && authorization.startsWith("Bearer ") ? authorization.slice(7).trim() : "";
-    if (!sessionToken) return res.status(401).json({ error: "Missing Descope session." });
-    try {
-      const result = await exchangeDescopeSession(sessionToken, req);
-      setPasswordSessionCookie(res, req, result.rawSessionToken);
-      return res.status(200).json({ user: { id: result.user.id, name: result.user.name, email: result.user.email } });
-    } catch (error) {
-      console.warn("[Auth] Descope session exchange rejected.", error instanceof Error ? error.message : "unknown error");
-      return res.status(401).json({ error: "Descope authentication could not be completed." });
-    }
   });
   if (process.env.OAUTH_SERVER_URL?.trim()) {
     const { registerOAuthRoutes } = await import("./oauth");
