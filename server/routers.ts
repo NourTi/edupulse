@@ -309,10 +309,41 @@ export const appRouter = router({
       await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "registrar", "finance_admin", "teacher", "counsellor", "student", "guardian"]);
       return listLearners(institutionId);
     }),
-    createLearner: protectedProcedure.input(z.object({ institutionId: z.string().max(64).optional(), name: z.string().trim().min(2).max(160), nameAr: z.string().trim().min(2).max(160), grade: z.string().trim().min(1).max(80), phone: z.string().trim().max(40).optional(), status: z.enum(["active", "new", "review", "archived"]).default("new") })).mutation(async ({ ctx, input }) => {
+    createLearner: protectedProcedure.input(z.object({
+      institutionId: z.string().max(64).optional(),
+      name: z.string().trim().min(2).max(160),
+      nameAr: z.string().trim().min(2).max(160),
+      grade: z.string().trim().min(1).max(80),
+      phone: z.string().trim().max(40).optional(),
+      status: z.enum(["active", "new", "review", "archived"]).default("new"),
+      avatarDataUrl: z.string().optional()
+    })).mutation(async ({ ctx, input }) => {
       const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
       await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "registrar"]);
-      const learner = await createLearner({ id: `learner_${nanoid(16)}`, institutionId, name: input.name, nameAr: input.nameAr, grade: input.grade, phone: input.phone, status: input.status, createdById: ctx.user.id });
+
+      let avatarUrl: string | null = null;
+      if (input.avatarDataUrl) {
+        const match = input.avatarDataUrl.match(/^data:(image\/(?:png|jpeg|webp));base64,(.+)$/i);
+        if (match) {
+          const mimeType = match[1].toLowerCase();
+          const extension = mimeType === "image/jpeg" ? "jpg" : mimeType.split("/")[1];
+          const stored = await storagePut(`avatars/${ctx.user.id}/${nanoid(10)}.${extension}`, Buffer.from(match[2], "base64"), mimeType);
+          avatarUrl = stored.url;
+        }
+      }
+
+      const learner = await createLearner({
+        id: `learner_${nanoid(16)}`,
+        institutionId,
+        name: input.name,
+        nameAr: input.nameAr,
+        grade: input.grade,
+        phone: input.phone,
+        status: input.status,
+        avatarUrl,
+        createdById: ctx.user.id
+      });
+
       await writeAuditLog({ id: `audit_${nanoid(16)}`, institutionId, actorUserId: ctx.user.id, action: "learner.created", entityType: "learner", entityId: learner?.id, metadata: JSON.stringify({ name: input.name }) });
       return learner;
     }),
