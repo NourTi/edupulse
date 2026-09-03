@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X } from "lucide-react";
+import { X, Upload } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -15,8 +15,8 @@ export function AddStudentModal({ isOpen, onClose, isArabic }: { isOpen: boolean
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [stage, setStage] = useState("secondary");
+  const [avatarDataUrl, setAvatarDataUrl] = useState<string | null>(null);
 
-  // This connects to your backend to save the student
   const createLearner = trpc.records.createLearner.useMutation({
     onSuccess: () => {
       toast.success(isArabic ? "تم إنشاء الطالب بنجاح" : "Student created successfully");
@@ -29,14 +29,28 @@ export function AddStudentModal({ isOpen, onClose, isArabic }: { isOpen: boolean
 
   if (!isOpen) return null;
 
-    const handleSubmit = (e: React.FormEvent) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setAvatarDataUrl(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // The backend expects both name and nameAr. We will pass the same value to both.
-    createLearner.mutate({ name, nameAr: name, phone, grade: stage });
+    createLearner.mutate({ 
+      name, 
+      nameAr: name, 
+      phone, 
+      grade: stage, 
+      avatarDataUrl: avatarDataUrl || undefined 
+    });
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" dir={isArabic ? "rtl" : "ltr"}>
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-xl font-bold text-slate-800">{isArabic ? "إضافة طالب جديد" : "Add New Student"}</h2>
@@ -46,6 +60,21 @@ export function AddStudentModal({ isOpen, onClose, isArabic }: { isOpen: boolean
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Avatar Upload */}
+          <div className="flex flex-col items-center gap-2">
+            <div className="h-20 w-20 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden border-2 border-dashed border-slate-300">
+              {avatarDataUrl ? (
+                <img src={avatarDataUrl} alt="Avatar" className="h-full w-full object-cover" />
+              ) : (
+                <Upload className="h-6 w-6 text-slate-400" />
+              )}
+            </div>
+            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" id="avatarInput" />
+            <label htmlFor="avatarInput" className="cursor-pointer text-xs font-medium text-blue-600 hover:underline">
+              {isArabic ? "رفع صورة الطالب" : "Upload Student Photo"}
+            </label>
+          </div>
+
           {/* Name Input */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">{isArabic ? "الاسم" : "Name"}</label>
