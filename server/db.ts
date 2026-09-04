@@ -1,7 +1,7 @@
-import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import mysql from "mysql2/promise";
-
+import { sql } from "drizzle-orm";
+import type { PoolOptions } from "mysql2";
 import {
   auditLogs,
   authSessions,
@@ -46,6 +46,26 @@ export function databaseErrorCode(error: unknown) {
   return "unknown_error";
 }
 
+export function databaseConnectionOptions(connectionUrl: string): PoolOptions {
+  const parsed = new URL(connectionUrl);
+  const hostname = parsed.hostname.toLowerCase();
+  const sslRequested = process.env.DATABASE_SSL === "true" || parsed.searchParams.get("sslaccept") === "strict" || hostname.endsWith(".tidbcloud.com") || hostname.endsWith(".aivencloud.com");
+  const database = decodeURIComponent(parsed.pathname.replace(/^\//, ""));
+  if (!parsed.hostname || !parsed.username || !database) throw new Error("DATABASE_URL must include a host, username, and database name.");
+  return {
+    host: parsed.hostname,
+    port: parsed.port ? Number(parsed.port) : 3306,
+    user: decodeURIComponent(parsed.username),
+    password: decodeURIComponent(parsed.password),
+    database,
+    connectTimeout: 15_000,
+    waitForConnections: true,
+    connectionLimit: 5,
+    enableKeepAlive: true,
+    ssl: sslRequested ? { minVersion: "TLSv1.2" } : undefined,
+  };
+}
+
 export async function getDb() {
   if (_db) return _db;
   const connectionUrl = process.env.DATABASE_URL?.trim();
@@ -53,20 +73,10 @@ export async function getDb() {
     console.warn("[Database] DATABASE_URL is missing.");
     return null;
   }
-         try {
-    const parsed = new URL(connectionUrl);
-    const pool = mysql.createPool({
-      host: parsed.hostname,
-      port: parsed.port ? Number(parsed.port) : 4000,
-      user: decodeURIComponent(parsed.username),
-      password: decodeURIComponent(parsed.password),
-      database: parsed.pathname.replace(/^\//, ""),
-      ssl: { rejectUnauthorized: false },
-      waitForConnections: true,
-      connectionLimit: 5,
-    });
-    _db = drizzle(pool); // Pass the pool directly, not inside an object
-    console.log("[Database] Connected via mysql2 Pool.");
+  try {
+    const options = databaseConnectionOptions(connectionUrl);
+    console.log(`[Database] Configured for ${options.host}:${options.port}/${options.database}; TLS ${options.ssl ? "enabled" : "disabled"}.`);
+    _db = drizzle({ connection: options });
   } catch (error) {
     console.warn(`[Database] Failed to initialize connection (${databaseErrorCode(error)}).`);
     _db = null;
@@ -191,10 +201,10 @@ export async function createPasswordUser(input: { name: string; email: string; p
     status: "active",
     mustChangePassword: false,
     passwordChangedAt: new Date(),
-    openId: `pwd-${Date.now()}`, // Generate a unique openId to avoid duplicate entry errors
   });
   return getUserById(Number(result[0].insertId));
 }
+
 export async function updateUserPassword(userId: number, passwordHash: string) {
   const db = await getDb();
   if (!db) throw new Error("Database is unavailable.");
