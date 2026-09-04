@@ -70,6 +70,7 @@ import { buildWeeklyProgressMessage } from "@/lib/weeklyProgress";
 import MedusaCommercePanel from "./MedusaCommercePanel";
 import { StudentSupportEvaluationPanel } from "./StudentSupportEvaluationPanel";
 import { InstitutionTeamPanel } from "./InstitutionTeamPanel";
+import CreatorStudioPanel from "./creator/CreatorStudioPanel";
 
 type Screen = "landing" | "access" | "workspace";
 type Role = "admin" | "finance_admin" | "registrar" | "teacher" | "counsellor" | "student" | "guardian";
@@ -483,6 +484,8 @@ export default function EduPulseApp() {
     { id: "cefr", label: "تقييم CEFR", icon: BarChart3, roles: ["admin", "teacher", "student"] },
     { id: "guardians", label: "التواصل مع الأولياء", icon: MessageCircle, roles: ["admin", "teacher", "counsellor"] },
     { id: "payments", label: "المدفوعات والإيصالات", icon: WalletCards, roles: ["admin", "finance_admin"] },
+    { id: "creator", label: "استوديو المبدع", icon:  Sparkles,
+    roles: ["admin", "teacher", "counsellor"] },
     { id: "commerce", label: "التجارة والخدمات", icon:   PackageOpen,
     roles: ["admin", "finance_admin"] },
     { id: "reports", label: "تقارير التقدم", icon: FileText, roles: ["admin", "teacher", "student"] },
@@ -552,11 +555,12 @@ export default function EduPulseApp() {
 
   const visibleNav = navItems.filter((item) => item.roles.includes(role));
   const navigate = (id: string) => { const destination = navItems.find(item => item.id === id); if (!destination || !destination.roles.includes(role)) { toast.error(isArabic ? "لا تملك صلاحية فتح هذه الوحدة." : "You do not have permission to open this module."); return; } if (id === "search") { setSearchOpen(true); setMobileMenu(false); return; } setActiveView(id); setMobileMenu(false); };
-  const dashboardTitle = ({ overview: "صباح واضح.", registration: "تسجيل طالب جديد.", learners: "سجل الطلاب.", subjects: "مكتبة المواد الدراسية.", attendance: "حضور اليوم.", cefr: "تقدم اللغة الإنجليزية.", guardians: "تواصل إنساني واضح.", payments: "مدفوعات وإيصالات.", commerce: "التجارة والخدمات.", reports: "تقارير التقدم.", knowledge: "دليل المؤسسة.", team: "فريق المؤسسة.", ask: "اسأل المؤسسة.", crm: "نظام المعلم.", portal: "بوابة الطالب." } as Record<string, string>)[activeView] ?? "EduPulse";
+  const dashboardTitle = ({ overview: "صباح واضح.", registration: "تسجيل طالب جديد.", learners: "سجل الطلاب.", subjects: "مكتبة المواد الدراسية.", attendance: "حضور اليوم.", cefr: "تقدم اللغة الإنجليزية.", guardians: "تواصل إنساني واضح.", payments: "مدفوعات وإيصالات.", creator: "استوديو المبدع.", commerce: "التجارة والخدمات.", reports: "تقارير التقدم.", knowledge: "دليل المؤسسة.", team: "فريق المؤسسة.", ask: "اسأل المؤسسة.", crm: "نظام المعلم.", portal: "بوابة الطالب." } as Record<string, string>)[activeView] ?? "EduPulse";
 
   const renderView = () => {
     if (activeView === "team") return <><SectionHeader eyebrow="Institution administration" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">فريق بصلاحيات واضحة.</em></>} copy="أنشئ دعوات المستخدمين، وراجع حالة كل عضوية، واحتفظ بحدود المؤسسة واضحة." /><InstitutionTeamPanel isArabic={isArabic} institutionId={membershipsQuery.data?.[0]?.institution.id} /></>;
     if (activeView === "crm") return <EducatorCRMPanel isArabic={isArabic} desktopRuntime={desktopRuntime} />;
+    if (activeView === "creator") return <><SectionHeader eyebrow="Creator Studio" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">من الرسم البياني إلى الخطة — بروتوكول جزائري.</em></>} copy="استوديوك الخاص: أنشئ الأفواج، حلّل الرسم البياني، أنشئ الخطط والاختبارات — كلها مستندة إلى البرنامج الرسمي." /><CreatorStudioPanel /></>;
     if (activeView === "portal") return role === "guardian" ? <GuardianPortalPanel isArabic={isArabic} /> : <StudentPortalPanel isArabic={isArabic} />;
     if (activeView === "support-evaluation") return <><SectionHeader eyebrow="Evidence-based teacher support" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">فهم التقدم قبل اتخاذ القرار.</em></>} copy="يعرض هذا التقييم إشارات تعليمية قابلة للمراجعة، ولا يشخّص حالة نفسية أو طبية." /><StudentSupportEvaluationPanel isArabic={isArabic} /></>;
     if (activeView === "commerce") return <><SectionHeader eyebrow="Medusa commerce boundary" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">خدمات مدفوعة، بحدود واضحة.</em></>} copy="Medusa يدير الكتالوج وحالة التجارة. EduPulse يحتفظ بالمؤسسة وسياق الطالب والصلاحيات." /><MedusaCommercePanel isArabic={isArabic} /></>;
