@@ -39,17 +39,30 @@ async function startServer() {
   const app = express();
   app.set("trust proxy", 1);
   const server = createServer(app);
+  let startupMigrationError: unknown = null;
   const startupMigration = runStartupMigration().then(
     () => true,
     error => {
+      startupMigrationError = error;
       const message = error instanceof Error ? error.message.slice(0, 600) : "unknown error";
       console.error("[Database] Startup migration failed:", JSON.stringify({ code: databaseErrorCode(error), message }));
       return false;
     }
   );
-  const migrationGate: RequestHandler = async (_req, res, next) => {
+  const migrationGate: RequestHandler = async (req, res, next) => {
     if (!shouldRunStartupMigration()) return next();
     if (await startupMigration) return next();
+    // Degraded mode: permission errors (e.g. sys DB) should not block public reads.
+    // Public knowledge queries degrade to platform/conversation/enrollment + Wikipedia,
+    // while authenticated writes still need the full schema.
+    const code = databaseErrorCode(startupMigrationError);
+    const isPermissionFailure = /denied|access|permission/i.test(code) || (startupMigrationError instanceof Error && /system `sys` database/i.test(startupMigrationError.message));
+    const path = req.path || req.url || "";
+    const isPublicRead = path.includes("askPublic") || path.includes("health") || req.method === "GET";
+    if (isPermissionFailure && isPublicRead) {
+      console.warn(`[Database] Allowing degraded public read despite migration failure (${code}). Authenticated writes remain blocked until DATABASE_URL is corrected.`);
+      return next();
+    }
     res.status(503).json(databaseSetupErrorPayload());
   };
   // Configure body parser with larger size limit for file uploads
@@ -64,6 +77,12 @@ async function startServer() {
     const health = await checkMigrationHealth();
     const ready = health.reachable && health.migrationsTable === "present";
     res.status(ready ? 200 : 503).json({ service: "migrations", ...health });
+  });
+  app.get("/api/health/venice", async (_req, res) => {
+    const { veniceHealth } = await import("../ai/venice");
+    const health = veniceHealth();
+    // Never leak the API key — only host/model/configured flags.
+    res.status(200).json({ service: "venice", configured: health.configured, model: health.model, baseHost: health.baseHost });
   });
   app.post("/api/auth/descope/session", async (req, res) => {
     const authorization = req.headers.authorization;

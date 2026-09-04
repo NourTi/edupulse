@@ -23,16 +23,19 @@ The current managed lightweight webpage importer uses a server-side `fetch` plus
 
 ## Configuration
 
-The agent uses the preconfigured server-side Forge-compatible LLM adapter. Its required runtime variables are:
+The agent uses Venice AI as primary and the Forge-compatible LLM as fallback. Required runtime variables are:
 
 | Variable | Purpose |
 |---|---|
-| `BUILT_IN_FORGE_API_URL` | OpenAI-compatible model endpoint used by the server adapter. |
-| `BUILT_IN_FORGE_API_KEY` | Server-only bearer credential for the model endpoint. |
-| `DATABASE_URL` | Institution sources and searchable chunks. |
+| `VENICE_INFERENCE_API_KEY` | **Server-only** Venice credential (rotate screenshot-exposed key before prod). If set, `knowledge.askPublic` and `buildSupportEvaluation` use Venice; otherwise they fall back. |
+| `VENICE_BASE_URL` | Venice OpenAI-compatible base (default `https://api.venice.ai/api/v1`). |
+| `VENICE_MODEL` | Venice model (default `llama-3.3-70b`). |
+| `BUILT_IN_FORGE_API_URL` / `LLM_API_BASE_URL` | OpenAI-compatible fallback endpoint. |
+| `BUILT_IN_FORGE_API_KEY` / `LLM_API_KEY` | Fallback bearer credential. |
+| `DATABASE_URL` | Institution sources and searchable chunks. **Must not be `.../sys`.** |
 | `JWT_SECRET` | Application session security; not sent to the model. |
 
-The current router requests model `gpt-5-mini` and allows the adapter to retry transient network failures. The browser never receives the LLM credential. If the model credential is missing or the endpoint rejects the request, the UI shows a safe retry message and source links instead of exposing an exception or fabricating an answer.
+Health: `GET /api/health/venice` returns `{ configured, model, baseHost }` without leaking the key. The router chooses `veniceConfigured() ? invokeVenice : invokeLLM`, validates that every grounded answer cites `[S1]…`, rejects truncated/uncited output, and returns a safe retry message with source links on provider failure. When Venice is missing, the learner-progress evaluation runs deterministic local scoring and marks `usedVenice: false` so the UI shows “local aid” instead of silently pretending Venice ran. The browser never receives any LLM credential.
 
 ## Privacy and safety boundaries
 
@@ -83,3 +86,10 @@ After the e0fa008e checkpoint, `https://edupulse-krcu.onrender.com/` became reac
 ## Latest Published Agent Surface
 
 The latest published EduPulse build was reopened successfully. Its accessibility surface contains one visitor assistant launcher, which opens one panel with the prompts `كيف أساعدك؟`, `ما هي مراحل التعليم في الجزائر؟`, `ما هي برامج EduPulse؟`, and `كيف يمكنني التواصل مع الإدارة؟`, plus one textarea and one close control. No full-page duplicate chat appears in the published landing surface.
+
+## 2026-09-04 Hardening (Venice + Degraded DB + Learner Aid)
+
+- **Venice linkage hardened:** `server/ai/venice.ts` now exposes `veniceHealth()` and `GET /api/health/venice` (no secret leak). `buildSupportEvaluation` returns `usedVenice`, `confidence`, `missingSignals`, `dataCompleteness` and synthesizes those into the Venice JSON prompt; local fallback is deterministic and non-diagnostic. `records.generateSupportEvaluation` audits `usedVenice/confidence/dataCompleteness`.
+- **DB sys guard + degraded gate:** `server/_core/startup.ts` detects `DATABASE_URL` with `/sys` and fails fast with actionable log. `server/_core/index.ts` migration gate now allows degraded public reads (platform/conversation/enrollment + Wikipedia) when the failure is a permission/`sys` error, while authenticated writes remain blocked until `DATABASE_URL` is corrected. This prevents the agent’s 503 `DATABASE_SETUP_FAILED` from masking Venice/Wikipedia fallbacks.
+- **“A clear view of learner progress” is now a true aid:** `StudentSupportEvaluationPanel.tsx` rebuilt as data-driven analysis — strengths vs difficulties (non-stigmatizing), data-completeness bar, confidence badge, missing-data warning, attendance/CEFR signals, follow-up date, vivid white controls, stage sorting, CSV export, and explicit “local aid vs Venice AI” toast. Deterministic local scoring guarantees a review even when Venice is absent.
+- **Facilitator focus:** The panel is now the primary teacher/counsellor workspace for all Algeria stages (preparatory→LMD). The white CRM control system is applied consistently (no dark-glass regression). Exports mirror the commerce reporting pattern (validated filters, audit, CSV).
