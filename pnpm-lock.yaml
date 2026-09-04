@@ -124,6 +124,9 @@ importers:
       '@tauri-apps/plugin-store':
         specifier: ^2.4.4
         version: 2.4.4
+      '@tidbcloud/serverless':
+        specifier: ^0.1.1
+        version: 0.1.1
       '@trpc/client':
         specifier: ^11.6.0
         version: 11.18.0(@trpc/server@11.18.0(typescript@5.9.3))(typescript@5.9.3)
@@ -159,7 +162,7 @@ importers:
         version: 17.4.2
       drizzle-orm:
         specifier: ^0.44.5
-        version: 0.44.7(mysql2@3.24.2(@types/node@24.7.0))
+        version: 0.44.7(@tidbcloud/serverless@0.1.1)(mysql2@3.24.2(@types/node@24.7.0))
       embla-carousel-react:
         specifier: ^8.6.0
         version: 8.6.0(react@19.2.1)
@@ -2193,6 +2196,10 @@ packages:
 
   '@tauri-apps/plugin-store@2.4.4':
     resolution: {integrity: sha512-oxSMaj/QpVfJcBMYX5aOQV94fWvga0MwQMfD6TLlbK2dh+ShPWAzefd8HWXhvOKjPRJdGVAkW7ZGO76JzzjaDA==}
+
+  '@tidbcloud/serverless@0.1.1':
+    resolution: {integrity: sha512-km2P5Mgr9nqVah5p5aMYbO3dBqecSwZ0AU7+BhJH+03L2eJO6qCATcBR8UHPuVLhA7GCt3CambKvVYK79pVQ2g==}
+    engines: {node: '>=16'}
 
   '@trpc/client@11.18.0':
     resolution: {integrity: sha512-wOqeg3Fvl25V1ZisQhUD3K8G60ZJDlSGJNSyeXrLH24xAo5w6GSR2Kzb1cSNY9Y+IQ2YZvYGZstBU+V/ulo/ow==}
@@ -6376,6 +6383,8 @@ snapshots:
     dependencies:
       '@tauri-apps/api': 2.11.1
 
+  '@tidbcloud/serverless@0.1.1': {}
+
   '@trpc/client@11.18.0(@trpc/server@11.18.0(typescript@5.9.3))(typescript@5.9.3)':
     dependencies:
       '@trpc/server': 11.18.0(typescript@5.9.3)
@@ -7145,8 +7154,9 @@ snapshots:
       esbuild: 0.25.10
       tsx: 4.23.12
 
-  drizzle-orm@0.44.7(mysql2@3.24.2(@types/node@24.7.0)):
+  drizzle-orm@0.44.7(@tidbcloud/serverless@0.1.1)(mysql2@3.24.2(@types/node@24.7.0)):
     optionalDependencies:
+      '@tidbcloud/serverless': 0.1.1
       mysql2: 3.24.2(@types/node@24.7.0)
 
   dunder-proto@1.0.1:
