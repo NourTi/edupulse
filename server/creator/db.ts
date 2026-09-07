@@ -1,7 +1,8 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, lt } from "drizzle-orm";
 import { getDb } from "../db";
 import {
   algerianResources,
+  attendanceRecords,
   cohorts,
   cohortLearners,
   conceptEdges,
@@ -12,6 +13,7 @@ import {
   focusSessions,
   households,
   knowledgeGraphNodes,
+  learningAssessments,
   learningPaths,
   lessonPlans,
   notebooks,
@@ -21,6 +23,7 @@ import {
   supervisionMilestones,
   teachBacks,
   templates,
+  learners,
 } from "../../drizzle/schema";
 
 // ── Enquiries / Households ──
@@ -179,3 +182,106 @@ export async function createTemplate(input: typeof templates.$inferInsert){ cons
 
 export async function listNotebooks(institutionId: string){ const db=await getDb(); if(!db) return []; return db.select().from(notebooks).where(eq(notebooks.institutionId, institutionId)).orderBy(desc(notebooks.createdAt)); }
 export async function createNotebook(input: typeof notebooks.$inferInsert){ const db=await getDb(); if(!db) throw new Error("DB unavailable"); await db.insert(notebooks).values(input); return input; }
+
+// ── Adaptive engine helpers (FSRS queue, streak evidence, briefing inputs) ──
+export async function getFlashcard(institutionId: string, id: string) {
+  const db = await getDb(); if (!db) return undefined;
+  const rows = await db.select().from(flashcards).where(and(eq(flashcards.id, id), eq(flashcards.institutionId, institutionId))).limit(1);
+  return rows[0];
+}
+
+/** Institution-wide due queue: cards whose due date has arrived, newest urgency first. */
+export async function listDueFlashcards(institutionId: string, now = new Date()) {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(flashcards).where(and(eq(flashcards.institutionId, institutionId), lt(flashcards.dueAt, new Date(now.getTime() + 86_400_000)))).orderBy(flashcards.dueAt).limit(50);
+}
+
+/** FSRS review timestamps used for streak/heatmap evidence — no fabricated activity. */
+export async function listFlashcardReviewDates(institutionId: string, learnerId: string, sinceIso: string) {
+  const db = await getDb(); if (!db) return [];
+  const rows = await db
+    .select({ lastReviewedAt: flashcards.lastReviewedAt, dueAt: flashcards.dueAt, learnerId: flashcards.learnerId })
+    .from(flashcards)
+    .where(and(eq(flashcards.institutionId, institutionId), eq(flashcards.learnerId, learnerId)))
+    .limit(500);
+  return rows
+    .map(row => (row.learnerId === learnerId && row.lastReviewedAt && row.lastReviewedAt.toISOString() >= sinceIso ? row.lastReviewedAt.toISOString() : null))
+    .filter((value): value is string => Boolean(value));
+}
+
+export async function listFocusSessionsSince(institutionId: string, learnerId: string, since: Date) {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(focusSessions).where(and(eq(focusSessions.institutionId, institutionId), eq(focusSessions.learnerId, learnerId))).orderBy(desc(focusSessions.startedAt)).limit(400);
+}
+
+export async function countEnquiriesByStatus(institutionId: string) {
+  const db = await getDb(); if (!db) return {};
+  const rows = await db.select({ status: enquiries.status }).from(enquiries).where(eq(enquiries.institutionId, institutionId));
+  return rows.reduce<Record<string, number>>((acc, row) => { acc[row.status] = (acc[row.status] ?? 0) + 1; return acc; }, {});
+}
+
+export async function countOverdueSupervision(institutionId: string, now = new Date()) {
+  const db = await getDb(); if (!db) return 0;
+  const rows = await db
+    .select({ id: supervisionMilestones.id })
+    .from(supervisionMilestones)
+    .where(and(eq(supervisionMilestones.institutionId, institutionId), lt(supervisionMilestones.dueAt, now)));
+  return rows.length;
+}
+
+export async function countPlannerProposals(institutionId: string, status: typeof plannerProposals.$inferSelect["status"]) {
+  const db = await getDb(); if (!db) return 0;
+  const rows = await db.select({ id: plannerProposals.id }).from(plannerProposals).where(and(eq(plannerProposals.institutionId, institutionId), eq(plannerProposals.status, status)));
+  return rows.length;
+}
+
+/** Attendance + assessment rollups per learner (bounded scan — small institutions). */
+export async function listLearnerSignalSummaries(institutionId: string) {
+  const db = await getDb(); if (!db) return [];
+  const learnerRows = await db.select({ id: learners.id, name: learners.name, nameAr: learners.nameAr }).from(learners).where(eq(learners.institutionId, institutionId)).limit(200);
+  const ids = learnerRows.map(row => row.id);
+  if (!ids.length) return [];
+  const [attendanceRows, assessmentRows] = await Promise.all([
+    db.select({ learnerId: attendanceRecords.learnerId, status: attendanceRecords.status }).from(attendanceRecords).where(inArray(attendanceRecords.learnerId, ids)),
+    db.select({ learnerId: learningAssessments.learnerId, score: learningAssessments.score }).from(learningAssessments).where(inArray(learningAssessments.learnerId, ids)),
+  ]);
+  const attendanceByLearner = new Map<string, { total: number; good: number }>();
+  for (const row of attendanceRows) {
+    const entry = attendanceByLearner.get(row.learnerId) ?? { total: 0, good: 0 };
+    entry.total += 1;
+    if (row.status === "present" || row.status === "late") entry.good += row.status === "late" ? 0.5 : 1;
+    attendanceByLearner.set(row.learnerId, entry);
+  }
+  const scoresByLearner = new Map<string, number[]>();
+  for (const row of assessmentRows) {
+    const list = scoresByLearner.get(row.learnerId) ?? [];
+    if (typeof row.score === "number") list.push(row.score);
+    scoresByLearner.set(row.learnerId, list);
+  }
+  return learnerRows.map(row => {
+    const attendance = attendanceByLearner.get(row.id);
+    const scores = scoresByLearner.get(row.id) ?? [];
+    return {
+      learnerId: row.id,
+      name: row.name ?? row.nameAr ?? row.id,
+      attendance: attendance && attendance.total ? Math.round((attendance.good / attendance.total) * 100) : 100,
+      avgScore: scores.length ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10 : 0,
+      assessmentCount: scores.length,
+    };
+  });
+}
+
+/** Learner's per-competency mastery evidence pulled from FSRS card states. */
+export async function listLearnerCardStates(institutionId: string, learnerId: string) {
+  const db = await getDb(); if (!db) return [];
+  const rows = await db
+    .select({ competencyId: flashcards.competencyId, fsrsStateJson: flashcards.fsrsStateJson })
+    .from(flashcards)
+    .where(and(eq(flashcards.institutionId, institutionId), eq(flashcards.learnerId, learnerId)))
+    .limit(500);
+  return rows.map(row => {
+    let state: { stability?: number; difficulty?: number; retrievability?: number } | null = null;
+    try { state = row.fsrsStateJson ? JSON.parse(row.fsrsStateJson) : null; } catch { state = null; }
+    return { competencyId: row.competencyId ?? null, state };
+  });
+}
