@@ -10,6 +10,7 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
+    "verify:free-data": "tsx scripts/verify-free-data.ts",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
     "desktop:web-dev": "vite --host 127.0.0.1 --port 1420",
     "desktop:web-build": "vite build --outDir ../desktop-dist",

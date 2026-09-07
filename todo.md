@@ -195,11 +195,13 @@
 - [ ] Add a reproducible full-stack deployment workflow that can be connected to the selected Node host.
 - [x] Push and validate the deployment configuration in the private GitHub repository.
 
-## CircleCI Deployment Pipeline
+## CircleCI Deployment Pipeline — RETIRED (2026-09-07)
 
-- [ ] Add CircleCI configuration for private GitHub checkout, dependency install, type checking, tests, and production build.
-- [ ] Add a guarded deployment handoff that requires a configured external Node host and never commits secrets.
-- [ ] Validate and push the CircleCI pipeline to the private GitHub repository.
+- [x] Retire CircleCI by owner decision: delete `.circleci/config.yml`, remove the deploy-webhook job that pointed at a route this repository never exposed, and drop the `edupulse-production` context requirement from `docs/portable-deployment.md`.
+- [x] Keep a single CI gate in GitHub Actions (`ci.yml`: install → type check → unit tests → production build) with Render owning deploy-from-branch.
+- ~~Add CircleCI configuration for private GitHub checkout, dependency install, type checking, tests, and production build.~~
+- ~~Add a guarded deployment handoff that requires a configured external Node host and never commits secrets.~~
+- ~~Validate and push the CircleCI pipeline to the private GitHub repository.~~
 
 ## Render OAuth Startup Error
 
@@ -827,3 +829,21 @@
 - [x] Review Gentelella’s interior dashboard structure and adapt its useful sections to EduPulse.
 - [x] Implement the interior dashboard in EduPulse’s Arabic-first white CRM visual system for the role-specific workspaces.
 - [x] Verify the hero remains intact and validate dashboard behavior, responsiveness, tests, and build.
+
+## Interior Workspace v3, AI Console, and Adaptive Engine (2026-09-06)
+
+- [x] Fixed the mid-project compile blocker: registered the orphaned `creatorRouter` in `server/routers.ts`, clearing all 35 `CreatorStudioPanel.tsx` type errors without a single client-side cast.
+- [x] Made `server/descope.config.test.ts` and the Google credential check configuration probes that skip when unconfigured; a clean checkout is green with no `.env`. Descope and Google auth behavior itself was left untouched at the owner's instruction.
+- [x] Built `server/creator/adaptive.ts`: FSRS-lite scheduler with lapse penalty and daily-cap triage, Kahn topological learning-path ordering with weak-node promotion, LECTOR-lite mastery clustering, deterministic daily briefing, evidence-only streak/heatmap, and an English-only speaking rubric that never produces a clinical label.
+- [x] Shipped 10 new institution-scoped tRPC procedures (`creator.listDueCards`, `reviewCard`, `dailyBriefing`, `learnerStreak`, `learnerMastery`, `buildPath`, `speakingScenarios`, `speakEvaluate`, `speakPolish`, `updatePlannerProposalStatus`) plus 9 supporting data helpers — no new migration, so the TiDB risk did not grow.
+- [x] Added the free public data layer (`server/knowledge/freeData.ts`): Open-Meteo weather + air quality, CoinGecko, GitHub, ERIC research, Open Library — keyless only, cached, rate-limited, citation-bearing, and never sent learner data. Paid-key "free" wrappers in the supplied collection were rejected.
+- [x] Re-implemented the useful half of the supplied AI-agent template as `server/knowledge/aiConsole.ts`: deterministic planner, `needs_input` clarification state, public-source execution, optional Venice rephrasing that may not add facts, JSON-safe failure envelope.
+- [x] Replaced the interior workspace with tokenized dark instrument surfaces (`.workspace-scope` plus `.ws-panel/.ws-row/.ws-chip/.ws-strip/.ws-status/.ws-heat`), removed every light "paper patch" and the marketing gradient from Creator Studio, and left the cinematic hero and landing CSS untouched.
+- [x] Built the workspace AI console panel (source health strip, suggestion chips, cited answers, model-polish switch) as a staff-only role-guarded view, and wired Adaptive Review, Focus Room/streak heatmap, and the Speaking Studio into Creator Studio; Daily Briefing now reads live institution rows instead of a demo button.
+- [x] Verified: `pnpm run check` clean, `vitest` 106 passed / 2 skipped (31 files), production build clean, dev server live with correct title, `/api/health/database` JSON, `creator.listGraphNodes` empty-but-graceful without a DB, protected procedures returning 401 JSON instead of crashing.
+- [x] Documented the build, the source-selection rationale, the rejected connectors, and the sandbox's egress/no-database limitation in `docs/system-design-v3-integration-build-2026-09-06.md`; added `pnpm verify:free-data` for live provider probes.
+- [ ] Run `pnpm verify:free-data` from a normal network (this sandbox blocks all four keyless hosts and Node rejects the proxied GitHub certificate) and record the six adapter results.
+- [ ] Point `DATABASE_URL` at the owner's TiDB and verify persistence live: a `creator.reviewCard` state change, a persisted `creator.buildPath`, `creator.dailyBriefing` actions, and one `knowledge.runFreeSource` weather answer.
+- [ ] Resolve the `0012_creator_studio.sql` TiDB compatibility risk (12 `enum()` columns, 6 `ON UPDATE now()`) before the first real deploy of this milestone.
+- [ ] Add the studyield anchor for real: the owner-provided `studyield/studyield` GitHub link returned "Not Found", so its capabilities were taken from the owner's v2 notes rather than from the repository.
+- [ ] Extend the desktop bridge so `focusSessions`, flashcard FSRS state, and the speaking drill persist through SQLCipher on the Tauri path, and expose Anki `.apkg` export for learners.

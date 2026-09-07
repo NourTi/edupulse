@@ -25,7 +25,7 @@ Portable adapter paths are now available for object storage and the LLM gateway.
 
 ## GitHub Actions and host connection
 
-GitHub Actions and CircleCI can build and test this repository, but they do not run the persistent Express server. Connect the private repository to the selected Node host using its GitHub integration, or use the guarded CircleCI webhook after configuring the production context. Store all values above in the host’s secret manager, never in GitHub source or workflow YAML.
+GitHub Actions builds and tests this repository (`ci.yml`: install, type check, unit tests, production build on every push and pull request), but it does not run the persistent Express server. Deployment belongs entirely to the Node host’s own GitHub integration: Render watches the repository and builds the branch you select. No second CI service, no deploy webhook, and no `DEPLOY_WEBHOOK_URL` are required. Store all values above in the host’s secret manager, never in GitHub source or workflow YAML.
 
 GitHub Pages remains a static preview only. It cannot execute password authentication, tRPC procedures, MySQL queries, RAG retrieval, Resend delivery, or S3 uploads.
 
@@ -38,9 +38,11 @@ A provider subdomain can be used for `APP_BASE_URL` if the selected host supplie
 The approved-source retrieval and citation policy belongs in the Node backend. For a portable deployment, the ingestion adapter must use a server-side crawler or approved URL extraction service, store source text/chunks in the database or S3-compatible storage, and call an OpenAI-compatible LLM only after retrieving approved institution-scoped chunks. Parent/student questions must continue to refuse unsupported personal-record claims and return citations only from approved sources.
 
 
-## CircleCI deployment
+## Deployment pipeline (CircleCI removed 2026-09-07)
 
-The repository also includes `.circleci/config.yml`. CircleCI runs type checking, unit tests, and the production build on every change. On `main`, deployment pauses for an explicit approval step and then calls a configured external-host webhook. Create a CircleCI context named `edupulse-production` containing `DEPLOY_WEBHOOK_URL` and `DEPLOY_WEBHOOK_TOKEN`; without both values the deploy job refuses to run. This pipeline does not deploy to GitHub Pages or Manus and does not contain credentials.
+`ci/circleci: validate`, `.circleci/config.yml`, and the `edupulse-production` context are retired by owner decision. One CI service is enough: GitHub Actions runs the same gates (type check, unit tests, production build) on every push and pull request, and Render deploys from the branch it watches. The old deploy job was never wired to a real endpoint — it expected `DEPLOY_WEBHOOK_URL`/`DEPLOY_WEBHOOK_TOKEN`, but this repository exposes no deploy webhook route, so it could only ever fail. If a manual approval gate is wanted later, implement it as a GitHub Actions environment protection rule instead of re-adding a second provider.
+
+Operational note: keep exactly one service running with `AUTO_MIGRATE=true` against a given TiDB database at a time. Two services (for example a preview and `main`) racing on `__drizzle_migrations` can leave a half-applied migration journal.
 
 
 ### Resend sender requirement

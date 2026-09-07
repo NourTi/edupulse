@@ -66,6 +66,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { ENV } from "./_core/env";
 import { invokeLLM } from "./_core/llm";
 import { systemRouter } from "./_core/systemRouter";
+import { creatorRouter } from "./creator/router";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { storagePut } from "./storage";
 import { assertSafePublicUrl, chunkText, containsProtectedRecordIntent, conversationReply, detectConversationIntent, detectEnrollmentIntent, detectPlatformIntent, enrollmentReply, extractTextFromHtml, platformReply, retrieveRelevantChunks, toSourceReferences, validateGroundedAnswer, isLikelyTruncatedAnswer, type RetrievedChunk } from "./knowledge/policy";
@@ -73,10 +74,12 @@ import { createCrawl4AIJob, crawlPublicPageWithCrawl4AI } from "./knowledge/craw
 import { canUseFreeSource, fetchWikipediaAnswer, isLikelyGeneralKnowledgeQuestion } from "./knowledge/freeSources";
 import { searchAndFetchPublicWeb } from "./knowledge/agentScraper";
 import { recordAgentEvent, type AgentIntent, type AgentOutcome } from "./knowledge/observability";
-import { invokeVenice, veniceConfigured } from "./ai/venice";
+import { invokeVenice, veniceConfigured, veniceHealth } from "./ai/venice";
 import { getMedusaStatus, listMedusaProducts } from "./commerce/medusa";
 import { commerceReportCsv, subscriptionCycleDays } from "./commerce/reporting";
 import { buildSupportEvaluation } from "./ai/evaluation";
+import { freeDataHealth } from "./knowledge/freeData";
+import { buildPolishPrompt, planConsoleTurn, runConsoleTool, shouldPolish as shouldPolishConsole } from "./knowledge/aiConsole";
 
 const schoolRoles = ["owner", "admin", "registrar", "finance_admin", "teacher", "counsellor", "student", "guardian"] as const;
 type SchoolRole = (typeof schoolRoles)[number];
@@ -129,6 +132,7 @@ const authInput = z.object({ email: z.string().email().max(320), password: z.str
 
 export const appRouter = router({
   system: systemRouter,
+  creator: creatorRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     register: publicProcedure.input(z.object({ name: z.string().trim().min(2).max(160), institutionName: z.string().trim().min(2).max(255), email: z.string().email().max(320), password: z.string().min(10).max(200) })).mutation(async ({ ctx, input }) => {
@@ -515,6 +519,31 @@ export const appRouter = router({
       }
       if (text.length < 120) throw new Error("The page did not provide enough readable public text.");
       return saveApprovedSource({ title, content: text, visibility: input.visibility, mimeType: "text/html", sourceUrl, kind: "webpage", userId: ctx.user.id, institutionId });
+    }),
+    /**
+     * Free public data sources available to the workspace (weather, markets, GitHub,
+     * ERIC research, Open Library). Health only — no secrets, no counters beyond
+     * configuration state, and no private data ever leaves EduPulse to reach them.
+     */
+    freeSourceStatus: protectedProcedure.query(async ({ ctx }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id).catch(() => undefined);
+      const staff = institutionId ? await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "registrar", "teacher", "counsellor"]).then(() => true).catch(() => false) : false;
+      return { allowed: staff, venice: veniceHealth(), sources: freeDataHealth(), crawled: Boolean(process.env.CRAWL4AI_API_URL?.trim()), scraper: true };
+    }),
+    /** Console turn: deterministic planner → free public source → JSON-safe answer with citations. */
+    runFreeSource: protectedProcedure.input(z.object({ message: z.string().trim().min(3).max(500), polish: z.boolean().default(false) })).mutation(async ({ input }) => {
+      const plan = planConsoleTurn(input.message);
+      const result = await runConsoleTool(plan);
+      if (input.polish && shouldPolishConsole(input.message, result)) {
+        try {
+          const completion = await invokeVenice({ messages: buildPolishPrompt(input.message, result), maxTokens: 400 });
+          const text = completion.choices?.[0]?.message?.content?.trim();
+          if (text && text.length <= 1800) return { ...result, polish: "venice" as const, answer: text };
+        } catch {
+          // The deterministic answer stays authoritative when the model is unavailable.
+        }
+      }
+      return result;
     }),
     askPublic: publicProcedure.input(z.object({ question: z.string().trim().min(3).max(800), institutionId: z.string().max(64).optional() })).mutation(async ({ input, ctx }) => {
       const startedAt = Date.now();

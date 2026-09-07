@@ -26,7 +26,7 @@ function EnquiriesKanban({ institutionId }: { institutionId?: string }) {
     { key: "trial", label: "Trial" }, { key: "offer", label: "Offer" }, { key: "enrolled", label: "Enrolled" },
   ];
   return (
-    <Card className="border-2">
+    <Card className="ws-panel">
       <CardHeader><CardTitle className="flex items-center gap-2">🎯 Admissions Kanban — Growth Engine <Badge variant="secondary">{enquiries?.length ?? 0} leads</Badge></CardTitle></CardHeader>
       <CardContent className="space-y-4">
         <div className="flex gap-2 flex-wrap">
@@ -38,11 +38,11 @@ function EnquiriesKanban({ institutionId }: { institutionId?: string }) {
         {isLoading ? <p className="text-sm text-muted-foreground">Loading...</p> : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {columns.map(col => (
-              <div key={col.key} className="rounded-lg border bg-white min-h-[220px] p-2">
+              <div key={col.key} className="ws-row min-h-[220px] p-2">
                 <div className="font-semibold text-xs uppercase tracking-wide border-b pb-1 mb-2">{col.label} <span className="text-muted-foreground">({enquiries?.filter(e => e.status === col.key).length ?? 0})</span></div>
                 <div className="space-y-2">
                   {(enquiries ?? []).filter(e => e.status === col.key).map(enq => (
-                    <div key={enq.id} className="rounded border p-2 bg-zinc-50 text-xs">
+                    <div key={enq.id} className="ws-row p-2 text-xs">
                       <div className="font-medium">{enq.name}</div>
                       <div className="text-muted-foreground">{enq.phone ?? ""} · {enq.stage ?? ""}</div>
                       <div className="flex gap-1 mt-1 flex-wrap">
@@ -81,7 +81,7 @@ function CohortsBlock({ institutionId }: { institutionId?: string }) {
         </div>
         <div className="grid md:grid-cols-3 gap-2">
           {(cohorts ?? []).map(c => (
-            <div key={c.id} className="border rounded p-3 bg-white">
+            <div key={c.id} className="ws-row p-3">
               <div className="font-semibold">{c.nameEn} <span className="text-muted-foreground text-xs">({c.nameAr})</span></div>
               <div className="text-xs flex gap-2 mt-1"><Badge>{c.stage}</Badge><Badge variant={c.taughtLanguage === "en" ? "default" : "secondary"}>{c.taughtLanguage.toUpperCase()}</Badge><span className="text-muted-foreground">cap {c.capacity}</span></div>
             </div>
@@ -109,7 +109,7 @@ function KnowledgeGraphBlock() {
         </div>
         <div className="grid md:grid-cols-2 gap-2 max-h-[300px] overflow-auto">
           {filtered.map(n => (
-            <div key={n.id} className="border rounded p-2 text-xs bg-gradient-to-br from-white to-zinc-50">
+            <div key={n.id} className="ws-row p-2 text-xs">
               <div className="font-mono text-[10px] text-muted-foreground">{n.competencyCode}</div>
               <div className="font-medium">{n.unit}</div>
               <div>{n.competencyEn}</div>
@@ -123,24 +123,56 @@ function KnowledgeGraphBlock() {
   );
 }
 
-// ── Daily Briefing (Studivexa + OpenTutor Planner) ──
+// ── Daily Briefing (Studivexa + OpenTutor Planner) — live institution rows ──
 function DailyBriefing({ institutionId }: { institutionId?: string }) {
-  const { data: proposals } = trpc.creator.listPlannerProposals.useQuery(institutionId ? { institutionId } : undefined);
   const utils = trpc.useUtils();
-  const create = trpc.creator.createPlannerProposal.useMutation({ onSuccess: () => utils.creator.listPlannerProposals.invalidate() });
+  const { data: briefing, isLoading } = trpc.creator.dailyBriefing.useQuery(institutionId ? { institutionId } : undefined);
+  const { data: proposals } = trpc.creator.listPlannerProposals.useQuery(institutionId ? { institutionId } : undefined);
+  const decide = trpc.creator.updatePlannerProposalStatus.useMutation({ onSuccess: () => { utils.creator.listPlannerProposals.invalidate(); utils.creator.dailyBriefing.invalidate(); } });
+  const priorityTone: Record<string, string> = { high: "border-[hsl(4_74%_62%/0.4)] bg-[hsl(4_74%_62%/0.12)]", medium: "border-[hsl(45_92%_68%/0.4)] bg-[hsl(45_92%_68%/0.1)]", low: "border-white/10 bg-white/[0.03]" };
   return (
-    <Card className="border-amber-200 bg-amber-50/50">
-      <CardHeader><CardTitle className="flex gap-2">☀️ Daily Briefing — What to CREATE today <Button size="sm" variant="outline" onClick={() => create.mutate({ institutionId, titleAr: "مراجعة 3AS Ethics — مجموعات ضعيفة", titleEn: "Review 3AS Ethics — weak group", reasonJson: JSON.stringify({ demo: true }), source: "assessment" })}>+ Demo proposal</Button></CardTitle></CardHeader>
-      <CardContent>
+    <Card className="ws-panel border-[hsl(45_92%_68%/0.3)]">
+      <CardHeader>
+        <CardTitle className="flex flex-wrap items-center gap-2 text-base">☀️ Daily Briefing — what to CREATE today
+          <Badge variant="outline">{briefing?.actions.length ?? 0} actions</Badge>
+          <Badge variant="secondary">streak {briefing?.activity.streakDays ?? 0}d</Badge>
+          <Badge variant="secondary">{briefing?.activity.xpToday ?? 0} XP today</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {isLoading && <p className="text-sm text-muted-foreground">Reading attendance, FSRS queue, pipeline and supervision gates…</p>}
+        {!isLoading && !(briefing?.actions.length) && <p className="text-sm text-muted-foreground">Nothing on fire — clone a BAC paper or draft a fiche for the weakest cohort.</p>}
         <div className="space-y-2">
-          {(proposals ?? []).slice(0, 6).map(p => (
-            <div key={p.id} className="flex items-center justify-between border rounded p-2 bg-white text-xs">
-              <div><div className="font-medium">{p.titleEn}</div><div className="text-muted-foreground" dir="rtl">{p.titleAr}</div></div>
-              <Badge variant={p.source === "attendance" ? "destructive" : p.source === "fsrs" ? "default" : "secondary"}>{p.source}</Badge>
+          {(briefing?.actions ?? []).map(action => (
+            <div key={action.key} className={`ws-row flex items-start justify-between gap-3 p-3 text-xs ${priorityTone[action.priority] ?? ""}`}>
+              <div className="min-w-0">
+                <div className="font-medium">{action.titleEn}</div>
+                <div className="text-muted-foreground" dir="rtl">{action.titleAr}</div>
+                <div className="mt-1 text-[11px] text-muted-foreground">{action.reasonEn}</div>
+              </div>
+              <Badge variant={action.priority === "high" ? "destructive" : "outline"}>{action.priority}</Badge>
             </div>
           ))}
-          {(!proposals || proposals.length === 0) && <p className="text-sm text-muted-foreground">No proposals yet — briefing generates after chart analysis. Click +Demo.</p>}
         </div>
+        {!!proposals?.length && (
+          <div className="space-y-1 border-t border-white/10 pt-3">
+            <div className="text-xs font-semibold">Planner queue — you decide, the engine never executes</div>
+            {proposals.slice(0, 5).map(p => (
+              <div key={p.id} className="ws-row flex items-center justify-between gap-2 p-2 text-xs">
+                <span className="min-w-0 truncate">{p.titleEn} <span className="text-muted-foreground" dir="rtl">· {p.titleAr}</span></span>
+                <span className="flex shrink-0 items-center gap-1">
+                  <Badge variant={p.status === "proposed" ? "outline" : p.status === "accepted" ? "default" : "secondary"}>{p.source} · {p.status}</Badge>
+                  {p.status === "proposed" && (
+                    <>
+                      <Button size="sm" variant="outline" className="h-6 px-2 text-[10px]" onClick={() => decide.mutate({ institutionId, id: p.id, status: "accepted" })}>Accept</Button>
+                      <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px]" onClick={() => decide.mutate({ institutionId, id: p.id, status: "dismissed" })}>Dismiss</Button>
+                    </>
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -159,14 +191,14 @@ function LessonPlanBlock({ institutionId }: { institutionId?: string }) {
   const node = nodes?.find(n => n.id === selected) ?? nodes?.[0];
   const cohort = cohorts?.[0];
   return (
-    <Card className="border-2 border-emerald-200">
+    <Card className="ws-panel border-2 border-[hsl(187_78%_63%/0.35)]">
       <CardHeader><CardTitle>🇩🇿 Algerian Fiche — Chart → Lesson Plan (CBA / LMD) {generate.data as any ? <Badge>Venice { (generate.data as any)?.usedVenice ? "✓" : "fallback" }</Badge> : null}</CardTitle></CardHeader>
       <CardContent className="space-y-3">
         <div className="flex gap-2 flex-wrap">
           <Select value={selected} onValueChange={setSelected}><SelectTrigger className="w-[320px]"><SelectValue placeholder="Select competency node" /></SelectTrigger><SelectContent>{(nodes ?? []).map(n => <SelectItem key={n.id} value={n.id}>{n.stage} · {n.unit.slice(0, 40)}</SelectItem>)}</SelectContent></Select>
           <Select value={cohort?.id ?? ""} disabled><SelectTrigger className="w-[180px]"><SelectValue placeholder={cohort ? cohort.nameEn : "No cohort"} /></SelectTrigger></Select>
         </div>
-        {node && <div className="text-xs p-2 bg-zinc-50 border rounded">Competency: <b>{node.competencyEn}</b> <span className="font-mono">[{node.competencyCode}]</span><br /><span dir="rtl">{node.competencyAr}</span></div>}
+        {node && <div className="ws-row p-2 text-xs">Competency: <b>{node.competencyEn}</b> <span className="font-mono">[{node.competencyCode}]</span><br /><span dir="rtl">{node.competencyAr}</span></div>}
         <div>
           <label className="text-xs font-semibold">Chart summary (auto from analytics — edit to test tailoring)</label>
           <Textarea value={chart} onChange={e => setChart(e.target.value)} rows={4} className="font-mono text-xs" />
@@ -177,7 +209,7 @@ function LessonPlanBlock({ institutionId }: { institutionId?: string }) {
           {generate.isPending ? "Generating with Venice..." : "⚡ Generate CBA Fiche (Venice → fallback)"}
         </Button>
         {generate.data && (
-          <div className="border rounded p-3 bg-white max-h-[400px] overflow-auto text-xs">
+          <div className="ws-panel max-h-[400px] overflow-auto p-3 text-xs">
             <div className="font-semibold mb-1">Generated Fiche (editable JSON → export PDF coming)</div>
             <pre className="whitespace-pre-wrap break-words">{JSON.stringify((generate.data as any).plan?.ficheJson ? JSON.parse((generate.data as any).plan.ficheJson) : (generate.data as any), null, 2)}</pre>
           </div>
@@ -185,7 +217,7 @@ function LessonPlanBlock({ institutionId }: { institutionId?: string }) {
         <div className="space-y-1">
           <div className="text-xs font-semibold">Recent fiches ({plans?.length ?? 0})</div>
           {(plans ?? []).slice(0, 3).map(p => (
-            <div key={p.id} className="border rounded p-2 text-xs bg-white">
+            <div key={p.id} className="ws-row p-2 text-xs">
               <div className="font-medium">{p.title} — {p.stage} {p.stream ?? ""}</div>
               <div className="text-muted-foreground">{new Date(p.createdAt).toLocaleString()} · {p.ficheKind}</div>
             </div>
@@ -212,10 +244,10 @@ function ExamFactoryBlock({ institutionId }: { institutionId?: string }) {
           <Button onClick={() => createClone.mutate({ institutionId, title, difficulty: "medium", style: "bac" })}>Clone Exam (5 items)</Button>
           <Button variant="outline" onClick={() => genQuiz.mutate({ title, competencyEn: title })}>Quick Quiz</Button>
         </div>
-        {genQuiz.data && <pre className="text-xs border rounded p-2 bg-zinc-50 max-h-[200px] overflow-auto">{JSON.stringify(genQuiz.data, null, 2)}</pre>}
+        {genQuiz.data && <pre className="ws-row p-2 text-xs max-h-[200px] overflow-auto">{JSON.stringify(genQuiz.data, null, 2)}</pre>}
         <div className="space-y-1">
           {(clones ?? []).slice(0, 3).map(c => (
-            <div key={c.id} className="border rounded p-2 text-xs bg-white">
+            <div key={c.id} className="ws-row p-2 text-xs">
               <div className="font-medium">{c.title} [{c.difficulty}]</div>
               <pre className="whitespace-pre-wrap text-[11px] max-h-[120px] overflow-auto">{(c.clonedExamJson ?? "").slice(0, 600)}</pre>
             </div>
@@ -245,7 +277,7 @@ function TeachBackBlock({ institutionId }: { institutionId?: string }) {
         </div>
         <Textarea value={transcript} onChange={e => setTranscript(e.target.value)} rows={3} placeholder="Learner explains concept — type or paste voice transcript (60s)..." />
         <Button disabled={transcript.length < 10} onClick={() => create.mutate({ institutionId, learnerId, prompt, transcript })}>Evaluate Teach-Back (Feynman)</Button>
-        {create.data && <pre className="text-xs border p-2 bg-white rounded">{JSON.stringify(create.data, null, 2)}</pre>}
+        {create.data && <pre className="ws-row p-2 text-xs">{JSON.stringify(create.data, null, 2)}</pre>}
       </CardContent>
     </Card>
   );
@@ -267,9 +299,171 @@ function SupervisionBlock({ institutionId }: { institutionId?: string }) {
           <Button onClick={() => learners?.[0] && createMS.mutate({ institutionId, learnerId: learners[0].id, title })}>+ Milestone</Button>
         </div>
         <div className="text-xs space-y-1">
-          {(milestones ?? []).map(m => <div key={m.id} className="border rounded p-2 bg-white flex justify-between"><span>{m.title}</span><Badge variant={m.status === "approved" ? "default" : "secondary"}>{m.status}</Badge></div>)}
+          {(milestones ?? []).map(m => <div key={m.id} className="ws-row flex justify-between p-2 text-xs"><span>{m.title}</span><Badge variant={m.status === "approved" ? "default" : "secondary"}>{m.status}</Badge></div>)}
           {(!milestones || milestones.length === 0) && <p className="text-muted-foreground">No milestones — create one for your M2 supervisee (maps to UEF/UEM).</p>}
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Adaptive Review — FSRS queue (OpenTutor + Smart-Study port) ──
+function AdaptiveReviewBlock({ institutionId }: { institutionId?: string }) {
+  const utils = trpc.useUtils();
+  const [dailyCap, setDailyCap] = useState(20);
+  const [revealed, setRevealed] = useState(false);
+  const [learnerId, setLearnerId] = useState<string>("");
+  const { data: learners } = trpc.records.learners.useQuery(institutionId ? { institutionId } : undefined);
+  const { data: cards, isLoading } = trpc.creator.listDueCards.useQuery({ institutionId, limit: 10 });
+  const { data: mastery } = trpc.creator.learnerMastery.useQuery({ institutionId, learnerId: learnerId || undefined });
+  const buildPath = trpc.creator.buildPath.useMutation({ onSuccess: () => utils.creator.dailyBriefing.invalidate() });
+  const review = trpc.creator.reviewCard.useMutation({
+    onSuccess: () => { setRevealed(false); setDailyCap(cap => Math.max(0, cap - 1)); void utils.creator.listDueCards.invalidate(); void utils.creator.dailyBriefing.invalidate(); },
+  });
+  const queue = cards ?? [];
+  const current = queue[0];
+  useEffect(() => { if (!learnerId && learners?.[0]?.id) setLearnerId(learners[0].id as string); }, [learners, learnerId]);
+  const rate = (rating: 1 | 2 | 3 | 4) => { if (!current || dailyCap <= 0) return; review.mutate({ institutionId, cardId: current.id, rating, dailyCapRemaining: dailyCap }); };
+  return (
+    <Card className="ws-panel">
+      <CardHeader><CardTitle className="flex flex-wrap items-center gap-2 text-base">🃏 Adaptive Review — FSRS + LECTOR-lite <Badge variant="outline">{queue.length} due</Badge><Badge variant="secondary">{dailyCap} left today</Badge></CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        {isLoading && <p className="text-sm text-muted-foreground">Reading the due queue…</p>}
+        {!isLoading && !current && <p className="text-sm text-muted-foreground">Queue empty — the scheduler will return cards when retrievability decays below 0.90.</p>}
+        {current && (
+          <div className="space-y-3">
+            <div className="ws-row p-5">
+              <div className="text-xs text-muted-foreground">{current.competencyId ?? "general"} · due {current.dueAt ? new Date(current.dueAt).toLocaleDateString() : "now"}</div>
+              <p className="mt-2 text-lg font-medium">{current.front}</p>
+              {current.frontAr && <p className="mt-1 text-sm text-muted-foreground" dir="rtl">{current.frontAr}</p>}
+              {revealed && (<><div className="my-3 h-px bg-white/10" /><p className="text-sm">{current.back}</p>{current.backAr && <p className="mt-1 text-sm text-muted-foreground" dir="rtl">{current.backAr}</p>}</>)}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {!revealed
+                ? <Button onClick={() => setRevealed(true)} variant="outline">Reveal answer</Button>
+                : (<>
+                    <Button variant="outline" disabled={review.isPending} onClick={() => rate(1)}>Again</Button>
+                    <Button variant="outline" disabled={review.isPending} onClick={() => rate(2)}>Hard</Button>
+                    <Button disabled={review.isPending} onClick={() => rate(3)}>Good</Button>
+                    <Button variant="outline" disabled={review.isPending} onClick={() => rate(4)}>Easy</Button>
+                  </>)}
+              <span className="ws-chip self-center">stability {current.state.stability ?? "?"}d · difficulty {current.state.difficulty ?? "?"} · R {current.state.retrievability ?? "?"}</span>
+            </div>
+            {review.data && <p className="text-xs text-muted-foreground">next in {review.data.intervalDays}d · +{review.data.xp} XP{review.data.overduePenalty ? " · lapse factor applied" : ""}</p>}
+          </div>
+        )}
+        <div className="space-y-2 border-t border-white/10 pt-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={learnerId} onValueChange={setLearnerId}>
+              <SelectTrigger className="w-[240px]"><SelectValue placeholder="Learner for mastery + path" /></SelectTrigger>
+              <SelectContent>{(learners ?? []).map(l => <SelectItem key={l.id as string} value={l.id as string}>{l.name}</SelectItem>)}</SelectContent>
+            </Select>
+            <Button variant="secondary" disabled={!learnerId || buildPath.isPending} onClick={() => learnerId && buildPath.mutate({ institutionId, learnerId, title: "Adaptive mastery path — remedial", kind: "remedial", persist: true, limit: 6 })}>
+              {buildPath.isPending ? "Ordering concept DAG…" : "Build remedial path (Kahn → persist)"}
+            </Button>
+          </div>
+          {!!mastery?.length && (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {mastery.slice(0, 6).map(m => (
+                <div key={m.competencyId} className="ws-row p-2 text-xs">
+                  <div className="flex items-center justify-between"><span className="truncate">{m.competencyId}</span><span className="font-mono">{Math.round(m.mastery * 100)}%</span></div>
+                  <div className="mt-2 h-1 rounded-full bg-white/10"><div className="h-full rounded-full bg-[hsl(187_78%_63%)]" style={{ width: `${Math.round(m.mastery * 100)}%` }} /></div>
+                  <div className="mt-1 text-muted-foreground">{m.cards} card(s) of evidence</div>
+                </div>
+              ))}
+            </div>
+          )}
+          {buildPath.data && (
+            <p className="text-xs text-muted-foreground">
+              path {buildPath.data.persisted ? "saved" : "planned"}: {buildPath.data.orderedNodeIds.join(" → ") || "no eligible nodes"} — {buildPath.data.rationale}
+            </p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Speaking Studio — English only (LingChat port, CEFR design lock) ──
+function SpeakingStudioBlock({ institutionId }: { institutionId?: string }) {
+  const { data: scenarios } = trpc.creator.speakingScenarios.useQuery();
+  const { data: learners } = trpc.records.learners.useQuery(institutionId ? { institutionId } : undefined);
+  const [scenarioId, setScenarioId] = useState("daily_standup");
+  const [seconds, setSeconds] = useState(60);
+  const [transcript, setTranscript] = useState("");
+  const [learnerId, setLearnerId] = useState("");
+  const evaluate = trpc.creator.speakEvaluate.useMutation();
+  const polish = trpc.creator.speakPolish.useMutation();
+  const scenario = (scenarios ?? []).find(item => item.id === scenarioId) ?? (scenarios ?? [])[0];
+  useEffect(() => { if (!learnerId && learners?.[0]?.id) setLearnerId(learners[0].id as string); }, [learners, learnerId]);
+  useEffect(() => { if (scenario) setSeconds(scenario.seconds); }, [scenario?.id]);
+  const result = evaluate.data;
+  return (
+    <Card className="ws-panel">
+      <CardHeader><CardTitle className="text-base">🎤 Speaking Studio — English micro-drills</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-xs text-muted-foreground">CEFR stays English-only by design. Record with any voice tool, paste the transcript, and the rubric scores fluency, lexical range, cohesion and task completion. Scores are facilitator evidence — never a diagnosis.</p>
+        <div className="flex flex-wrap gap-2">
+          <Select value={scenarioId} onValueChange={setScenarioId}>
+            <SelectTrigger className="w-[280px]"><SelectValue placeholder="Scenario" /></SelectTrigger>
+            <SelectContent>{(scenarios ?? []).map(item => <SelectItem key={item.id} value={item.id}>{item.label}</SelectItem>)}</SelectContent>
+          </Select>
+          <Select value={learnerId} onValueChange={setLearnerId}>
+            <SelectTrigger className="w-[200px]"><SelectValue placeholder="Learner (optional)" /></SelectTrigger>
+            <SelectContent>{(learners ?? []).map(l => <SelectItem key={l.id as string} value={l.id as string}>{l.name}</SelectItem>)}</SelectContent>
+          </Select>
+          <Input type="number" min={10} max={1800} value={seconds} onChange={e => setSeconds(Number(e.target.value) || 60)} className="w-[110px]" />
+        </div>
+        {scenario && <div className="ws-chip">target ≈ {scenario.targetWords} words in {scenario.seconds}s</div>}
+        <Textarea rows={4} value={transcript} onChange={e => setTranscript(e.target.value)} placeholder="Paste the English transcript (or use the browser Web Speech API)…" />
+        <div className="flex flex-wrap gap-2">
+          <Button disabled={transcript.trim().length < 20 || evaluate.isPending} onClick={() => evaluate.mutate({ institutionId, learnerId: learnerId || undefined, scenarioId, transcript, seconds })}>Score with rubric</Button>
+          <Button variant="outline" disabled={transcript.trim().length < 20 || polish.isPending} onClick={() => polish.mutate({ scenarioId, transcript, seconds })}>Rephrase feedback via Venice</Button>
+        </div>
+        {result && (
+          <div className="ws-row space-y-2 p-3 text-xs">
+            <div className="flex items-center gap-2"><span className="text-display text-3xl">{result.score}</span><Badge variant="outline">band {result.band}</Badge><span className="text-muted-foreground">{result.metrics.words} words · {result.metrics.wordsPerMinute} wpm · {result.metrics.connectives} connectives · {result.metrics.fillers} fillers</span></div>
+            {!!result.gaps.length && <ul className="list-disc ps-4 text-muted-foreground">{result.gaps.map(gap => <li key={gap}>{gap}</li>)}</ul>}
+            <p>{result.feedback}</p>
+            {polish.data?.coach && <p className="border-t border-white/10 pt-2 text-muted-foreground">coach (Venice): {polish.data.coach}</p>}
+            {(result.feedback || polish.data) && <p className="text-[11px] text-muted-foreground">{(polish.data ?? result).note}</p>}
+            {result.proposalId && <p className="text-[11px] text-muted-foreground">retake proposal queued: {result.proposalId} — approve it in the planner queue.</p>}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Focus + streak evidence (Studivexa gamification, facilitator-facing) ──
+function FocusStreakBlock({ institutionId }: { institutionId?: string }) {
+  const { data: learners } = trpc.records.learners.useQuery(institutionId ? { institutionId } : undefined);
+  const [learnerId, setLearnerId] = useState("");
+  const utils = trpc.useUtils();
+  const { data: streak } = trpc.creator.learnerStreak.useQuery({ institutionId, learnerId: learnerId || undefined });
+  const addFocus = trpc.creator.createFocusSession.useMutation({ onSuccess: () => { void utils.creator.learnerStreak.invalidate(); void utils.creator.dailyBriefing.invalidate(); } });
+  const [minutes, setMinutes] = useState(25);
+  useEffect(() => { if (!learnerId && learners?.[0]?.id) setLearnerId(learners[0].id as string); }, [learners, learnerId]);
+  const heat = streak?.heatmap ?? [];
+  return (
+    <Card className="ws-panel">
+      <CardHeader><CardTitle className="flex flex-wrap items-center gap-2 text-base">🎯 Focus Room & momentum <Badge variant="secondary">streak {streak?.streakDays ?? 0}d</Badge><Badge variant="outline">{streak?.xpTotal ?? 0} XP total</Badge></CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={learnerId} onValueChange={setLearnerId}>
+            <SelectTrigger className="w-[220px]"><SelectValue placeholder="Learner" /></SelectTrigger>
+            <SelectContent>{(learners ?? []).map(l => <SelectItem key={l.id as string} value={l.id as string}>{l.name}</SelectItem>)}</SelectContent>
+          </Select>
+          <Input type="number" min={1} max={240} value={minutes} onChange={e => setMinutes(Number(e.target.value) || 25)} className="w-[100px]" />
+          <Button variant="outline" disabled={!learnerId || addFocus.isPending} onClick={() => learnerId && addFocus.mutate({ institutionId, learnerId, durationMinutes: minutes, block: "pomodoro", xpEarned: minutes * 2 })}>Log focus block</Button>
+        </div>
+        <p className="text-[11px] text-muted-foreground">Streaks are activity markers for the facilitator — never a score, never sent to guardians.</p>
+        {!!heat.length && (
+          <div>
+            <div className="ws-heat">{heat.map(day => <span key={day.date} data-level={day.events === 0 ? 0 : day.xp > 60 ? 4 : day.events > 2 ? 3 : 2} title={`${day.date} · ${day.events} event(s) · ${day.xp} XP`} />)}</div>
+            <div className="mt-1 flex justify-between text-[10px] text-muted-foreground"><span>{heat[0].date}</span><span>{heat[heat.length - 1].date}</span></div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -282,7 +476,7 @@ export default function CreatorStudioPanel() {
   useEffect(() => { seed.mutate(); }, []); // fire once
   return (
     <div className="space-y-6 p-1">
-      <div className="rounded-xl bg-gradient-to-br from-violet-600 via-indigo-600 to-blue-600 text-white p-6">
+      <div className="ws-panel relative overflow-hidden p-6">
         <h2 className="text-2xl font-bold">Creator Studio — Your Algerian Facilitator Advantage</h2>
         <p className="text-white/90 text-sm mt-1">Create cohorts, tailor fiches à l'algérienne, clone BAC exams, run teach-backs — all grounded in your chart + programme. Local-first, institution-scoped, human-in-the-loop.</p>
         <div className="flex gap-2 mt-3 flex-wrap text-xs">
@@ -298,6 +492,8 @@ export default function CreatorStudioPanel() {
           <TabsTrigger value="algerian">Algerian Fiche</TabsTrigger>
           <TabsTrigger value="exam">Exam & Learning</TabsTrigger>
           <TabsTrigger value="graph">Knowledge Graph</TabsTrigger>
+          <TabsTrigger value="adaptive">Adaptive Review</TabsTrigger>
+          <TabsTrigger value="speaking">Speaking &amp; Focus</TabsTrigger>
           <TabsTrigger value="university">University</TabsTrigger>
         </TabsList>
 
@@ -317,6 +513,15 @@ export default function CreatorStudioPanel() {
 
         <TabsContent value="graph" className="space-y-4 mt-4">
           <KnowledgeGraphBlock />
+        </TabsContent>
+
+        <TabsContent value="adaptive" className="space-y-4 mt-4">
+          <AdaptiveReviewBlock institutionId={institutionId} />
+          <FocusStreakBlock institutionId={institutionId} />
+        </TabsContent>
+
+        <TabsContent value="speaking" className="space-y-4 mt-4">
+          <SpeakingStudioBlock institutionId={institutionId} />
         </TabsContent>
 
         <TabsContent value="university" className="space-y-4 mt-4">
