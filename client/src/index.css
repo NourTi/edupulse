@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=Roboto:wght@400;500;700&family=Roboto+Arabic:wght@400;500;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -108,13 +108,15 @@
 }
 
 html[lang="ar"] body {
-  font-family: "Noto Sans Arabic", var(--font-body), sans-serif;
+  font-family: "Roboto Arabic", "Roboto", var(--font-body), sans-serif;
+  font-weight: 400;
   line-height: 1.65;
   font-kerning: normal;
   text-rendering: optimizeLegibility;
 }
 html[lang="ar"] .text-display {
-  font-family: "Noto Sans Arabic", var(--font-display), sans-serif;
+  font-family: "Roboto Arabic", "Roboto", var(--font-display), sans-serif;
+  font-weight: 500;
   letter-spacing: 0;
   word-spacing: 0.035em;
   line-height: 1.18 !important;
