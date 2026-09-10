@@ -152,17 +152,17 @@ function DashboardLayoutContent({
   return (
     <>
       <div className="relative" ref={sidebarRef}>
-        {/* Gentelella Dark Sidebar */}
+        {/* EduPulse academic navigation */}
         <Sidebar
           collapsible="icon"
-          className="border-r-0 bg-slate-800 text-slate-300"
+          className="border-r-0 bg-slate-950 text-slate-300"
           disableTransition={isResizing}
         >
-          <SidebarHeader className="h-16 justify-center border-b border-slate-700">
+          <SidebarHeader className="h-16 justify-center border-b border-slate-800">
             <div className="flex items-center gap-3 px-2 transition-all w-full">
               <button
                 onClick={toggleSidebar}
-                className="h-8 w-8 flex items-center justify-center hover:bg-slate-700 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 shrink-0"
+                className="h-8 w-8 flex items-center justify-center hover:bg-slate-800 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 shrink-0"
                 aria-label="Toggle navigation"
               >
                 <PanelLeft className="h-4 w-4 text-slate-400" />
@@ -187,7 +187,7 @@ function DashboardLayoutContent({
                       isActive={isActive}
                       onClick={() => setLocation(item.path)}
                       tooltip={item.label}
-                      className={`h-10 transition-all font-normal ${isActive ? "bg-blue-600 text-white shadow-sm" : "text-slate-400 hover:bg-slate-700 hover:text-white"}`}
+                      className={`h-10 transition-all font-normal ${isActive ? "bg-cyan-400/15 text-cyan-200 shadow-sm" : "text-slate-400 hover:bg-slate-800 hover:text-white"}`}
                     >
                       <item.icon
                         className={`h-4 w-4 ${isActive ? "text-white" : "text-slate-400"}`}
@@ -200,7 +200,7 @@ function DashboardLayoutContent({
             </SidebarMenu>
           </SidebarContent>
 
-          <SidebarFooter className="p-3 border-t border-slate-700">
+          <SidebarFooter className="p-3 border-t border-slate-800">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-slate-700 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
@@ -241,13 +241,12 @@ function DashboardLayoutContent({
         />
       </div>
 
-      {/* Gentelella Main Content Area */}
-      <SidebarInset className="bg-gray-100">
-        {/* White Top Bar */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-200 bg-white px-6 shadow-sm">
+      {/* EduPulse workspace content */}
+      <SidebarInset className="bg-slate-50">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-6 shadow-[0_4px_18px_rgba(15,23,42,0.04)] backdrop-blur">
           <div className="flex items-center gap-4">
-            {isMobile && <SidebarTrigger className="h-9 w-9 rounded-lg bg-gray-100" />}
-            <h2 className="text-lg font-semibold text-slate-800 tracking-tight">
+            {isMobile && <SidebarTrigger className="h-9 w-9 rounded-lg bg-slate-100" />}
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight">
               {activeMenuItem?.label ?? "Dashboard"}
             </h2>
           </div>

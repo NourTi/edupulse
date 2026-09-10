@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -44,36 +45,36 @@
 }
 
 :root {
-  --font-display: "Instrument Serif", serif;
-  --font-body: "Inter", sans-serif;
+  --font-display: "Manrope", "Inter", sans-serif;
+  --font-body: "DM Sans", "Inter", sans-serif;
   --radius: 1rem;
-  --background: hsl(201 100% 13%);
-  --foreground: hsl(0 0% 100%);
-  --muted-foreground: hsl(240 4% 66%);
-  --primary: hsl(0 0% 100%);
-  --primary-foreground: hsl(0 0% 4%);
-  --secondary: hsl(0 0% 10%);
-  --secondary-foreground: hsl(0 0% 100%);
-  --muted: hsl(0 0% 10%);
-  --accent: hsl(0 0% 10%);
+  --background: hsl(210 33% 98%);
+  --foreground: hsl(222 47% 11%);
+  --muted-foreground: hsl(215 16% 47%);
+  --primary: hsl(221 83% 53%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(210 40% 96%);
+  --secondary-foreground: hsl(222 47% 11%);
+  --muted: hsl(210 40% 96%);
+  --accent: hsl(187 78% 42%);
   --accent-foreground: hsl(0 0% 100%);
-  --card: hsl(201 86% 12% / 0.76);
-  --card-foreground: hsl(0 0% 100%);
-  --popover: hsl(201 86% 12% / 0.95);
-  --popover-foreground: hsl(0 0% 100%);
-  --destructive: hsl(0 72% 59%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(222 47% 11%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(222 47% 11%);
+  --destructive: hsl(0 72% 51%);
   --destructive-foreground: hsl(0 0% 100%);
-  --border: hsl(0 0% 18%);
-  --input: hsl(0 0% 18%);
-  --ring: hsl(0 0% 100% / 0.5);
-  --sidebar: hsl(201 100% 13%);
-  --sidebar-foreground: hsl(0 0% 100%);
-  --sidebar-primary: hsl(0 0% 100%);
-  --sidebar-primary-foreground: hsl(0 0% 4%);
-  --sidebar-accent: hsl(0 0% 100% / 0.07);
-  --sidebar-accent-foreground: hsl(0 0% 100%);
-  --sidebar-border: hsl(0 0% 100% / 0.11);
-  --sidebar-ring: hsl(0 0% 100% / 0.5);
+  --border: hsl(214 32% 91%);
+  --input: hsl(214 32% 91%);
+  --ring: hsl(221 83% 53% / 0.35);
+  --sidebar: hsl(222 47% 11%);
+  --sidebar-foreground: hsl(210 40% 96%);
+  --sidebar-primary: hsl(187 78% 62%);
+  --sidebar-primary-foreground: hsl(222 47% 11%);
+  --sidebar-accent: hsl(222 35% 18%);
+  --sidebar-accent-foreground: hsl(210 40% 96%);
+  --sidebar-border: hsl(222 32% 23%);
+  --sidebar-ring: hsl(187 78% 62% / 0.4);
 }
 
 .dark {
@@ -84,7 +85,7 @@
 @layer base {
   * { @apply border-border outline-ring/50; }
   html { background: hsl(201 100% 13%); }
-  body { @apply bg-background text-foreground; font-family: var(--font-body); min-width: 320px; }
+  body { @apply bg-background text-foreground; font-family: var(--font-body); min-width: 320px; letter-spacing: -0.01em; }
   button:not(:disabled), [role="button"]:not([aria-disabled="true"]), [type="button"]:not(:disabled), [type="submit"]:not(:disabled), [type="reset"]:not(:disabled), a[href], select:not(:disabled), input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled) { @apply cursor-pointer; }
 }
 
@@ -107,12 +108,13 @@
 }
 
 html[lang="ar"] body {
+  font-family: "Noto Sans Arabic", var(--font-body), sans-serif;
   line-height: 1.65;
   font-kerning: normal;
   text-rendering: optimizeLegibility;
 }
 html[lang="ar"] .text-display {
-  font-family: "Amiri", "Instrument Serif", serif;
+  font-family: "Noto Sans Arabic", var(--font-display), sans-serif;
   letter-spacing: 0;
   word-spacing: 0.035em;
   line-height: 1.18 !important;
