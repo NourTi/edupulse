@@ -10,6 +10,7 @@ import {
   createInvitation,
   createKnowledgeSource,
   createMembership,
+  createExternalUser,
   createPasswordUser,
   createPasswordResetToken,
   consumePasswordResetToken,
@@ -135,24 +136,129 @@ export const appRouter = router({
   creator: creatorRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
-    register: publicProcedure.input(z.object({ name: z.string().trim().min(2).max(160), institutionName: z.string().trim().min(2).max(255), email: z.string().email().max(320), password: z.string().min(10).max(200) })).mutation(async ({ ctx, input }) => {
+    register: publicProcedure.input(z.object({
+      name: z.string().trim().min(2).max(160),
+      familyName: z.string().trim().max(160).optional(),
+      age: z.union([z.number(), z.string()]).optional(),
+      gender: z.string().max(40).optional(),
+      wilaya: z.string().max(120).optional(),
+      country: z.string().max(120).optional(),
+      phone: z.string().max(50).optional(),
+      targetRole: z.enum(["admin", "teacher", "student", "guardian"]).optional(),
+      institutionName: z.string().trim().min(2).max(255).optional(),
+      email: z.string().email().max(320),
+      password: z.string().min(10).max(200)
+    })).mutation(async ({ ctx, input }) => {
       const email = normalizeEmail(input.email);
       if (await getUserByEmail(email)) throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists." });
-      const user = await createPasswordUser({ name: input.name, email, passwordHash: await hashPassword(input.password) });
+      const fullName = input.familyName ? `${input.name} ${input.familyName}`.trim() : input.name;
+      const user = await createPasswordUser({ name: fullName, email, passwordHash: await hashPassword(input.password) });
       if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Could not create the account." });
       const institutionId = `inst_${nanoid(16)}`;
-      await createInstitution({ id: institutionId, name: input.institutionName, slug: `edupulse-${nanoid(8).toLowerCase()}`, createdById: user.id });
-      await createMembership({ id: `mem_${nanoid(16)}`, institutionId, userId: user.id, role: "owner", status: "active" });
+      const instName = input.institutionName?.trim() || "ثانوية محمد بلخير — البيض";
+      await createInstitution({ id: institutionId, name: instName, slug: `edupulse-${nanoid(8).toLowerCase()}`, createdById: user.id });
+      const roleMapping: Record<string, "owner" | "teacher" | "student" | "guardian"> = {
+        admin: "owner",
+        teacher: "teacher",
+        student: "student",
+        guardian: "guardian"
+      };
+      const assignedRole = input.targetRole ? (roleMapping[input.targetRole] ?? "owner") : "owner";
+      await createMembership({ id: `mem_${nanoid(16)}`, institutionId, userId: user.id, role: assignedRole, status: "active" });
       const token = await establishPasswordSession(user.id, ctx.req);
       setPasswordSessionCookie(ctx.res, ctx.req, token);
-      await writeAuditLog({ id: `audit_${nanoid(16)}`, institutionId, actorUserId: user.id, action: "account.created", entityType: "user", entityId: String(user.id), metadata: JSON.stringify({ method: "password" }) });
-      return { user, institutionId };
+      await writeAuditLog({
+        id: `audit_${nanoid(16)}`,
+        institutionId,
+        actorUserId: user.id,
+        action: "account.created",
+        entityType: "user",
+        entityId: String(user.id),
+        metadata: JSON.stringify({
+          method: "password",
+          firstName: input.name,
+          familyName: input.familyName,
+          age: input.age,
+          gender: input.gender,
+          wilaya: input.wilaya,
+          country: input.country,
+          phone: input.phone,
+          targetRole: input.targetRole
+        })
+      });
+      return { user, institutionId, assignedRole };
     }),
     login: publicProcedure.input(authInput).mutation(async ({ ctx, input }) => {
       const user = await getUserByEmail(normalizeEmail(input.email));
       if (!user || user.status !== "active" || !(await verifyPassword(input.password, user.passwordHash))) {
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Email or password is incorrect." });
       }
+      const token = await establishPasswordSession(user.id, ctx.req);
+      setPasswordSessionCookie(ctx.res, ctx.req, token);
+      return { user };
+    }),
+    magicLogin: publicProcedure.input(z.object({
+      email: z.string().email().max(320),
+      didToken: z.string().optional(),
+      targetRole: z.enum(["admin", "teacher", "student", "guardian"]).optional(),
+      name: z.string().max(160).optional()
+    })).mutation(async ({ ctx, input }) => {
+      const email = normalizeEmail(input.email);
+      let user = await getUserByEmail(email);
+
+      if (!user) {
+        // Create the user in the database (TiDB / MySQL on Render)
+        const displayName = input.name?.trim() || email.split("@")[0] || "User";
+        user = await createExternalUser({
+          name: displayName,
+          email,
+          loginMethod: "magic",
+        });
+
+        if (!user) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Could not create user record in database." });
+        }
+
+        // Link with default institution & membership
+        const institutionId = `inst_${nanoid(16)}`;
+        const instName = "ثانوية محمد بلخير — البيض";
+        await createInstitution({ id: institutionId, name: instName, slug: `edupulse-${nanoid(8).toLowerCase()}`, createdById: user.id });
+
+        const roleMapping: Record<string, "owner" | "teacher" | "student" | "guardian"> = {
+          admin: "owner",
+          teacher: "teacher",
+          student: "student",
+          guardian: "guardian"
+        };
+        const assignedRole = input.targetRole ? (roleMapping[input.targetRole] ?? "student") : "student";
+        await createMembership({ id: `mem_${nanoid(16)}`, institutionId, userId: user.id, role: assignedRole, status: "active" });
+
+        await writeAuditLog({
+          id: `audit_${nanoid(16)}`,
+          institutionId,
+          actorUserId: user.id,
+          action: "auth.magic_signup",
+          entityType: "user",
+          entityId: String(user.id),
+          metadata: JSON.stringify({ email, method: "magic", targetRole: input.targetRole })
+        });
+      } else {
+        if (user.status !== "active") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "This account is inactive." });
+        }
+
+        await writeAuditLog({
+          id: `audit_${nanoid(16)}`,
+          institutionId: null,
+          actorUserId: user.id,
+          action: "auth.magic_login",
+          entityType: "user",
+          entityId: String(user.id),
+          metadata: JSON.stringify({ email, method: "magic" })
+        });
+      }
+
+      // Establish authenticated session in database and set session cookie
       const token = await establishPasswordSession(user.id, ctx.req);
       setPasswordSessionCookie(ctx.res, ctx.req, token);
       return { user };

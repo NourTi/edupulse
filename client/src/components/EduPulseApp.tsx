@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   ArrowUpRight,
   BarChart3,
+  Brain,
   BrainCircuit,
   Bell,
   BookOpen,
@@ -56,6 +57,7 @@ import { EducatorCRMPanel } from "./EducatorCRMPanel";
 import { VividDashboard } from "./VividDashboard";
 import { PostHeroModuleStrip } from "./PostHeroModuleStrip";
 import AboutSection from "./AboutSection";
+import ZohoEducationLanding from "./ZohoEducationLanding";
 import { StudentInformationPanel } from "./StudentInformationPanel";
 import { GradebookPanel } from "./GradebookPanel";
 import { StudentPortalPanel } from "@/components/StudentPortalPanel";
@@ -73,6 +75,9 @@ import { StudentSupportEvaluationPanel } from "./StudentSupportEvaluationPanel";
 import { InstitutionTeamPanel } from "./InstitutionTeamPanel";
 import AiConsolePanel from "./creator/AiConsolePanel";
 import CreatorStudioPanel from "./creator/CreatorStudioPanel";
+import { ProfessorWorkspace } from "./ProfessorWorkspace";
+import { StudentIntelligencePanel } from "./StudentIntelligencePanel";
+import { ResearchStudioPanel } from "./ResearchStudioPanel";
 
 type Screen = "landing" | "access" | "workspace";
 type Role = "admin" | "finance_admin" | "registrar" | "teacher" | "counsellor" | "student" | "guardian";
@@ -233,6 +238,7 @@ export default function EduPulseApp() {
   const desktopRuntime = isDesktopRuntime();
   const membershipsQuery = trpc.auth.myMemberships.useQuery(undefined, { enabled: Boolean(authUser) && !desktopRuntime, retry: false });
   const [screen, setScreen] = useState<Screen>("landing");
+  const [initialAuthTab, setInitialAuthTab] = useState<"login" | "register" | "magic-link" | "portals">("login");
   const [language, setLanguage] = useState<Language>("ar");
   const [role, setRole] = useState<Role>("admin");
   const [pendingRole, setPendingRole] = useState<Role>("admin");
@@ -479,18 +485,19 @@ export default function EduPulseApp() {
 
   const navItems = [
     { id: "overview", label: "نظرة عامة", icon: LayoutDashboard, roles: ["admin", "teacher", "student"] },
+    { id: "professor", label: "مركز قرار الأستاذ", icon: Brain, roles: ["admin", "teacher", "counsellor"] },
+    { id: "student_intel", label: "ذكاء الطالب والبكالوريا", icon: Sparkles, roles: ["admin", "teacher", "student", "guardian"] },
+    { id: "research_studio", label: "أستوديو البحث وMCP", icon: Search, roles: ["admin", "teacher", "counsellor"] },
     { id: "registration", label: "تسجيل الطالب", icon: UserRoundPlus, roles: ["admin", "registrar"] },
     { id: "learners", label: "الطلاب", icon: UsersRound, roles: ["admin", "registrar", "teacher", "counsellor"] },
-    { id: "subjects", label: "المواد الدراسية", icon: LibraryBig, roles: ["admin", "teacher", "student"] },
+    { id: "subjects", label: "المواد والمنهاج", icon: LibraryBig, roles: ["admin", "teacher", "student"] },
     { id: "attendance", label: "الحضور", icon: ClipboardCheck, roles: ["admin", "registrar", "teacher", "counsellor"] },
     { id: "cefr", label: "تقييم CEFR", icon: BarChart3, roles: ["admin", "teacher", "student"] },
     { id: "guardians", label: "التواصل مع الأولياء", icon: MessageCircle, roles: ["admin", "teacher", "counsellor"] },
     { id: "payments", label: "المدفوعات والإيصالات", icon: WalletCards, roles: ["admin", "finance_admin"] },
-    { id: "creator", label: "استوديو المبدع", icon:  Sparkles,
-    roles: ["admin", "teacher", "counsellor"] },
+    { id: "creator", label: "استوديو المبدع", icon:  Sparkles, roles: ["admin", "teacher", "counsellor"] },
     { id: "ai-console", label: "وحدة الذكاء والمصادر", icon: Radar, roles: ["admin", "teacher", "counsellor"] },
-    { id: "commerce", label: "التجارة والخدمات", icon:   PackageOpen,
-    roles: ["admin", "finance_admin"] },
+    { id: "commerce", label: "التجارة والخدمات", icon:   PackageOpen, roles: ["admin", "finance_admin"] },
     { id: "reports", label: "تقارير التقدم", icon: FileText, roles: ["admin", "teacher", "student"] },
     { id: "support-evaluation", label: "تقييم الدعم التعليمي", icon: BrainCircuit, roles: ["admin", "teacher", "counsellor"] },
     { id: "search", label: "بحث في السجل", icon: Search, roles: ["admin", "teacher", "student"] },
@@ -502,65 +509,157 @@ export default function EduPulseApp() {
   ];
 
   const landingNav = [
-    ["module-suite", isArabic ? "الوحدات" : "Modules"], ["about", isArabic ? "عن المنصة" : "About"], ["sis", "SIS"], ["levels", isArabic ? "مراحل التعليم" : "Stages"], ["platform", isArabic ? "المنصة" : "Platform"], ["roles", isArabic ? "الأدوار" : "Roles"], ["assistant", isArabic ? "المساعد" : "Assistant"], ["local", isArabic ? "محلي وآمن" : "Local & safe"],
+    ["admissions-pipeline", isArabic ? "مسار القبول" : "Admissions"],
+    ["student-360", isArabic ? "سجل 360°" : "Student 360"],
+    ["omnichannel-comms", isArabic ? "التواصل" : "Comms"],
+    ["curriculum-engine", isArabic ? "الشعب الجزائرية" : "Curriculum"],
+    ["workflow-automation", isArabic ? "الأتمتة" : "Workflows"],
+    ["stakeholder-portals", isArabic ? "البوابات" : "Portals"],
+    ["academic-intelligence", isArabic ? "المختبر الإدراكي" : "Intelligence"],
+    ["data-sovereignty", isArabic ? "السيادة والخصوصية" : "Sovereignty"],
   ];
 
   if (screen === "landing") {
     return <main className="bg-[hsl(201_100%_13%)] text-white" dir={direction}>
       <section className="relative min-h-screen overflow-hidden" id="top">
-        <video className="absolute inset-0 z-0 h-full w-full object-cover" autoPlay loop muted playsInline poster="/manus-storage/edupulse-cinematic-school-fallback_a69e1a92.jpg"><source src={VIDEO_URL} type="video/mp4" /></video>
+        {/* Cinematic Background Video - Clearly Visible */}
+        <video 
+          className="absolute inset-0 z-0 h-full w-full object-cover brightness-[0.92] contrast-[1.04]" 
+          autoPlay 
+          loop 
+          muted 
+          playsInline 
+          poster="/manus-storage/edupulse-cinematic-school-fallback_a69e1a92.jpg"
+        >
+          <source src={VIDEO_URL} type="video/mp4" />
+        </video>
+        
+        {/* Clear Cinematic Scrim - Video remains fully visible and bright */}
+        <div className="absolute inset-0 z-0 bg-gradient-to-b from-black/25 via-transparent to-[#001724]/90 pointer-events-none" />
+
         <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-6 sm:px-8">
-          <header className="liquid-glass flex items-center justify-between rounded-full px-5 py-3 sm:px-6"><button onClick={() => scrollTo("top")} className="relative z-10 flex items-center gap-2 text-left sm:gap-3"><LogoMark className="h-8 w-8" /><span className="text-display text-2xl leading-none tracking-tight sm:text-3xl">EduPulse<sup className="ml-0.5 text-xs align-top">•</sup></span></button><nav className="hidden items-center gap-6 lg:flex">{landingNav.map(([id, label]) => <button key={id} onClick={() => scrollTo(id)} className="nav-link relative z-10 text-sm">{label}</button>)}</nav><div className="relative z-10 flex items-center gap-2"><button onClick={() => setLanguage(isArabic ? "en" : "ar")} className="hidden rounded-full px-3 py-2 text-xs text-white/70 hover:text-white sm:block">{isArabic ? "EN" : "العربية"}</button><button onClick={() => setScreen("access")} className="liquid-glass rounded-full px-4 py-2.5 text-sm transition hover:scale-[1.03] active:scale-[0.97] sm:px-6">{isArabic ? "دخول المساحة" : "Open workspace"}</button></div></header>
-          <div className="flex flex-1 flex-col items-center justify-center px-2 pb-32 pt-28 text-center sm:px-6"><div className="animate-fade-rise mb-7 flex items-center gap-3 text-xs font-medium uppercase tracking-[0.22em] text-white/60"><span>{isArabic ? "إدارة تعليمية محلية" : "Local-first education management"}</span><span className="h-px w-9 bg-white/30" /><span className="tracking-[0.14em]">{isArabic ? "طلاب · أولياء · تقدم" : "Learners · Guardians · Progress"}</span></div><h1 className="animate-fade-rise text-display max-w-6xl rounded-[2rem] bg-black/10 px-5 py-3 text-5xl font-semibold leading-[0.98] tracking-[-2.46px] text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)] sm:px-8 sm:text-7xl md:text-8xl" style={{ textShadow: "0 3px 22px rgba(0,0,0,0.9)" }}>{isArabic ? <>كل طالب.<br />سجل واضح واحد.</> : <>Every learner.<br />One clear record.</>}</h1><p className="animate-fade-rise-delay mt-8 max-w-2xl rounded-2xl bg-black/15 px-5 py-3 text-base font-medium leading-8 text-white drop-shadow-[0_2px_14px_rgba(0,0,0,0.9)] sm:text-lg">{isArabic ? "EduPulse يجمع التسجيل، المواد، الحضور، التقدم، التواصل، والإيصالات في مساحة تعليمية محلية، عربية أولاً، ومصممة للإنسان." : "EduPulse brings registration, subjects, attendance, progress, communication, and receipts into one local education workspace."}</p><div className="animate-fade-rise-delay-2 mt-10 flex flex-wrap justify-center gap-3"><button onClick={() => setScreen("access")} className="liquid-glass rounded-full px-8 py-4 text-sm transition hover:scale-[1.03]">{isArabic ? "اختيار دورك" : "Choose your role"}<ArrowUpRight className="ml-2 inline h-4 w-4" /></button><button onClick={() => scrollTo("platform")} className="rounded-full border border-white/20 px-7 py-4 text-sm text-white/80 transition hover:border-white/45 hover:text-white">{isArabic ? "استكشاف المنصة" : "Explore the platform"}</button></div></div>
-          <footer className="flex items-center justify-between text-xs text-white/55"><span className="flex items-center gap-2"><LockKeyhole className="h-3.5 w-3.5" />{isArabic ? "مساحة المؤسسة · دخول محمي بكلمة مرور" : "Institution workspace · password protected"}</span><span>{isArabic ? "العربية أولاً · English ready" : "Arabic-first · English ready"}</span></footer>
+          <header className="flex items-center justify-between rounded-full border border-white/25 bg-[#001724]/75 px-5 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.4)] backdrop-blur-md sm:px-6">
+            <button onClick={() => scrollTo("top")} className="relative z-10 flex items-center gap-2 text-left sm:gap-3">
+              <LogoMark className="h-8 w-8" />
+              <span className="text-display text-2xl font-bold leading-none tracking-tight sm:text-3xl">EduPulse<sup className="ml-0.5 text-xs align-top text-emerald-300">•</sup></span>
+            </button>
+            <nav className="hidden items-center gap-2 lg:flex">
+              {landingNav.map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => scrollTo(id)}
+                  className="rounded-full px-3 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/15 hover:text-white"
+                >
+                  {label}
+                </button>
+              ))}
+            </nav>
+            <div className="relative z-10 flex items-center gap-2.5">
+              <button onClick={() => setLanguage(isArabic ? "en" : "ar")} className="hidden rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/20 hover:text-white sm:block">
+                {isArabic ? "EN" : "العربية"}
+              </button>
+              <button onClick={() => { setInitialAuthTab("login"); setScreen("access"); }} className="rounded-full bg-emerald-400 px-5 py-2 text-xs font-bold text-slate-950 shadow-md transition hover:bg-emerald-300 hover:scale-105 active:scale-95 sm:px-6 sm:text-sm">
+                {isArabic ? "دخول المساحة" : "Open workspace"}
+              </button>
+            </div>
+          </header>
+
+          <div className="flex flex-1 flex-col items-center justify-center px-2 pb-28 pt-20 text-center sm:px-6">
+            <div className="animate-fade-rise mb-6 inline-flex items-center gap-2.5 rounded-full border border-emerald-400/40 bg-black/40 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-emerald-300 backdrop-blur-md shadow-lg">
+              <span>{isArabic ? "إدارة تعليمية جزائرية مستقلة" : "Independent Algerian Education OS"}</span>
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>{isArabic ? "البيض · وهران · الجزائر" : "El-Bayadh · Oran · Algiers"}</span>
+            </div>
+
+            {/* Direct Hero Typography rendered cleanly on the video without any bounding square */}
+            <div className="max-w-4xl">
+              <h1 className="animate-fade-rise text-display text-4xl sm:text-6xl md:text-7xl font-black leading-[1.08] tracking-tight text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)]">
+                {isArabic ? (
+                  <>كل طالب جزائري.<br /><span className="text-emerald-300 drop-shadow-[0_2px_16px_rgba(16,185,129,0.5)]">سجل إدراكي موحد.</span></>
+                ) : (
+                  <>Every learner.<br /><span className="text-emerald-300">One clear record.</span></>
+                )}
+              </h1>
+              <p className="animate-fade-rise-delay mt-5 max-w-2xl mx-auto text-base sm:text-lg font-medium leading-relaxed text-white/95 drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
+                {isArabic ? "EduPulse يجمع التسجيل، معاملات البكالوريا الرسمية، الحضور، التقدم، تواصل الأولياء، والإيصالات في مساحة تعليمية سيادية، عربية أولاً، ومصممة للإنسان." : "EduPulse brings admissions, official BAC coefficients, attendance, spaced retrieval, guardian comms, and receipts into one sovereign education workspace."}
+              </p>
+            </div>
+
+            <div className="animate-fade-rise-delay-2 mt-8 flex flex-wrap justify-center gap-3.5">
+              <button 
+                onClick={() => { setInitialAuthTab("login"); setScreen("access"); }} 
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-400 px-7 py-3.5 text-sm font-bold text-slate-950 shadow-[0_12px_32px_rgba(52,211,153,0.35)] transition duration-200 hover:scale-105 hover:bg-emerald-300 active:scale-95 sm:text-base"
+              >
+                {isArabic ? "اختيار دورك ودخول المساحة" : "Choose your role & enter"}
+                <ArrowUpRight className="h-4 w-4" />
+              </button>
+
+              <button 
+                onClick={() => scrollTo("admissions-pipeline")} 
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/50 bg-white/10 px-6 py-3.5 text-sm font-bold text-white shadow-[0_8px_24px_rgba(0,0,0,0.3)] backdrop-blur-md transition duration-200 hover:scale-105 hover:bg-white hover:text-slate-950 active:scale-95 sm:text-base"
+              >
+                {isArabic ? "استكشاف المنصة والشعب" : "Explore the platform"}
+              </button>
+            </div>
+          </div>
+          <footer className="flex flex-col gap-3 sm:flex-row items-center justify-between border-t border-white/15 pt-4 text-xs text-white/70">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1.5 font-semibold text-emerald-300">
+                <LockKeyhole className="h-3.5 w-3.5" />
+                {isArabic ? "مساحة المؤسسة الموثقة" : "Authenticated Workspace"}
+              </span>
+              <span>·</span>
+              <span>{isArabic ? "البيض (32) · وهران · الجزائر" : "El-Bayadh (32) · Oran · Algiers"}</span>
+            </div>
+            <div className="flex items-center gap-3 text-white/60">
+              <span>{isArabic ? "تطوير: نور محمد عبد الصمد" : "Developed by Nour Mohammed Abdessamed"}</span>
+              <span>·</span>
+              <span>{isArabic ? "العربية أولاً" : "Arabic-first"}</span>
+            </div>
+          </footer>
         </div>
       </section>
 
       <PostHeroModuleStrip isArabic={isArabic} onSelect={(view) => {
-        if (["overview", "registration", "payments", "commerce", "learners", "attendance", "cefr", "guardians", "subjects", "crm", "reports", "portal", "ask"].includes(view)) {
+        if (["overview", "registration", "payments", "commerce", "learners", "attendance", "cefr", "guardians", "subjects", "crm", "reports", "portal", "ask", "professor", "student_intel", "research_studio"].includes(view)) {
           enterWorkspace(view === "portal" ? (role === "guardian" ? "guardian" : "student") : role);
           setActiveView(view);
         } else {
-          scrollTo("platform");
+          scrollTo("admissions-pipeline");
         }
       }} />
       <AboutSection isArabic={isArabic} />
-      <section id="sis" className="border-t border-white/10 bg-[#00364A] px-6 py-24 sm:px-8"><div className="mx-auto max-w-7xl"><div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-start"><div><SectionHeader eyebrow={isArabic ? "نظام معلومات الطلاب" : "Student Information System"} title={isArabic ? <>البنية التي تجمع<br /><em className="not-italic text-white/55">رحلة الطالب كاملة.</em></> : <>The system behind<br /><em className="not-italic text-white/55">the whole learner lifecycle.</em></>} /></div><div><p className="max-w-3xl text-base leading-8 text-white/75">{isArabic ? "نظام معلومات الطلاب (SIS) هو تطبيق برمجي يمثل جزءاً أساسياً من رقمنة المؤسسات التعليمية. وظيفته إدارة وتجميع بيانات الطالب طوال رحلته التعليمية: معلومات الطلاب وأولياء الأمور والمعلمين وعناصر المقررات، داخل قاعدة بيانات موحّدة، غالباً في بيئة سحابية. كما يربط أصحاب المصلحة ويحسّن التواصل ويثري عملية التعلم." : "A Student Information System (SIS) is a core software application in the digitization of educational organizations. It manages student-related data across the learner lifecycle, bringing student, parent, educator, and course information into one unified database while improving communication between stakeholders."}</p><p className="mt-5 max-w-3xl text-sm leading-7 text-white/50">{isArabic ? "EduPulse يطبّق هذه الفكرة بطبقة عربية أولاً، مع حدود واضحة بين البيانات المحلية على سطح المكتب والسجلات المؤسسية المتصلة عند الحاجة." : "EduPulse applies this model with an Arabic-first layer and a clear boundary between local desktop data and connected institution records."}</p></div></div><div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><SisPillar icon={UsersRound} title={isArabic ? "الأشخاص" : "People"} copy={isArabic ? "طلاب، أولياء أمور، معلمون، وإدارة ضمن أدوار واضحة." : "Students, guardians, educators, and administrators with clear roles."} /><SisPillar icon={BookOpen} title={isArabic ? "المقررات" : "Courses"} copy={isArabic ? "مواد ومجموعات وتقدم يمكن مراجعته." : "Subjects, cohorts, and progress that can be reviewed."} /><SisPillar icon={ClipboardCheck} title={isArabic ? "الرحلة" : "Lifecycle"} copy={isArabic ? "من التسجيل إلى التقارير والتواصل والمتابعة." : "From registration to reports, communication, and follow-up."} /><SisPillar icon={LockKeyhole} title={isArabic ? "الثقة" : "Trust"} copy={isArabic ? "عزل مؤسسي، بيانات قابلة للتصدير، وذكاء مؤسس على مصادر." : "Tenant isolation, exportable data, and grounded intelligence."} /></div></div></section>
-
-      <section id="levels" className="border-t border-white/10 bg-[#002638] px-6 py-24 sm:px-8"><div className="mx-auto max-w-7xl"><SectionHeader eyebrow={isArabic ? "المسار الجزائري" : "Algerian pathway"} title={isArabic ? <>مراحل واضحة.<br /><em className="not-italic text-white/55">من التحضيري إلى الدكتوراه.</em></> : <>A clear pathway.<br /><em className="not-italic text-white/55">From preparatory to doctorate.</em></>} copy={isArabic ? "يعكس هذا المسار بنية التعليم في الجزائر، مع مدد الشهادات ونقاط الانتقال التي يعرفها الطالب وولي الأمر والمؤسسة." : "This pathway reflects Algeria’s education structure, including the durations and transition points shared by learners, guardians, and institutions."} /><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{[
-        { icon: UserRoundCheck, number: "01", title: isArabic ? "التعليم التحضيري" : "Preparatory", detail: isArabic ? "05–06 سنوات · غير إلزامي" : "Age 05–06 · non-compulsory", certificate: isArabic ? "تهيئة قبل الابتدائي" : "Preparation before primary" },
-        { icon: BookOpen, number: "02", title: isArabic ? "التعليم الابتدائي" : "Primary", detail: isArabic ? "05 سنوات" : "5 years", certificate: isArabic ? "شهادة التعليم الابتدائي" : "Primary Education Certificate" },
-        { icon: ClipboardCheck, number: "03", title: isArabic ? "التعليم المتوسط" : "Middle school", detail: isArabic ? "04 سنوات" : "4 years", certificate: isArabic ? "شهادة التعليم المتوسط · البيام" : "Middle Education Certificate · BEM" },
-        { icon: GraduationCap, number: "04", title: isArabic ? "التعليم الثانوي" : "Secondary", detail: isArabic ? "03 سنوات" : "3 years", certificate: isArabic ? "شهادة البكالوريا في مختلف الشعب" : "Baccalaureate across streams" },
-        { icon: LibraryBig, number: "05", title: isArabic ? "التعليم العالي · التدرج" : "Higher education · LMD", detail: isArabic ? "ليسانس 03 · ماستر 02 · ثم دكتوراه" : "Licence 3 · Master 2 · then Doctorate", certificate: isArabic ? "نظام ليسانس–ماستر–دكتوراه" : "Licence–Master–Doctorate system" },
-      ].map(({ icon: Icon, number, title, detail, certificate }) => <article key={number} className="surface-panel group rounded-2xl p-5 transition duration-200 hover:-translate-y-1"><div className="flex items-center justify-between"><span className="text-xs font-semibold tracking-[0.18em] text-amber-100/70">{number}</span><Icon className="h-5 w-5 text-amber-100" /></div><h3 className="text-display mt-10 text-2xl text-white">{title}</h3><p className="mt-3 text-sm font-medium text-white/75">{detail}</p><p className="mt-4 border-t border-white/10 pt-4 text-xs leading-5 text-white/50">{certificate}</p></article>)}</div></div></section>
-
-      <section id="assistant" className="border-t border-white/10 bg-[#001f2d] px-6 py-24 sm:px-8"><div className="mx-auto max-w-7xl"><SectionHeader eyebrow={isArabic ? "مساعد المؤسسة" : "Institution assistant"} title={isArabic ? <>اسأل قبل أن<br /><em className="not-italic text-white/55">تبدأ يومك.</em></> : <>Ask before the<br /><em className="not-italic text-white/55">school day begins.</em></>} copy={isArabic ? "مساعد مؤسس على مصادر تعتمدها الإدارة. إذا لم يجد الإجابة في قاعدة المعرفة، سيصرّح بذلك ولن يخمّن." : "A grounded assistant that answers from administrator-approved sources. If the answer is not in the knowledge base, it says so instead of guessing."} action={<div className="flex flex-wrap gap-3"><button onClick={() => setScreen("access")} className="liquid-glass rounded-full px-5 py-3 text-sm">{isArabic ? "فتح مساحة المؤسسة" : "Open workspace"}<ArrowUpRight className="ml-2 inline h-4 w-4" /></button><button onClick={openKnowledgeAdministration} className="rounded-full border border-amber-100/25 bg-amber-100/10 px-5 py-3 text-sm text-amber-50 transition hover:border-amber-100/50">{isArabic ? "إدارة المصادر" : "Manage sources"}<BookOpen className="ml-2 inline h-4 w-4" /></button></div>} /><div className="surface-panel rounded-2xl p-7 sm:p-10"><div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-xs uppercase tracking-[0.2em] text-white/40">{isArabic ? "مساعد واحد، في المكان المناسب" : "One assistant, right where you need it"}</p><p className="text-display mt-4 text-3xl sm:text-4xl">{isArabic ? "اسأل من الزاوية." : "Ask from the corner."}</p><p className="mt-3 max-w-xl text-sm leading-7 text-white/55">{isArabic ? "افتح فقاعة مساعد EduPulse في أسفل الشاشة لطرح سؤال عن المنصة أو المعلومات العامة. تبقى المحادثة منفصلة عن سجلات المؤسسة الخاصة." : "Open the EduPulse assistant bubble at the bottom of the screen to ask about the platform or general information. The conversation stays separate from private school records."}</p></div><div className="shrink-0 rounded-2xl border border-cyan-100/15 bg-cyan-100/[0.06] px-5 py-4 text-sm text-cyan-50">{isArabic ? "مساعد الزوار متاح الآن" : "Visitor assistant is available"}</div></div></div><p className="mt-4 text-xs leading-6 text-white/40">{isArabic ? "حدود الخصوصية: هذه الواجهة تجيب عن السياسات والمعلومات العامة المعتمدة فقط، ولا تعرض درجات أو حضوراً أو رسوماً فردية. استيراد صفحات الويب يمر عبر بوابة المؤسسة ويحتاج مراجعة واعتماد المدير قبل أن يصبح مصدراً للإجابة." : "Privacy boundary: this surface answers approved policy and public-information questions only; it does not expose individual grades, attendance, or fees. Web source ingestion passes through the institution gateway and requires administrator review before retrieval."}</p></div></section>
-
-      <section id="platform" className="border-t border-white/10 bg-[#00364A] px-6 py-24 sm:px-8"><div className="mx-auto max-w-7xl"><SectionHeader eyebrow={isArabic ? "مساحة التشغيل" : "Operating workspace"} title={isArabic ? <>ليست لوحة جميلة فقط.<br /><em className="not-italic text-white/55">إنها يوم المدرسة في موضعه.</em></> : <>Not a pretty dashboard.<br /><em className="not-italic text-white/55">A school day, in its place.</em></>} copy={isArabic ? "بُنيت المنصة حول ما يحدث فعلاً: تسجيل طالب، اختيار المواد، متابعة الحضور، توثيق التقدم، وإبقاء ولي الأمر على علم بما يهم." : "The system follows the real school day: register, assign subjects, track attendance, document progress, and keep guardians informed."} /><div className="grid gap-6 lg:grid-cols-[1.45fr_0.75fr]"><div className="surface-panel overflow-hidden rounded-2xl"><div className="flex items-center justify-between border-b border-white/10 px-5 py-4"><div className="flex items-center gap-3"><LogoMark className="h-7 w-7" /><span className="text-display text-2xl">EduPulse</span></div><span className="text-xs text-white/45">{isArabic ? "سجل محلي نشط" : "Local record active"}</span></div><div className="grid min-h-[360px] grid-cols-[150px_1fr]"><div className="border-r border-white/10 p-3"><p className="mb-4 text-[10px] uppercase tracking-[0.14em] text-white/35">{isArabic ? "المساحة" : "Workspace"}</p>{["نظرة عامة", "تسجيل", "الطلاب", "المواد", "الحضور", "التقارير"].map((item, index) => <div key={item} className={`mb-1 rounded-lg px-3 py-2 text-xs ${index === 0 ? "bg-white text-[#00364A]" : "text-white/55"}`}>{item}</div>)}</div><div className="p-5"><p className="text-display text-4xl">{isArabic ? "صباح واضح." : "A clear morning."}</p><div className="mt-6 grid gap-3 sm:grid-cols-3">{[["طلاب نشطون", activeStudents], ["حضور اليوم", "92%"], ["متابعات", "04"]].map(([label, value]) => <div key={String(label)} className="rounded-xl border border-white/10 p-3"><p className="text-[10px] text-white/45">{label}</p><p className="mt-4 text-display text-3xl">{value}</p></div>)}</div><div className="mt-4 rounded-xl border border-white/10 p-4"><div className="flex items-center justify-between"><span className="text-sm">{isArabic ? "أمل بن يحيى" : "Amal Benyahia"}</span><StatusPill tone="good">B2</StatusPill></div><div className="mt-4 h-1.5 rounded-full bg-white/10"><div className="h-full w-[88%] rounded-full bg-white/80" /></div></div></div></div></div><div className="grid gap-6"><article className="surface-panel rounded-2xl p-6"><Database className="h-5 w-5 text-white/55" /><p className="text-display mt-8 text-3xl">{isArabic ? "البيانات ملكك." : "Your data is yours."}</p><p className="mt-3 text-sm leading-6 text-white/55">{isArabic ? "سجل محلي قابل للتصدير، وخطة واضحة لتغليفه كتطبيق سطح مكتب مشفّر." : "A local exportable record, with a clear path to an encrypted desktop database."}</p></article><article className="relative overflow-hidden rounded-2xl border border-white/10"><img src={ADMISSIONS_IMAGE} alt="Education admissions desk" className="h-52 w-full object-cover opacity-70" /><div className="absolute inset-x-0 bottom-0 p-5"><p className="text-display text-3xl">{isArabic ? "التسجيل، بسياق." : "Admissions, with context."}</p></div></article></div></div></div></section>
-
-      <section id="roles" className="px-6 py-24 sm:px-8"><div className="mx-auto max-w-7xl"><SectionHeader eyebrow={isArabic ? "صلاحيات واضحة" : "Clear access"} title={isArabic ? <>كل دور يرى ما<br /><em className="not-italic text-white/55">يحتاجه فقط.</em></> : <>Every role sees<br /><em className="not-italic text-white/55">only what it needs.</em></>} copy={isArabic ? "لا ينبغي أن يرى الطالب الدفتر المالي، ولا يحتاج المعلم إلى تغيير إعدادات المؤسسة. EduPulse يبدأ بهذه الحدود." : "Students should not see the ledger, and teachers should not change institution settings. EduPulse begins with those boundaries."} /><div className="grid gap-5 md:grid-cols-3">{(Object.keys(roleInfo) as Role[]).map((item) => { const info = roleInfo[item]; const Icon = info.icon; return <article key={item} className="surface-panel group rounded-2xl p-6 transition hover:-translate-y-1"><Icon className={`h-5 w-5 ${info.accent}`} /><p className="text-display mt-12 text-4xl">{info.arabic}</p><p className="mt-1 text-sm text-white/45">{info.title}</p><p className="mt-5 min-h-12 text-sm leading-6 text-white/60">{info.summary}</p><button onClick={() => enterWorkspace(item)} className="mt-8 inline-flex items-center gap-2 text-sm text-white/80 hover:text-white">{isArabic ? "فتح هذه التجربة" : "Open this view"}<ChevronLeft className="h-4 w-4" /></button></article>; })}</div></div></section>
-
-      <section id="subjects" className="border-y border-white/10 bg-[#002b3c] px-6 py-24 sm:px-8"><div className="mx-auto max-w-7xl"><SectionHeader eyebrow={isArabic ? "مكتبة المواد" : "Subject library"} title={isArabic ? <>من اللغة العربية إلى<br /><em className="not-italic text-white/55">الفيزياء والفنون.</em></> : <>From languages to<br /><em className="not-italic text-white/55">physics and the arts.</em></>} copy={isArabic ? "مكتبة مواد قابلة للتخصيص للمدرسة، تشمل المواد الأساسية، العلمية، الإنسانية، والإثرائية. لا توجد قائمة عالمية واحدة لكل مدرسة، ولذلك يمكن إضافة موادكم الخاصة." : "A customizable catalogue covering core, science, humanities, and enrichment subjects. No global list fits every school, so your institution can add its own."} /><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{SUBJECTS.map((subject) => <div key={subject.id} className="rounded-xl border border-white/10 bg-white/[0.025] px-4 py-4"><p className="text-sm">{isArabic ? subject.nameAr : subject.name}</p><p className="mt-1 text-[10px] uppercase tracking-[0.13em] text-white/40">{subject.group}</p></div>)}</div></div></section>
-
-      <section id="progress" className="px-6 py-24 sm:px-8"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center"><div><SectionHeader eyebrow={isArabic ? "تقدم مفهوم" : "Progress with meaning"} title={isArabic ? <>التقييم ليس رقمًا فقط.<br /><em className="not-italic text-white/55">إنه دليل للمحادثة القادمة.</em></> : <>Assessment is more than a score.<br /><em className="not-italic text-white/55">It is evidence for the next conversation.</em></>} copy={isArabic ? "تتبّع CEFR مع مهارات التحدث والاستماع والقراءة والكتابة، ثم أنشئ تقرير تقدم قابل للمشاركة مع ولي الأمر بعد مراجعة المعلم." : "Track CEFR speaking, listening, reading, and writing, then prepare a progress report for guardian review after the teacher approves it."} action={<button onClick={() => enterWorkspace("teacher")} className="liquid-glass rounded-full px-5 py-3 text-sm">{isArabic ? "عرض التقييم" : "View assessment"}</button>} /></div><article className="relative overflow-hidden rounded-2xl border border-white/10"><img src={LEARNING_IMAGE} alt="Quiet learning room" className="h-[420px] w-full object-cover opacity-55" /><div className="absolute inset-0 flex items-end p-6"><div className="surface-panel w-full rounded-2xl p-5"><div className="flex items-start justify-between"><div><p className="text-display text-4xl">CEFR B2</p><p className="mt-1 text-xs text-white/50">{isArabic ? "أمل بن يحيى · مراجعة أغسطس" : "Amal Benyahia · August review"}</p></div><StatusPill tone="good">{isArabic ? "معتمد" : "Approved"}</StatusPill></div><div className="mt-6 grid grid-cols-4 gap-3">{[["التحدث", 84], ["الاستماع", 88], ["القراءة", 91], ["الكتابة", 79]].map(([label, value]) => <div key={String(label)}><p className="text-[10px] text-white/45">{label}</p><p className="mt-1 text-display text-2xl">{value}%</p><div className="mt-2 h-1 rounded-full bg-white/10"><div className="h-full rounded-full bg-white" style={{ width: `${value}%` }} /></div></div>)}</div></div></div></article></div></section>
-
-      <section id="local" className="border-t border-white/10 bg-[#00364A] px-6 py-24 sm:px-8"><div className="mx-auto max-w-7xl"><SectionHeader eyebrow={isArabic ? "خصوصية عملية" : "Practical privacy"} title={isArabic ? <>كل اتصال مع ولي الأمر.<br /><em className="not-italic text-white/55">كل إيصال. كل تقرير.</em></> : <>Every guardian message.<br /><em className="not-italic text-white/55">Every receipt. Every report.</em></>} copy={isArabic ? "المراسلات ومسودات التقارير والإيصالات جزء من سجل واضح يمكن تصديره. الوصول محمي بحساب المؤسسة، ولا ترسل المنصة شيئًا تلقائيًا ولا تستخدم ذكاءً اصطناعيًا لاتخاذ قرارات أكاديمية عالية الأثر." : "Messages, report drafts, and receipts belong to a clear exportable record. Access is protected by an institution account; nothing is sent automatically, and no AI makes high-stakes academic decisions."} /><div className="grid gap-5 md:grid-cols-3">{[[LockKeyhole, "محلي أولاً", "التجربة الحالية تحفظ البيانات في المتصفح، مع انتقال مخطط له إلى SQLite المشفّر على سطح المكتب."], [MessageCircle, "موافقة بشرية", "الرسالة تُصاغ وتُراجع وتُنسخ قبل مشاركتها مع ولي الأمر."], [Download, "قابل للنقل", "صدّر السجل المحلي والوثائق من دون حبس بياناتك داخل منصة مغلقة."]].map(([Icon, title, description]) => { const IconComponent = Icon as typeof LockKeyhole; return <article key={String(title)} className="surface-panel rounded-2xl p-6"><IconComponent className="h-5 w-5 text-white/55" /><p className="text-display mt-9 text-3xl">{title as string}</p><p className="mt-3 text-sm leading-6 text-white/55">{description as string}</p></article>; })}</div><div className="liquid-glass mt-10 flex flex-col items-start justify-between gap-5 rounded-2xl p-6 sm:flex-row sm:items-center"><div><p className="text-display text-3xl">{isArabic ? "ابدأ بسجل واحد واضح." : "Begin with one clear record."}</p><p className="mt-1 text-sm text-white/55">{isArabic ? "اختر الدور المناسب لتجربة الواجهة." : "Choose a role to experience the product."}</p></div><button onClick={() => setScreen("access")} className="rounded-full bg-white px-6 py-3 text-sm text-[#00364A] transition hover:scale-[1.03]">{isArabic ? "دخول EduPulse" : "Enter EduPulse"}</button></div></div></section>
-      <footer className="px-6 py-9 sm:px-8"><div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 text-xs text-white/45 sm:flex-row"><span>EduPulse · {isArabic ? "نظام تعليم محلي أولاً" : "Local-first education system"}</span><div className="flex gap-5"><button onClick={() => scrollTo("top")}>{isArabic ? "إلى الأعلى" : "Back to top"}</button><button onClick={() => setScreen("access")}>{isArabic ? "الدخول" : "Enter workspace"}</button></div></div></footer>
+      <ZohoEducationLanding
+        isArabic={isArabic}
+        onEnterWorkspace={(targetRole?: string) => {
+          if (targetRole && ["admin", "teacher", "student", "guardian", "inspector"].includes(targetRole)) {
+            enterWorkspace(targetRole as Role);
+          } else {
+            setScreen("access");
+          }
+        }}
+        onNavigateToView={(viewId: string) => {
+          enterWorkspace(viewId === "portal" ? "student" : (role === "student" || role === "guardian" ? "admin" : role));
+          setActiveView(viewId);
+        }}
+      />
     </main>;
   }
 
   if (screen === "access") {
     if (authLoading) return <main className="relative flex min-h-screen items-center justify-center bg-[hsl(201_100%_13%)] text-white"><Loader2 className="h-6 w-6 animate-spin" /></main>;
-    if (!authUser) return <main className="relative min-h-screen overflow-hidden bg-[hsl(201_100%_13%)] text-white" dir={direction}><video className="absolute inset-0 z-0 h-full w-full object-cover opacity-40" autoPlay loop muted playsInline><source src={VIDEO_URL} type="video/mp4" /></video><div className="relative z-10 mx-auto flex min-h-screen max-w-6xl items-center justify-center px-6 py-8"><AccountPortal language={language} onBack={() => setScreen("landing")} onLanguageChange={setLanguage} onAuthenticated={() => { setRole(accountRole); setScreen("workspace"); setActiveView("overview"); }} /></div></main>;
+    if (!authUser) return <main className="relative min-h-screen overflow-hidden bg-[hsl(201_100%_13%)] text-white" dir={direction}><video className="absolute inset-0 z-0 h-full w-full object-cover opacity-40" autoPlay loop muted playsInline><source src={VIDEO_URL} type="video/mp4" /></video><div className="relative z-10 mx-auto flex min-h-screen max-w-6xl items-center justify-center px-6 py-8"><AccountPortal language={language} initialTab={initialAuthTab} onBack={() => setScreen("landing")} onLanguageChange={setLanguage} onAuthenticated={(targetRole) => { const chosen = (targetRole as Role) || accountRole; setRole(chosen); setScreen("workspace"); setActiveView(chosen === "guardian" || chosen === "student" ? "portal" : "overview"); }} /></div></main>;
     return <main className="relative min-h-screen overflow-hidden bg-[hsl(201_100%_13%)] text-white" dir={direction}><video className="absolute inset-0 z-0 h-full w-full object-cover opacity-40" autoPlay loop muted playsInline><source src={VIDEO_URL} type="video/mp4" /></video><div className="relative z-10 mx-auto flex min-h-screen max-w-4xl flex-col px-6 py-6 sm:px-8"><header className="flex items-center justify-between"><button onClick={() => setScreen("landing")} className="flex items-center gap-2 text-sm text-white/70 hover:text-white"><ArrowLeft className="h-4 w-4" />{isArabic ? "العودة للمنصة" : "Back to platform"}</button><button onClick={() => setLanguage(isArabic ? "en" : "ar")} className="text-xs text-white/60">{isArabic ? "EN" : "العربية"}</button></header><div className="flex flex-1 items-center justify-center py-16"><div className="surface-panel w-full max-w-xl rounded-[2rem] p-8 text-center"><LogoMark className="mx-auto h-12 w-12" /><p className="text-display mt-6 text-5xl">{isArabic ? "أهلاً بك مجدداً." : "Welcome back."}</p><p className="mt-4 text-sm leading-7 text-white/55">{authUser.name || authUser.email} · {roleInfo[accountRole].arabic}</p><button onClick={() => enterWorkspace(accountRole)} className="liquid-glass mt-8 rounded-xl px-7 py-3.5 text-sm">{isArabic ? "فتح لوحة العمل" : "Open workspace"}<ArrowUpRight className="ml-2 inline h-4 w-4" /></button><button onClick={() => authLogout()} className="mt-5 block w-full text-xs text-white/45 transition hover:text-white">{isArabic ? "تسجيل الخروج" : "Sign out"}</button></div></div></div></main>;
   }
 
   const visibleNav = navItems.filter((item) => item.roles.includes(role));
   const navigate = (id: string) => { const destination = navItems.find(item => item.id === id); if (!destination || !destination.roles.includes(role)) { toast.error(isArabic ? "لا تملك صلاحية فتح هذه الوحدة." : "You do not have permission to open this module."); return; } if (id === "search") { setSearchOpen(true); setMobileMenu(false); return; } setActiveView(id); setMobileMenu(false); };
-  const dashboardTitle = ({ overview: "صباح واضح.", registration: "تسجيل طالب جديد.", learners: "سجل الطلاب.", subjects: "مكتبة المواد الدراسية.", attendance: "حضور اليوم.", cefr: "تقدم اللغة الإنجليزية.", guardians: "تواصل إنساني واضح.", payments: "مدفوعات وإيصالات.", creator: "استوديو المبدع.", "ai-console": "الذكاء والبيانات العامة.", commerce: "التجارة والخدمات.", reports: "تقارير التقدم.", knowledge: "دليل المؤسسة.", team: "فريق المؤسسة.", ask: "اسأل المؤسسة.", crm: "نظام المعلم.", portal: "بوابة الطالب." } as Record<string, string>)[activeView] ?? "EduPulse";
+  const dashboardTitle = ({ overview: "صباح واضح.", professor: "مركز قرار الأستاذ والمنهاج الجزائري.", student_intel: "ذكاء الطالب والتحضير للبكالوريا.", research_studio: "أستوديو البحث العلمي وتكاملات MCP.", registration: "تسجيل طالب جديد.", learners: "سجل الطلاب.", subjects: "مكتبة المواد الدراسية.", attendance: "حضور اليوم.", cefr: "تقدم اللغة الإنجليزية.", guardians: "تواصل إنساني واضح.", payments: "مدفوعات وإيصالات.", creator: "استوديو المبدع.", "ai-console": "الذكاء والبيانات العامة.", commerce: "التجارة والخدمات.", reports: "تقارير التقدم.", knowledge: "دليل المؤسسة.", team: "فريق المؤسسة.", ask: "اسأل المؤسسة.", crm: "نظام المعلم.", portal: "بوابة الطالب." } as Record<string, string>)[activeView] ?? "EduPulse";
 
   const renderView = () => {
+    if (activeView === "professor") return <ProfessorWorkspace isArabic={isArabic} onNavigate={(view) => setActiveView(view)} />;
+    if (activeView === "student_intel") return <StudentIntelligencePanel isArabic={isArabic} />;
+    if (activeView === "research_studio") return <ResearchStudioPanel isArabic={isArabic} />;
     if (activeView === "team") return <><SectionHeader eyebrow="Institution administration" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">فريق بصلاحيات واضحة.</em></>} copy="أنشئ دعوات المستخدمين، وراجع حالة كل عضوية، واحتفظ بحدود المؤسسة واضحة." /><InstitutionTeamPanel isArabic={isArabic} institutionId={membershipsQuery.data?.[0]?.institution.id} /></>;
     if (activeView === "crm") return <EducatorCRMPanel isArabic={isArabic} desktopRuntime={desktopRuntime} />;
     if (activeView === "creator") return <><SectionHeader eyebrow="Creator Studio" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">من الرسم البياني إلى الخطة — بروتوكول جزائري.</em></>} copy="استوديوك الخاص: أنشئ الأفواج، حلّل الرسم البياني، أنشئ الخطط والاختبارات — كلها مستندة إلى البرنامج الرسمي." /><CreatorStudioPanel /></>;

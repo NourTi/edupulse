@@ -1,0 +1,6 @@
+{
+  "name": "EduPulse",
+  "description": "Evidence-informed academic intelligence and school operations platform for the Algerian secondary curriculum with cognitive science lesson planning and BAC simulator.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -98,6 +98,26 @@ function vitePluginManusDebugCollector(): Plugin {
     },
 
     configureServer(server: ViteDevServer) {
+      // GET /__manus__/debug-collector.js: Serve valid JavaScript
+      server.middlewares.use("/__manus__/debug-collector.js", (_req, res) => {
+        res.writeHead(200, { "Content-Type": "application/javascript; charset=utf-8" });
+        res.end(`/* manus debug collector */
+(function() {
+  if (typeof window === 'undefined') return;
+  window.addEventListener('error', function(e) {
+    if (!e || !e.message) return;
+    try {
+      fetch('/__manus__/logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ consoleLogs: [{ type: 'error', message: e.message, filename: e.filename, lineno: e.lineno }] })
+      }).catch(function() {});
+    } catch(err) {}
+  });
+})();
+`);
+      });
+
       // POST /__manus__/logs: Browser sends logs (written directly to files)
       server.middlewares.use("/__manus__/logs", (req, res, next) => {
         if (req.method !== "POST") {
@@ -170,16 +190,9 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
-    host: true,
-    allowedHosts: [
-      ".manuspre.computer",
-      ".manus.computer",
-      ".manus-asia.computer",
-      ".manuscomputer.ai",
-      ".manusvm.computer",
-      "localhost",
-      "127.0.0.1",
-    ],
+    host: "0.0.0.0",
+    port: 3000,
+    allowedHosts: true,
     fs: {
       strict: true,
       deny: ["**/.*"],
