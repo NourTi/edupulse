@@ -4,11 +4,16 @@ import { Download, Filter, MoreHorizontal, Plus, Search, UsersRound } from "luci
 
 type StudentRecord = { id: string; name: string; nameAr: string; grade: string; guardian: string; phone: string; level: string; attendance: number; subjects: string[]; status: string; avatarUrl?: string };
 
-type Props = { students: StudentRecord[]; onAdd: () => void; isArabic: boolean };
+type Props = { 
+  students: StudentRecord[]; 
+  onAdd?: () => void; 
+  isArabic: boolean;
+  onStudentCreated?: (student: StudentRecord) => void;
+};
 
 const statusLabel = (status: string, isArabic: boolean) => isArabic ? (status === "Review" ? "مراجعة" : status === "New" ? "جديد" : "نشط") : (status === "Review" ? "Review" : status === "New" ? "New" : "Active");
 
-export function StudentInformationPanel({ students, isArabic }: Props) {
+export function StudentInformationPanel({ students, isArabic, onStudentCreated }: Props) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"students" | "teachers" | "staff" | "contacts" | "prospects">("students");
   const [searchQuery, setSearchQuery] = useState("");
@@ -161,7 +166,12 @@ export function StudentInformationPanel({ students, isArabic }: Props) {
         </section>
       </div>
       
-      <AddStudentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} isArabic={isArabic} />
+      <AddStudentModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        isArabic={isArabic}
+        onStudentCreated={onStudentCreated}
+      />
       
     </div>
   );

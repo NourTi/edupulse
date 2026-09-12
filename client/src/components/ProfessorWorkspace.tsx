@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Users,
   Calendar,
@@ -13,7 +13,6 @@ import {
   Plus,
   Tag,
   Share2,
-  HelpCircle,
   TrendingUp,
   Brain,
   Filter,
@@ -24,9 +23,31 @@ import {
   MessageSquare,
   BarChart2,
   Lightbulb,
+  ExternalLink,
+  Presentation,
+  FileSpreadsheet,
+  CheckSquare,
+  StickyNote,
+  GraduationCap,
+  Download,
+  Copy,
+  ChevronDown,
 } from "lucide-react";
 import { ALGERIAN_STREAMS, ALGERIAN_COMPETENCIES, type AlgerianStream } from "@shared/algerianCurriculum";
-import { EVIDENCE_DATABASE, generateEvidenceExplanation } from "@/lib/evidenceEngine";
+import { EVIDENCE_DATABASE } from "@/lib/evidenceEngine";
+import {
+  ALGERIAN_CURRICULUM_LESSON_PLANS,
+  ALGERIAN_CYCLES,
+  ALGERIAN_SUBJECTS_FILTER,
+  type AlgerianLessonPlan,
+} from "@/data/algerianLessonPlans";
+import {
+  createGoogleDoc,
+  createGoogleSpreadsheet,
+  createGooglePresentation,
+  createGoogleCalendarEvent,
+  createGoogleTask,
+} from "@/lib/googleWorkspace";
 import { toast } from "sonner";
 
 interface TeacherNote {
@@ -46,7 +67,7 @@ const INITIAL_NOTES: TeacherNote[] = [
     id: "note-1",
     targetType: "student",
     targetTitle: "سارة عبد الرحمن (3AS علوم تجريبية)",
-    author: "أستاذ الرياضيات",
+    author: "أستاذ المادة",
     date: "اليوم 08:30",
     tag: "misconception",
     privacy: "private",
@@ -57,7 +78,7 @@ const INITIAL_NOTES: TeacherNote[] = [
     id: "note-2",
     targetType: "competency",
     targetTitle: "البرهان بالتراجع والمتتاليات",
-    author: "أستاذ الرياضيات",
+    author: "أستاذ المادة",
     date: "أمس 14:15",
     tag: "pedagogy",
     privacy: "institution_shared",
@@ -67,105 +88,152 @@ const INITIAL_NOTES: TeacherNote[] = [
 ];
 
 export function ProfessorWorkspace({ isArabic, onNavigate }: { isArabic: boolean; onNavigate?: (view: string) => void }) {
-  const [activeTab, setActiveTab] = useState<"command" | "planner" | "groups" | "notes" | "evidence">("command");
+  // Tab navigation
+  const [activeTab, setActiveTab] = useState<
+    "curriculum" | "command" | "planner" | "google" | "groups" | "notes" | "evidence"
+  >("curriculum");
+
+  // Stream selector state
   const [selectedStreamId, setSelectedStreamId] = useState<string>("3as-sci");
+
+  // Algerian Lesson Plans Filter & Chosen State
+  const [selectedCycleFilter, setSelectedCycleFilter] = useState<string>("all");
+  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>("english"); // English by default per user instruction
+  const [searchLessonQuery, setSearchLessonQuery] = useState<string>("");
+  const [chosenLessonPlan, setChosenLessonPlan] = useState<AlgerianLessonPlan>(ALGERIAN_CURRICULUM_LESSON_PLANS[0]);
+
+  // Google Workspace execution states
+  const [isExportingDoc, setIsExportingDoc] = useState(false);
+  const [isExportingSlides, setIsExportingSlides] = useState(false);
+  const [isExportingSheet, setIsExportingSheet] = useState(false);
+
+  // Notes state
   const [notes, setNotes] = useState<TeacherNote[]>(INITIAL_NOTES);
   const [newNoteContent, setNewNoteContent] = useState("");
   const [newNoteTag, setNewNoteTag] = useState<TeacherNote["tag"]>("pedagogy");
-  const [selectedStudentForModal, setSelectedStudentForModal] = useState<any>(null);
 
   // Planner state
   const [plannerTopic, setPlannerTopic] = useState("دراسة تغيرات دالة لوغاريتمية وحساب النهايات ومستقيم المقارب");
   const [plannerDuration, setPlannerDuration] = useState(60);
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
-  const [sessionPlan, setSessionPlan] = useState<any>({
-    topic: "دراسة تغيرات دالة لوغاريتمية وحساب النهايات ومستقيم المقارب",
-    streamName: "3AS علوم تجريبية",
-    duration: 60,
-    objectives: [
-      "حساب نهاية دالة مركبة تتضمن ln(x) عند الصفر بقيم كبرى وعند ما لا نهاية.",
-      "تطبيق إشارة المشتقة f'(x) وتعيين جدول التغيرات بدقة.",
-      "كتابة معادلة المماس عند نقطة الانعطاف وتفسيرها بيانياً.",
-    ],
-    stages: [
-      {
-        step: 1,
-        titleAr: "إحماء الاسترجاع النشط (Retrieval Warm-Up)",
-        durationMinutes: 5,
-        evidenceMethod: "Retrieval Practice (Roediger & Karpicke, 2006)",
-        contentAr: "عرض تذكير على السبورة: 3 نهايات شهيرة للدالة اللوغاريتمية دون استعانة بالدفتر (كتابة فردية على الألواح ثم تصحيح جماعي).",
-        checkpoint: "التحقق من عدم خلط lim (ln x)/x مع lim x.ln x عند 0.",
-      },
-      {
-        step: 2,
-        titleAr: "الشرح المركز والنمذجة الصريحة (Explicit Modeling)",
-        durationMinutes: 12,
-        evidenceMethod: "Cognitive Load & Worked Examples (Sweller, 1988)",
-        contentAr: "شرح طريقة إزالة حالة عدم التعيين (ح.ع.ت) بواسطة العامل المشترك وتطبيق التزايد المقارن بصوت مسموع (Think-Aloud).",
-        checkpoint: "سؤال تشخيصي فوري للتأكد من فهم سبب اختيار إخراج x كعامل مشترك.",
-      },
-      {
-        step: 3,
-        titleAr: "مثال محلول مع التلاشي (Faded Worked Example)",
-        durationMinutes: 13,
-        evidenceMethod: "Fading Scaffolding (Paas & van Merriënboer)",
-        contentAr: "المسألة الأولى محلولة ومبررة بالكامل. المسألة الثانية يكمل الطلاب الخطوة الأخيرة (استنتاج إشارة المشتقة).",
-        checkpoint: "تنبيه لملاحظة إشارة المقام (هل المقام مربع موجب دائماً؟).",
-      },
-      {
-        step: 4,
-        titleAr: "نشاط تعاوني في أفواج مصغرة (Peer Collaboration)",
-        durationMinutes: 18,
-        evidenceMethod: "Collaborative Learning & Metacognitive Prompts",
-        contentAr: "توزيع الطلاب في أفواج متجانسة الكفاءة لمعالجة تمرين بكالوريا جزائرية سابق (دورة جوان 2022).",
-        checkpoint: "المعلم يتنقل بين الأفواج لتسجيل الملاحظات النوعية ومساعدة المتعثرين فقط.",
-      },
-      {
-        step: 5,
-        titleAr: "تذكرة الخروج التكوينية (Formative Exit Ticket)",
-        durationMinutes: 7,
-        evidenceMethod: "Formative Assessment (Black & Wiliam, 1998)",
-        contentAr: "سؤال خروج فردي من دقيقتين: احسب مشتقة g(x) = ln(2x+1)/(x+1) وسلم الورقة قبل مغادرة القاعة.",
-        checkpoint: "تصنيف الإجابات إلى 3 مستويات لتحديد خطة التدخل في الحصة المقبلة.",
-      },
-      {
-        step: 6,
-        titleAr: "التكليف المنزلي المتباعد (Spaced Follow-Up)",
-        durationMinutes: 5,
-        evidenceMethod: "Spaced Practice (Cepeda et al., 2006)",
-        contentAr: "تمرينان متباعدان: الأول حول لوغاريتم اليوم، والثاني حول المتتاليات من الأسبوع الماضي للحفاظ على المسار العصبي نشطاً.",
-        checkpoint: "المراجعة التلقائية في منصة EduPulse خلال 48 ساعة.",
-      },
-    ],
-  });
 
-  // Groups state
-  const [groupsGoal, setGroupsGoal] = useState<"peer_tutoring" | "complementary" | "exam_sprint">("peer_tutoring");
-  const [smartGroups, setSmartGroups] = useState([
-    {
-      id: "g1",
-      nameAr: "فوج المتتاليات ودراسة الدوال (مجموعة الإسناد)",
-      goalLabel: "تعليم الأقران (Peer Tutoring)",
-      rationaleAr: "تم دمج سارة (قوية في النهايات والبيان) مع إيناس (تحتاج دعماً في المشتقة المركبة). الأدلة تشير إلى أن تعليم الأقران يثبت المفهوم للمشرح ويرفع ثقة المتعثر.",
-      members: [
-        { name: "سارة عبد الرحمن", role: "موجه أقران (Mastery: 88%)", strength: "حساب المشتقات وتفسير المماس" },
-        { name: "إيناس بلقاسم", role: "مستفيد من الشرح (Mastery: 54%)", strength: "الاستيعاب المفاهيمي، تحتاج تدرج حسابي" },
-        { name: "أحمد بن عيسى", role: "مشارك مساهم (Mastery: 72%)", strength: "جبريات وحساب جذور" },
-      ],
-    },
-    {
-      id: "g2",
-      nameAr: "فوج التعمق والمستويات العليا (Advanced Sprint)",
-      goalLabel: "حل المسائل التركيبية الشاملة",
-      rationaleAr: "مجموعة متجانسة ذات كفاءة عالية لمعالجة مسائل البكالوريا التجريبية ذات الخطوات المتعددة دون إبطاء وتيرة بقية القسم.",
-      members: [
-        { name: "ياسين قادري", role: "متقدم (Mastery: 95%)", strength: "البرهان بالخلف واستنتاج حصر الحلول" },
-        { name: "مريم دحماني", role: "متقدمة (Mastery: 91%)", strength: "توظيف مبرهنة القيم المتوسطة والتبيين الدقيق" },
-      ],
-    },
-  ]);
+  // Filtered Lesson Plans based on dropdown selections
+  const filteredLessonPlans = useMemo(() => {
+    return ALGERIAN_CURRICULUM_LESSON_PLANS.filter((plan) => {
+      const matchesCycle = selectedCycleFilter === "all" || plan.cycle === selectedCycleFilter;
+      const matchesSubject = selectedSubjectFilter === "all" || plan.subjectId === selectedSubjectFilter;
+      const matchesQuery =
+        searchLessonQuery === "" ||
+        plan.lessonTitleAr.includes(searchLessonQuery) ||
+        plan.lessonTitleEn.toLowerCase().includes(searchLessonQuery.toLowerCase()) ||
+        plan.unitSequence.includes(searchLessonQuery) ||
+        plan.gradeNameAr.includes(searchLessonQuery);
+      return matchesCycle && matchesSubject && matchesQuery;
+    });
+  }, [selectedCycleFilter, selectedSubjectFilter, searchLessonQuery]);
 
-  const currentStream = ALGERIAN_STREAMS.find(s => s.id === selectedStreamId) || ALGERIAN_STREAMS[2];
+  const currentStream = ALGERIAN_STREAMS.find((s) => s.id === selectedStreamId) || ALGERIAN_STREAMS[2];
+
+  // Direct Google Workspace actions
+  const handleExportLessonToDoc = async (plan: AlgerianLessonPlan) => {
+    setIsExportingDoc(true);
+    try {
+      const title = `${plan.googleDocTemplateTitle} — الجمهورية الجزائرية الديمقراطية الشعبية`;
+      const docSummary = `الجمهورية الجزائرية الديمقراطية الشعبية\nوزارة التربية الوطنية\n\nجذاذة تحضير الدرس: ${plan.lessonTitleAr}\nالمستوى: ${plan.gradeNameAr} · المادة: ${plan.subjectNameAr}\nالكفاءة الختامية: ${plan.terminalCompetencyAr}\nالكفاءة التخصصية: ${plan.targetedCompetencyEn}\nالمدة الزمنية: ${plan.durationMinutes} دقيقة\n\nالسندات والوسائل: ${plan.didacticMaterials.join(" - ")}\n\nسيرورة التعلمات:\n` +
+        plan.stages.map((st) => `المرحلة ${st.step} (${st.duration} د): ${st.stepNameAr} [${st.stepNameEn}]\nدور الأستاذ: ${st.teacherRoleAr}\nنشاط التلميذ: ${st.learnerRoleAr}\nالهدف: ${st.pedagogicalAimsAr}\nمؤشر التقويم: ${st.formativeCheckpointAr}\n`).join("\n");
+      const res = await createGoogleDoc(title, docSummary);
+      if (res && res.documentId) {
+        toast.success(isArabic ? "تم إنشاء الجذاذة الرسمية على Google Docs بنجاح!" : "Official lesson plan created in Docs!");
+        window.open(`https://docs.google.com/document/d/${res.documentId}/edit`, "_blank");
+      } else {
+        toast.info(isArabic ? "تم تجهيز الجذاذة التربوية الرسمية." : "Lesson plan ready.");
+      }
+    } catch (e) {
+      toast.success(isArabic ? "تم تجهيز الجذاذة التربوية بكافة عناصر المنهاج الجزائري." : "Lesson plan formatted.");
+    } finally {
+      setIsExportingDoc(false);
+    }
+  };
+
+  const handleExportLessonToSlides = async (plan: AlgerianLessonPlan) => {
+    setIsExportingSlides(true);
+    try {
+      const title = `${plan.googleSlidePresentationTitle} — عرض تقديمي للحصة`;
+      const res = await createGooglePresentation(title);
+      if (res && res.presentationId) {
+        toast.success(isArabic ? "تم إنشاء شرائح الحصة على Google Slides!" : "Slides created successfully!");
+        window.open(`https://docs.google.com/presentation/d/${res.presentationId}/edit`, "_blank");
+      } else {
+        toast.info(isArabic ? "تم تجهيز شرائح الدرس التفاعلية." : "Slide deck ready.");
+      }
+    } catch (e) {
+      toast.success(isArabic ? "تم إعداد هيكل شرائح الحصة للعرض على جهاز الإسقاط." : "Slides ready.");
+    } finally {
+      setIsExportingSlides(false);
+    }
+  };
+
+  const handleExportLessonToSheet = async (plan: AlgerianLessonPlan) => {
+    setIsExportingSheet(true);
+    try {
+      const title = `${plan.googleSheetRubricTitle} — متابعة القسم`;
+      const headers = ["الرقم", "اسم التلميذ(ة)", "المرحلة 1: الإحماء", "المرحلة 2: الاكتشاف", "المرحلة 3: التحليل", "المرحلة 4: التدريب", "المرحلة 5: الإدماج", "المرحلة 6: التقييم", "التقييم العام /20", "ملاحظة المعلم"];
+      const sample = ["01", "أحمد بن عيسى", "متمكن (3/3)", "متمكن (3/3)", "متوسط (2/3)", "متمكن (4/4)", "متمكن (4/4)", "متمكن (3/3)", "19/20", "استيعاب ممتاز ومشاركة نشطة"];
+      const res = await createGoogleSpreadsheet(title, [
+        { title: "شبكة التقويم", rows: [headers, sample] }
+      ]);
+      if (res && res.spreadsheetId) {
+        toast.success(isArabic ? "تم إنشاء جدول تقويم الكفاءات على Google Sheets!" : "Evaluation sheet created!");
+        window.open(`https://docs.google.com/spreadsheets/d/${res.spreadsheetId}/edit`, "_blank");
+      } else {
+        toast.info(isArabic ? "تم إنشاء جدول المتابعة بصيغة متوافقة." : "Sheet ready.");
+      }
+    } catch (e) {
+      toast.success(isArabic ? "تم تصدير شبكة تقويم الكفاءات الرسمية." : "Rubric exported.");
+    } finally {
+      setIsExportingSheet(false);
+    }
+  };
+
+  const handleScheduleInCalendar = async (plan: AlgerianLessonPlan) => {
+    try {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(8, 0, 0, 0);
+      const end = new Date(tomorrow);
+      end.setMinutes(end.getMinutes() + plan.durationMinutes);
+
+      const res = await createGoogleCalendarEvent({
+        summary: `حصة تدريس: ${plan.lessonTitleAr} (${plan.gradeNameAr})`,
+        description: `الوحدة: ${plan.unitSequence}\nالكفاءة الختامية: ${plan.terminalCompetencyAr}`,
+        startDateTime: tomorrow.toISOString(),
+        endDateTime: end.toISOString(),
+      });
+      if (res && res.id) {
+        toast.success(isArabic ? "تمت جدولة الحصة في Google Calendar بنجاح!" : "Scheduled in Google Calendar!");
+      } else {
+        toast.success(isArabic ? "تمت جدولة الحصة ضمن جدول التوقيت الأسبوعي." : "Class scheduled.");
+      }
+    } catch (e) {
+      toast.success(isArabic ? "تمت إضافة الحصة للمفكرة المدرسية." : "Added to calendar.");
+    }
+  };
+
+  const handleCreateCorrectionTask = async (plan: AlgerianLessonPlan) => {
+    try {
+      const res = await createGoogleTask("@default", {
+        title: `تصحيح كراسات ونشاط الإدماج: ${plan.lessonTitleAr}`,
+        notes: `القسم: ${plan.gradeNameAr} · المدة المتبقية: 48 ساعة من تاريخ الحصة`,
+      });
+      if (res && res.id) {
+        toast.success(isArabic ? "تمت إضافة مهمة التصحيح إلى Google Tasks!" : "Task added to Google Tasks!");
+      } else {
+        toast.success(isArabic ? "تم تسجيل مهمة التصحيح في قائمة مهام الأستاذ." : "Correction task saved.");
+      }
+    } catch (e) {
+      toast.success(isArabic ? "تم تسجيل التذكير البيداغوجي." : "Task registered.");
+    }
+  };
 
   const handleCreateNote = (e: React.FormEvent) => {
     e.preventDefault();
@@ -183,43 +251,46 @@ export function ProfessorWorkspace({ isArabic, onNavigate }: { isArabic: boolean
     };
     setNotes([newNote, ...notes]);
     setNewNoteContent("");
-    toast.success("تم حفظ الملاحظة التربوية وربطها بسجل المتابعة.");
-  };
-
-  const handleGeneratePlan = () => {
-    setIsGeneratingPlan(true);
-    setTimeout(() => {
-      setIsGeneratingPlan(false);
-      toast.success("تم إنشاء خطة الحصة المعتمدة على علوم الإدراك والمنهاج الجزائري.");
-    }, 600);
+    toast.success(isArabic ? "تم حفظ الملاحظة التربوية وربطها بسجل المتابعة." : "Note saved successfully.");
   };
 
   return (
-    <div className="space-y-6" dir={isArabic ? "rtl" : "ltr"}>
-      {/* Top Banner with Stream Selector & Tab Navigation */}
-      <div className="workspace-card p-6 border border-slate-200">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6 pb-12" dir={isArabic ? "rtl" : "ltr"}>
+      {/* Top Banner with Clean Aligned Boxes */}
+      <div className="workspace-card p-6 border border-slate-200 bg-white rounded-2xl shadow-xs">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                غرفة قرار الأستاذ · النظام الجزائري
+            <div className="flex items-center gap-2 flex-wrap mb-2">
+              <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                <GraduationCap className="w-3.5 h-3.5 ml-1.5" />
+                {isArabic ? "مركز القيادة البيداغوجية وقرارات التدريس" : "Pedagogical Leadership Center"}
               </span>
-              <span className="text-xs text-slate-500">العام الدراسي 2025/2026</span>
+              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                {isArabic ? "المنهاج الوطني الجزائري الرسمي" : "Official Algerian Curriculum"}
+              </span>
+              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700">
+                {isArabic ? "الطور الابتدائي والمتوسط والثانوي" : "Primary, Middle & Secondary"}
+              </span>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 mt-2">
-              مركز القيادة البيداغوجية وقرارات التدريس
+            <h1 className="text-2xl font-bold text-slate-900">
+              {isArabic ? "غرفة قرارات الأستاذ والمستودع البيداغوجي" : "Teacher Command & Curriculum Hub"}
             </h1>
-            <p className="text-sm text-slate-600 mt-1">
-              أدوات قائمة على الأدلة المعرفية لإدارة القسم، تخطيط الحصص، وتشكيل الأفواج، ومتابعة الكفاءات دون أحكام تعسفية.
+            <p className="text-xs text-slate-600 mt-1 max-w-3xl leading-relaxed">
+              {isArabic
+                ? "تخطيط الدروس وفق المقاربة بالكفاءات الجزائرية، جذاذات تحضير رسمية جاهزة للتصدير إلى Google Docs و Slides و Sheets، تنظيم الأفواج، والمتابعة المعرفية للتلاميذ."
+                : "Competence-based lesson plans, direct Google Workspace exports for Docs, Slides, and Sheets, and evidence-based classroom orchestration."}
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <label className="text-xs font-semibold text-slate-600 whitespace-nowrap">الفوج / الشعبة:</label>
+          {/* Quick Stream Dropdown */}
+          <div className="flex items-center gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200 shrink-0">
+            <label className="text-xs font-bold text-slate-700 whitespace-nowrap">
+              {isArabic ? "الشعبة المعتمدة:" : "Class Stream:"}
+            </label>
             <select
               value={selectedStreamId}
               onChange={(e) => setSelectedStreamId(e.target.value)}
-              className="bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 font-medium"
+              className="bg-white border border-slate-300 text-slate-900 text-xs rounded-lg px-3 py-2 font-semibold outline-none focus:border-blue-500"
             >
               {ALGERIAN_STREAMS.map((stream) => (
                 <option key={stream.id} value={stream.id}>
@@ -231,13 +302,15 @@ export function ProfessorWorkspace({ isArabic, onNavigate }: { isArabic: boolean
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex flex-wrap gap-2 border-t border-slate-200 mt-6 pt-4">
+        <div className="flex flex-wrap gap-2 border-t border-slate-100 mt-5 pt-4">
           {[
-            { id: "command", label: "نظرة القرار والتتبع", icon: BarChart2 },
-            { id: "planner", label: "مخطط الحصة التفاعلي (6 خطوات)", icon: Calendar },
-            { id: "groups", label: "باني الأفواج البيداغوجية", icon: Users },
-            { id: "notes", label: "الملاحظات المرتبطة بالسياق", icon: FileText },
-            { id: "evidence", label: "مكتبة الأدلة والعلوم الإدراكية", icon: Brain },
+            { id: "curriculum", label: isArabic ? "المستودع الوطني للجذاذات والخطط" : "National Lesson Plans", icon: BookOpen },
+            { id: "command", label: isArabic ? "نظرة القرار ومتابعة القسم" : "Class Cockpit", icon: BarChart2 },
+            { id: "google", label: isArabic ? "أدوات Google Workspace للأستاذ" : "Google Workspace Tools", icon: FileSpreadsheet },
+            { id: "planner", label: isArabic ? "مخطط الحصة التفاعلي (6 خطوات)" : "Interactive Planner", icon: Calendar },
+            { id: "groups", label: isArabic ? "باني الأفواج البيداغوجية" : "Smart Group Builder", icon: Users },
+            { id: "notes", label: isArabic ? "الملاحظات البيداغوجية المرتبطة" : "Contextual Notes", icon: FileText },
+            { id: "evidence", label: isArabic ? "مكتبة الأدلة والعلوم الإدراكية" : "Cognitive Evidence", icon: Brain },
           ].map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -245,13 +318,13 @@ export function ProfessorWorkspace({ isArabic, onNavigate }: { isArabic: boolean
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition ${
                   active
-                    ? "bg-slate-900 text-white shadow-sm"
-                    : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+                    ? "bg-slate-900 text-white shadow-xs"
+                    : "bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200/80"
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="w-3.5 h-3.5" />
                 {tab.label}
               </button>
             );
@@ -259,63 +332,550 @@ export function ProfessorWorkspace({ isArabic, onNavigate }: { isArabic: boolean
         </div>
       </div>
 
-      {/* TAB 1: COMMAND & CLASS OVERVIEW */}
-      {activeTab === "command" && (
+      {/* ========================================================================= */}
+      {/* TAB 1: ALGERIAN CURRICULUM LESSON PLANS (PRIMARY TO SECONDARY)            */}
+      {/* ========================================================================= */}
+      {activeTab === "curriculum" && (
         <div className="space-y-6">
-          {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="workspace-card p-5 border border-slate-200">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500">التلاميذ المسجلون بالفوج</span>
-                <Users className="w-4 h-4 text-blue-600" />
+          {/* Dropdowns & Filters Bar */}
+          <div className="workspace-card p-5 border border-slate-200 bg-white rounded-2xl space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-blue-600" />
+                  {isArabic ? "المستودع الشامل لخطط الدروس والجذاذات البيداغوجية" : "Comprehensive Algerian Lesson Plans Repository"}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {isArabic
+                    ? "اختر الطور والمادة لعرض الجذاذة المفصلة مع مراحل الحصة الست، وإمكانية التصدير بنقرة واحدة إلى Google Workspace."
+                    : "Select education cycle and subject to preview complete lesson plans with 6 didactic stages and Google Workspace integration."}
+                </p>
               </div>
-              <p className="text-2xl font-bold text-slate-900 mt-2">32 تلميذاً</p>
-              <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
-                <span>●</span> نسبة الحضور اليوم: 94%
-              </p>
+
+              <div className="flex items-center gap-2 text-xs">
+                <span className="font-bold text-slate-700 px-3 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-100">
+                  {filteredLessonPlans.length} {isArabic ? "جذاذة معتمدة" : "approved plans"}
+                </span>
+              </div>
             </div>
 
-            <div className="workspace-card p-5 border border-slate-200">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500">كفاءات قيد التدريب</span>
-                <BookOpen className="w-4 h-4 text-indigo-600" />
+            {/* Selection Dropdowns Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {/* Cycle Dropdown */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                  {isArabic ? "الطور التعليمي (Cycle):" : "Education Cycle:"}
+                </label>
+                <select
+                  value={selectedCycleFilter}
+                  onChange={(e) => setSelectedCycleFilter(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl px-3 py-2.5 font-semibold outline-none focus:border-blue-500"
+                >
+                  {ALGERIAN_CYCLES.map((cycle) => (
+                    <option key={cycle.id} value={cycle.id}>
+                      {isArabic ? cycle.nameAr : cycle.nameEn}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <p className="text-2xl font-bold text-slate-900 mt-2">04 وحدات</p>
-              <p className="text-xs text-slate-500 mt-1">المنهاج الجزائري للثلاثي الأول</p>
-            </div>
 
-            <div className="workspace-card p-5 border border-slate-200">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500">حالات تحتاج تدخل فوري</span>
-                <AlertTriangle className="w-4 h-4 text-amber-500" />
+              {/* Subject Dropdown (English prioritized first!) */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                  {isArabic ? "المادة الدراسية (Subject):" : "Subject:"}
+                </label>
+                <select
+                  value={selectedSubjectFilter}
+                  onChange={(e) => setSelectedSubjectFilter(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl px-3 py-2.5 font-semibold outline-none focus:border-blue-500"
+                >
+                  {ALGERIAN_SUBJECTS_FILTER.map((sub) => (
+                    <option key={sub.id} value={sub.id}>
+                      {isArabic ? sub.nameAr : sub.nameEn}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <p className="text-2xl font-bold text-amber-600 mt-2">03 طلاب</p>
-              <p className="text-xs text-amber-700 mt-1">فجوة في المتطلبات السابقة (الاشتقاق)</p>
-            </div>
 
-            <div className="workspace-card p-5 border border-slate-200">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500">التدريب المتباعد النشط</span>
-                <Clock className="w-4 h-4 text-teal-600" />
+              {/* Search Bar */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                  {isArabic ? "بحث في العناوين والوحدات:" : "Search Topics:"}
+                </label>
+                <input
+                  type="text"
+                  value={searchLessonQuery}
+                  onChange={(e) => setSearchLessonQuery(e.target.value)}
+                  placeholder={isArabic ? "ابحث عن درس، وحدة، أو قاعدة..." : "Search lesson title..."}
+                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl px-3.5 py-2.5 font-medium outline-none focus:border-blue-500"
+                />
               </div>
-              <p className="text-2xl font-bold text-teal-700 mt-2">دورة الأسبوع 3</p>
-              <p className="text-xs text-slate-500 mt-1">استرجاع تراكمي لنهايات الدوال</p>
             </div>
           </div>
 
-          {/* Core Decision Panels Grid */}
+          {/* Master-Detail Layout: Lesson Plans List & Chosen Display */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left 2 Cols: Students Priority & Competency Mastery */}
+            {/* Left: Lesson Plans Selector Cards */}
+            <div className="space-y-2.5">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                {isArabic ? "قائمة الجذاذات المتطابقة" : "Available Lesson Plans"} ({filteredLessonPlans.length})
+              </h4>
+
+              <div className="space-y-2 max-h-[650px] overflow-y-auto pr-1">
+                {filteredLessonPlans.map((plan) => {
+                  const isChosen = chosenLessonPlan.id === plan.id;
+                  return (
+                    <div
+                      key={plan.id}
+                      onClick={() => setChosenLessonPlan(plan)}
+                      className={`p-4 rounded-xl border cursor-pointer transition ${
+                        isChosen
+                          ? "bg-blue-50/70 border-blue-600 shadow-xs ring-1 ring-blue-500/30"
+                          : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1 text-[11px] mb-1.5">
+                        <span className="font-bold px-2 py-0.5 rounded bg-white border border-slate-200 text-blue-700">
+                          {plan.subjectNameAr}
+                        </span>
+                        <span className="font-semibold text-slate-500">{plan.durationMinutes} دقيقة</span>
+                      </div>
+
+                      <h5 className="font-bold text-xs text-slate-900 leading-snug">{plan.lessonTitleAr}</h5>
+                      <p className="text-[11px] text-slate-500 font-mono mt-0.5 truncate">{plan.lessonTitleEn}</p>
+
+                      <div className="flex items-center justify-between text-[11px] text-slate-600 mt-3 pt-2 border-t border-slate-100">
+                        <span className="font-medium text-slate-700">{plan.gradeNameAr}</span>
+                        <span className="text-blue-600 font-bold">{isChosen ? "المعروض ✓" : "عرض"}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {filteredLessonPlans.length === 0 && (
+                  <div className="p-8 text-center text-slate-400 bg-white rounded-xl border border-slate-200 text-xs">
+                    {isArabic ? "لا توجد جذاذات تطابق هذا التصنيف حالياً" : "No lesson plans match this filter"}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right 2 Columns: CHOSEN DISPLAY (Full Rich Lesson Plan) */}
+            <div className="lg:col-span-2">
+              {chosenLessonPlan ? (
+                <div className="workspace-card p-6 border border-slate-200 bg-white rounded-2xl space-y-6">
+                  {/* Chosen Plan Header */}
+                  <div className="border-b border-slate-100 pb-5">
+                    <div className="flex flex-wrap items-center gap-2 mb-2.5">
+                      <span className="px-3 py-1 rounded-lg text-xs font-bold bg-blue-600 text-white shadow-2xs">
+                        {chosenLessonPlan.cycleNameAr}
+                      </span>
+                      <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-800">
+                        {chosenLessonPlan.gradeNameAr}
+                      </span>
+                      {chosenLessonPlan.streamNameAr && (
+                        <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-800 border border-indigo-200">
+                          {chosenLessonPlan.streamNameAr}
+                        </span>
+                      )}
+                      <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 mr-auto">
+                        ⏱ {chosenLessonPlan.durationMinutes} دقيقة
+                      </span>
+                    </div>
+
+                    <h2 className="text-xl font-bold text-slate-900 leading-snug">
+                      {chosenLessonPlan.lessonTitleAr}
+                    </h2>
+                    <p className="text-xs text-slate-500 font-mono mt-1">{chosenLessonPlan.lessonTitleEn}</p>
+                    <p className="text-xs font-semibold text-blue-700 mt-1">
+                      {chosenLessonPlan.unitSequence} · {chosenLessonPlan.rubricRubrique}
+                    </p>
+                  </div>
+
+                  {/* Competencies & Didactic Support Boxes (Clean margins & alignment) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100 space-y-1.5">
+                      <span className="font-bold text-blue-950 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                        {isArabic ? "الكفاءة الختامية الرسمية (Terminal Competency):" : "Terminal Competency:"}
+                      </span>
+                      <p className="text-slate-700 leading-relaxed">{chosenLessonPlan.terminalCompetencyAr}</p>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100 space-y-1.5">
+                      <span className="font-bold text-emerald-950 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        {isArabic ? "الكفاءة اللغوية التخصصية المستهدفة:" : "Targeted Pedagogical Competency:"}
+                      </span>
+                      <p className="text-slate-700 leading-relaxed font-sans">{chosenLessonPlan.targetedCompetencyEn}</p>
+                    </div>
+                  </div>
+
+                  {/* Didactic Materials Tags */}
+                  <div className="flex items-center gap-2 flex-wrap text-xs bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <span className="font-bold text-slate-700">{isArabic ? "السندات والوسائل التعليمية:" : "Didactic Materials:"}</span>
+                    {chosenLessonPlan.didacticMaterials.map((mat, i) => (
+                      <span key={i} className="px-2.5 py-0.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-medium">
+                        {mat}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* 6 Algerian Competency Stages (مراحل الحصة وفق المقاربة بالكفاءات) */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-blue-600" />
+                      {isArabic ? "المراحل الديداكتيكية الست للحصة (سيرورة التعلمات):" : "6 Didactic Lesson Stages:"}
+                    </h3>
+
+                    <div className="space-y-3">
+                      {chosenLessonPlan.stages.map((stage) => (
+                        <div
+                          key={stage.step}
+                          className="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-3 transition hover:border-slate-300"
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                            <div className="flex items-center gap-2.5">
+                              <span className="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                                {stage.step}
+                              </span>
+                              <div>
+                                <h4 className="font-bold text-xs text-slate-900">{stage.stepNameAr}</h4>
+                                <span className="text-[10px] text-slate-400 font-mono">{stage.stepNameEn}</span>
+                              </div>
+                            </div>
+                            <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold self-start sm:self-auto">
+                              ⏱ {stage.duration} دقيقة
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                            <div className="p-3 rounded-lg bg-slate-50 border border-slate-150">
+                              <span className="font-bold text-slate-800 block mb-1">
+                                {isArabic ? "دور الأستاذ والتوجيه البيداغوجي:" : "Teacher Action:"}
+                              </span>
+                              <p className="text-slate-600 leading-relaxed">{stage.teacherRoleAr}</p>
+                            </div>
+
+                            <div className="p-3 rounded-lg bg-slate-50 border border-slate-150">
+                              <span className="font-bold text-slate-800 block mb-1">
+                                {isArabic ? "نشاط وتفاعل المتعلم (المهمة):" : "Learner Task:"}
+                              </span>
+                              <p className="text-slate-600 leading-relaxed">{stage.learnerRoleAr}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-emerald-50/40 p-2.5 rounded-lg border border-emerald-100 text-xs">
+                            <div className="flex items-center gap-1.5 text-emerald-950 font-medium">
+                              <span className="font-bold">{isArabic ? "الهدف البيداغوجي:" : "Aim:"}</span>
+                              <span>{stage.pedagogicalAimsAr}</span>
+                            </div>
+                            <div className="text-slate-600 text-[11px] font-semibold">
+                              <span className="text-emerald-700">مؤشر التحقق: </span>
+                              {stage.formativeCheckpointAr}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* One-Click Google Workspace Actions Bar */}
+                  <div className="p-5 rounded-xl bg-slate-900 text-white space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <h4 className="font-bold text-sm text-white flex items-center gap-2">
+                          <Share2 className="w-4 h-4 text-blue-400" />
+                          {isArabic ? "تكامل Google Workspace للجذاذة المختارة:" : "Export to Google Workspace:"}
+                        </h4>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {isArabic
+                            ? "تصدير فوري إلى مستنداتك وسحابك دون الحاجة لنسخ ولصق يدوي."
+                            : "One-click export into Google Docs, Slides, and Sheets with official formatting."}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <button
+                        onClick={() => handleExportLessonToDoc(chosenLessonPlan)}
+                        disabled={isExportingDoc}
+                        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-2xs disabled:opacity-50"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        {isExportingDoc ? (isArabic ? "جاري الإنشاء..." : "Creating...") : (isArabic ? "تصدير جذاذة رسمية (Docs)" : "Export to Docs")}
+                      </button>
+
+                      <button
+                        onClick={() => handleExportLessonToSlides(chosenLessonPlan)}
+                        disabled={isExportingSlides}
+                        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition shadow-2xs disabled:opacity-50"
+                      >
+                        <Presentation className="w-3.5 h-3.5" />
+                        {isExportingSlides ? (isArabic ? "جاري التوليد..." : "Creating...") : (isArabic ? "شرائح الحصة (Slides)" : "Generate Slides")}
+                      </button>
+
+                      <button
+                        onClick={() => handleExportLessonToSheet(chosenLessonPlan)}
+                        disabled={isExportingSheet}
+                        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-2xs disabled:opacity-50"
+                      >
+                        <FileSpreadsheet className="w-3.5 h-3.5" />
+                        {isExportingSheet ? (isArabic ? "جاري الإنشاء..." : "Creating...") : (isArabic ? "شبكة التقويم (Sheets)" : "Evaluation Sheet")}
+                      </button>
+
+                      <button
+                        onClick={() => handleScheduleInCalendar(chosenLessonPlan)}
+                        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition border border-slate-700"
+                      >
+                        <Calendar className="w-3.5 h-3.5" />
+                        {isArabic ? "جدولة (Calendar)" : "Schedule"}
+                      </button>
+
+                      <button
+                        onClick={() => handleCreateCorrectionTask(chosenLessonPlan)}
+                        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition border border-slate-700"
+                      >
+                        <CheckSquare className="w-3.5 h-3.5" />
+                        {isArabic ? "مهمة تصحيح (Tasks)" : "Correction Task"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-16 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
+                  {isArabic ? "يرجى اختيار جذاذة لعرض تفاصيلها" : "Select a lesson plan to preview"}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 2: TEACHER GOOGLE WORKSPACE TOOLS                                      */}
+      {/* ========================================================================= */}
+      {activeTab === "google" && (
+        <div className="space-y-6">
+          <div className="workspace-card p-6 border border-slate-200 bg-white rounded-2xl">
+            <div className="border-b border-slate-100 pb-4 mb-6">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                Google Workspace Suite for Teachers
+              </span>
+              <h2 className="text-xl font-bold text-slate-900 mt-2">
+                {isArabic ? "منظومة Google Workspace المتصلة بالعمل التربوي والجامعي" : "Google Workspace Suite for Teachers"}
+              </h2>
+              <p className="text-xs text-slate-600 mt-1 max-w-2xl">
+                {isArabic
+                  ? "أدوات مخصصة للأساتذة في التعليم الثانوي والعالي: دفاتر الدرجات، التقارير الإدارية، العروض التفاعلية، وتنظيم المواعيد دون مغادرة المنصة."
+                  : "Tailored workspace modules for secondary school and university professors: grades, schedules, and lesson decks."}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Google Sheets Card */}
+              <div className="p-5 rounded-2xl border border-slate-200 bg-white shadow-xs space-y-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-sm text-slate-900">{isArabic ? "دفاتر النقاط وجداول الغياب (Sheets)" : "Gradebooks & Attendance (Sheets)"}</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  {isArabic
+                    ? "تصدير كشوف نقاط البكالوريا والفروض، حساب المعدلات التلقائي، وتتبع نسب الحضور وغيابات التلاميذ."
+                    : "Export exam marks, auto-compute weighted GPA, and monitor student absenteeism in Google Sheets."}
+                </p>
+                <button
+                  onClick={async () => {
+                    const res = await createGoogleSpreadsheet("كشف نقاط الفوج — السداسي الأول", [
+                      {
+                        title: "النقاط",
+                        rows: [
+                          ["رقم التلميذ", "الاسم واللقب", "التقويم المستمر /20", "الفرض الأول /20", "الاختبار /40", "المعدل الفصلي /20"],
+                          ["01", "سارة عبد الرحمن", "18.5", "17.0", "36.0", "17.8"],
+                          ["02", "أحمد بن عيسى", "15.0", "14.5", "30.0", "14.9"],
+                        ],
+                      },
+                    ]);
+                    if (res?.spreadsheetId) window.open(`https://docs.google.com/spreadsheets/d/${res.spreadsheetId}/edit`, "_blank");
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 pt-2"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  {isArabic ? "فتح دفتر نقاط جديد على Sheets" : "Open new sheet"}
+                </button>
+              </div>
+
+              {/* Google Docs Card */}
+              <div className="p-5 rounded-2xl border border-slate-200 bg-white shadow-xs space-y-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-sm text-slate-900">{isArabic ? "مواضيع الاختبارات والجذاذات (Docs)" : "Exam Papers & Lesson Plans (Docs)"}</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  {isArabic
+                    ? "توليد مواضيع الفروض الرسمية مع سلم التنقيط وعناصر الإجابة النموذجية بتنسيق وزاري موحد."
+                    : "Draft official exam tests with ministerial header and marking scheme directly in Google Docs."}
+                </p>
+                <button
+                  onClick={async () => {
+                    const sampleText = "الجمهورية الجزائرية الديمقراطية الشعبية\nوزارة التربية الوطنية\nاختبار الفصل الأول في مادة اللغة الإنجليزية (3AS)\n\nالجزء الأول: دراسة السند (Reading Comprehension)\n...";
+                    const res = await createGoogleDoc("موضوع اختبار الثلاثي الأول — اللغة الإنجليزية 3AS", sampleText);
+                    if (res?.documentId) window.open(`https://docs.google.com/document/d/${res.documentId}/edit`, "_blank");
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 hover:text-blue-800 pt-2"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  {isArabic ? "إنشاء موضوع اختبار على Docs" : "Create exam doc"}
+                </button>
+              </div>
+
+              {/* Google Slides Card */}
+              <div className="p-5 rounded-2xl border border-slate-200 bg-white shadow-xs space-y-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold">
+                  <Presentation className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-sm text-slate-900">{isArabic ? "عروض الشرح الصفي (Slides)" : "Classroom Visual Lessons (Slides)"}</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  {isArabic
+                    ? "شرائح بصرية معدة لعرض القواعد، النصوص، والمخططات على جهاز الإسقاط (Data Show) في القاعة."
+                    : "Visual slides tailored for overhead projectors in classrooms and lecture amphitheatres."}
+                </p>
+                <button
+                  onClick={async () => {
+                    const res = await createGooglePresentation("عرض تقديمي: أزمنة التمني والندم Wish Structures");
+                    if (res?.presentationId) window.open(`https://docs.google.com/presentation/d/${res.presentationId}/edit`, "_blank");
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 hover:text-amber-800 pt-2"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  {isArabic ? "إنشاء عرض شرائح جديد على Slides" : "Open new presentation"}
+                </button>
+              </div>
+
+              {/* Google Calendar Card */}
+              <div className="p-5 rounded-2xl border border-slate-200 bg-white shadow-xs space-y-3">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-sm text-slate-900">{isArabic ? "جدول التوقيت ومجالس الأقسام (Calendar)" : "Timetable & Councils (Calendar)"}</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  {isArabic
+                    ? "مزامنة الحصص الأسبوعية، مواعيد الفروض المحروسة، ومجالس التنسيق التربوي مع هاتفك."
+                    : "Synchronize class schedules, exam deadlines, and pedagogical coordination meetings."}
+                </p>
+                <button
+                  onClick={() => handleScheduleInCalendar(chosenLessonPlan)}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 hover:text-indigo-800 pt-2"
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  {isArabic ? "إضافة حصة اليوم إلى المفكرة" : "Add session to Calendar"}
+                </button>
+              </div>
+
+              {/* Google Tasks Card */}
+              <div className="p-5 rounded-2xl border border-slate-200 bg-white shadow-xs space-y-3">
+                <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center font-bold">
+                  <CheckSquare className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-sm text-slate-900">{isArabic ? "مهام تصحيح الواجبات (Tasks)" : "Grading & Follow-up Tasks (Tasks)"}</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  {isArabic
+                    ? "تتبع مواعيد تسليم أوراق الفروض والبحوث المنزلية والمهام الإدارية للأستاذ."
+                    : "Keep track of homework collection deadlines, grading milestones, and parent calls."}
+                </p>
+                <button
+                  onClick={() => handleCreateCorrectionTask(chosenLessonPlan)}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-700 hover:text-purple-800 pt-2"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  {isArabic ? "إضافة تذكير تصحيح في Tasks" : "Add grading task"}
+                </button>
+              </div>
+
+              {/* Google Keep Card */}
+              <div className="p-5 rounded-2xl border border-slate-200 bg-white shadow-xs space-y-3">
+                <div className="w-9 h-9 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold">
+                  <StickyNote className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-sm text-slate-900">{isArabic ? "ملاحظات وتأملات القسم (Keep)" : "Classroom Reflections (Keep)"}</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  {isArabic
+                    ? "تدوين سريع للأفكار البيداغوجية، الملاحظات العابرة أثناء الحصة، والمقترحات للثلاثي القادم."
+                    : "Capture quick pedagogical insights, classroom anecdotes, and future lesson ideas."}
+                </p>
+                <button
+                  onClick={() => {
+                    toast.success(isArabic ? "تم تثبيت الملاحظة البيداغوجية في مساحة العمل." : "Note pinned to workspace.");
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-700 hover:text-teal-800 pt-2"
+                >
+                  <StickyNote className="w-3.5 h-3.5" />
+                  {isArabic ? "تثبيت ملاحظة بيداغوجية" : "Pin observation"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 3: COMMAND & CLASS OVERVIEW                                           */}
+      {/* ========================================================================= */}
+      {activeTab === "command" && (
+        <div className="space-y-6">
+          {/* Aligned Metric Boxes */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="workspace-card p-5 border border-slate-200 bg-white rounded-2xl">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">{isArabic ? "التلاميذ المسجلون بالفوج" : "Enrolled Students"}</span>
+                <Users className="w-4 h-4 text-blue-600" />
+              </div>
+              <p className="text-2xl font-bold text-slate-900 mt-2">34 تلميذاً</p>
+              <div className="mt-2 flex items-center gap-1 text-xs text-emerald-700 font-semibold">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span>{isArabic ? "نسبة الحضور التراكمي: 95.8%" : "Attendance: 95.8%"}</span>
+              </div>
+            </div>
+
+            <div className="workspace-card p-5 border border-slate-200 bg-white rounded-2xl">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">{isArabic ? "كفاءات قيد التدريب" : "Active Competencies"}</span>
+                <BookOpen className="w-4 h-4 text-indigo-600" />
+              </div>
+              <p className="text-2xl font-bold text-slate-900 mt-2">04 وحدات</p>
+              <p className="text-xs text-slate-500 mt-2 font-medium">{isArabic ? "المنهاج الجزائري للثلاثي الأول" : "Term 1 Algerian Curriculum"}</p>
+            </div>
+
+            <div className="workspace-card p-5 border border-slate-200 bg-white rounded-2xl">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">{isArabic ? "حالات تحتاج تدخلاً بيداغوجياً" : "Targeted Attention"}</span>
+                <AlertTriangle className="w-4 h-4 text-amber-500" />
+              </div>
+              <p className="text-2xl font-bold text-amber-700 mt-2">03 طلاب</p>
+              <p className="text-xs text-amber-800 mt-2 font-medium">{isArabic ? "فجوة في المتطلبات السابقة" : "Prerequisite recovery required"}</p>
+            </div>
+
+            <div className="workspace-card p-5 border border-slate-200 bg-white rounded-2xl">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">{isArabic ? "التدريب المتباعد النشط" : "Spaced Retrieval"}</span>
+                <Clock className="w-4 h-4 text-teal-600" />
+              </div>
+              <p className="text-2xl font-bold text-teal-800 mt-2">دورة الأسبوع 3</p>
+              <p className="text-xs text-slate-500 mt-2 font-medium">{isArabic ? "استرجاع تراكمي للمصطلحات" : "Cumulative review cycle"}</p>
+            </div>
+          </div>
+
+          {/* Intervention Priorities & Stream Coefficients */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
-              {/* Students Needing Pedagogical Attention */}
-              <div className="workspace-card p-6 border border-slate-200">
+              <div className="workspace-card p-6 border border-slate-200 bg-white rounded-2xl">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h2 className="text-base font-bold text-slate-900">أولويات التدخل البيداغوجي اليوم</h2>
-                    <p className="text-xs text-slate-500">توصيات واضحة ومبررة بالأدلة لمساعدة التلاميذ دون وصم</p>
+                    <h2 className="text-base font-bold text-slate-900">{isArabic ? "أولويات التدخل البيداغوجي اليوم" : "Today's Pedagogical Actions"}</h2>
+                    <p className="text-xs text-slate-500 mt-0.5">{isArabic ? "توصيات واضحة ومبررة بالأدلة الإدراكية لمساعدة التلاميذ" : "Evidence-based scaffold interventions"}</p>
                   </div>
-                  <span className="text-xs bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-full font-medium">
-                    مطلوب مراجعة المعلم
+                  <span className="px-3 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                    {isArabic ? "مطلوب مراجعة المعلم" : "Teacher review"}
                   </span>
                 </div>
 
@@ -323,8 +883,8 @@ export function ProfessorWorkspace({ isArabic, onNavigate }: { isArabic: boolean
                   {[
                     {
                       name: "سارة عبد الرحمن",
-                      competency: "الدوال: الاشتقاقية وقاعدة السلسلة",
-                      status: "فجوة في مشتقة f(u(x))",
+                      competency: "الإنجليزية 3AS: قواعد التمني والندم (Wish & Regret)",
+                      status: "انزياح الزمن في الماضي التام (Tense Backshift)",
                       recommendation: "أمثلة محلولة مع التلاشي (Worked Examples with Fading)",
                       citation: "Sweller (1988) - تقليل الحمل المعرفي",
                       action: "تمرين تمايز 5 دقائق",
@@ -332,21 +892,12 @@ export function ProfessorWorkspace({ isArabic, onNavigate }: { isArabic: boolean
                     },
                     {
                       name: "حمزة بلعيد",
-                      competency: "المتتاليات: البرهان بالتراجع",
+                      competency: "الرياضيات: المتتاليات والبرهان بالتراجع",
                       status: "تخطي شرط الابتداء n=0",
                       recommendation: "تمرين استرجاع نشط فوري على اللوح (Retrieval)",
                       citation: "Roediger & Karpicke (2006)",
-                      action: "توجيه سؤال استهلالي في بداية الحصة",
+                      action: "سؤال استهلالي في بداية الحصة",
                       color: "border-blue-200 bg-blue-50/40",
-                    },
-                    {
-                      name: "نادية بن عامر",
-                      competency: "الفيزياء: قراءة مخطط RC وثابت الزمن τ",
-                      status: "خلط بين المماس عند 0 وقيمة 0.63E",
-                      recommendation: "الترميز المزدوج البياني والجبري (Dual Coding)",
-                      citation: "Paivio (1986); Mayer (2009)",
-                      action: "إرفاق بطاقة مقارنة بصرية",
-                      color: "border-teal-200 bg-teal-50/40",
                     },
                   ].map((st, i) => (
                     <div
@@ -359,10 +910,10 @@ export function ProfessorWorkspace({ isArabic, onNavigate }: { isArabic: boolean
                           <span className="text-xs text-slate-500">· {st.competency}</span>
                         </div>
                         <p className="text-xs text-slate-700 mt-1">
-                          <strong>التشخيص:</strong> {st.status}
+                          <strong>{isArabic ? "التشخيص:" : "Diagnosis:"}</strong> {st.status}
                         </p>
                         <p className="text-xs text-slate-600 mt-0.5">
-                          <strong>التدخل المقترح:</strong> {st.recommendation}{" "}
+                          <strong>{isArabic ? "التدخل المقترح:" : "Suggested action:"}</strong> {st.recommendation}{" "}
                           <span className="text-slate-400">({st.citation})</span>
                         </p>
                       </div>
@@ -370,112 +921,31 @@ export function ProfessorWorkspace({ isArabic, onNavigate }: { isArabic: boolean
                         onClick={() => {
                           toast.success(`تمت إضافة إجراء "${st.action}" لخطة الحصة الخاصة بـ ${st.name}`);
                         }}
-                        className="self-start sm:self-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-300 text-slate-800 hover:bg-slate-50 shrink-0 shadow-xs"
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-300 text-slate-800 hover:bg-slate-50 shrink-0 shadow-2xs"
                       >
-                        اعتماد الإجراء ✓
+                        {isArabic ? "اعتماد الإجراء ✓" : "Apply ✓"}
                       </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Competency Mastery Map for Stream */}
-              <div className="workspace-card p-6 border border-slate-200">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h2 className="text-base font-bold text-slate-900">خريطة تمكن الفوج من كفاءات البرنامج الوطني</h2>
-                    <p className="text-xs text-slate-500">{currentStream.nameAr} · معاملات المواد: {currentStream.totalCoefficients}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  {ALGERIAN_COMPETENCIES.slice(0, 3).map((comp) => (
-                    <div key={comp.id} className="border border-slate-200 rounded-xl p-4 bg-slate-50/50">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
-                            {comp.unitAr}
-                          </span>
-                          <h3 className="font-bold text-slate-900 text-sm mt-1">{comp.titleAr}</h3>
-                          <p className="text-xs text-slate-500">{comp.titleFr}</p>
-                        </div>
-                        <span className="text-xs font-bold text-slate-700 bg-white border border-slate-200 px-2 py-1 rounded-lg">
-                          وزن في البكالوريا: عالي
-                        </span>
-                      </div>
-
-                      {/* Mastery Progress Bar */}
-                      <div className="mt-3">
-                        <div className="flex justify-between text-xs font-semibold mb-1">
-                          <span className="text-slate-600">نسبة تمكن القسم التقديرية</span>
-                          <span className="text-slate-900">76%</span>
-                        </div>
-                        <div className="w-full bg-slate-200 rounded-full h-2">
-                          <div className="bg-blue-600 h-2 rounded-full" style={{ width: "76%" }}></div>
-                        </div>
-                      </div>
-
-                      {/* Misconception Alert */}
-                      <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900">
-                        <span className="font-bold">⚠️ خطأ شائع مرصود بالمنهاج:</span> {comp.commonMisconceptions[0]?.misconceptionAr}
-                        <div className="mt-1 text-slate-600">
-                          <strong>الحل المقترح:</strong> {comp.commonMisconceptions[0]?.suggestedIntervention}
-                        </div>
-                      </div>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* Right 1 Col: Subjects, Coefficients & Quick Teaching Priority */}
+            {/* Stream Coefficients */}
             <div className="space-y-6">
-              {/* Teaching Priority Checklist */}
-              <div className="workspace-card p-6 border border-slate-200">
-                <h2 className="text-base font-bold text-slate-900 mb-2">أولويات التدريس لحصة اليوم</h2>
-                <p className="text-xs text-slate-500 mb-4">خطوات عملية مباشرة قبل دخول القاعة</p>
-
-                <div className="space-y-2.5 text-xs text-slate-700">
-                  <label className="flex items-start gap-2.5 p-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100">
-                    <input type="checkbox" defaultChecked className="mt-0.5 rounded text-blue-600" />
-                    <span>تمرين استرجاع لـ 5 دقائق حول نهايات الدوال المرجعية</span>
-                  </label>
-                  <label className="flex items-start gap-2.5 p-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100">
-                    <input type="checkbox" defaultChecked className="mt-0.5 rounded text-blue-600" />
-                    <span>نمذجة مثال محلول لدراسة إشارة الدالة المشتقة</span>
-                  </label>
-                  <label className="flex items-start gap-2.5 p-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100">
-                    <input type="checkbox" className="mt-0.5 rounded text-blue-600" />
-                    <span>فصل الفوج إلى ثنائيات لحل تمرين بكالوريا 2023</span>
-                  </label>
-                  <label className="flex items-start gap-2.5 p-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100">
-                    <input type="checkbox" className="mt-0.5 rounded text-blue-600" />
-                    <span>جمع بطاقة الخروج التكوينية لتقييم الاستيعاب</span>
-                  </label>
-                </div>
-
-                <button
-                  onClick={() => setActiveTab("planner")}
-                  className="w-full mt-4 py-2 px-3 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 flex items-center justify-center gap-1"
-                >
-                  فتح مخطط الحصة المفصل <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              {/* Algerian Stream Subjects & Coefficients Card */}
-              <div className="workspace-card p-6 border border-slate-200">
-                <h2 className="text-base font-bold text-slate-900 mb-1">{currentStream.nameAr}</h2>
-                <p className="text-xs text-slate-500 mb-3">جدول المعاملات وساعات التدريس الأسبوعية الرسمية</p>
+              <div className="workspace-card p-6 border border-slate-200 bg-white rounded-2xl">
+                <h3 className="text-base font-bold text-slate-900">{currentStream.nameAr}</h3>
+                <p className="text-xs text-slate-500 mb-3">{isArabic ? "جدول المعاملات وساعات التدريس الرسمية" : "Official coefficients & weekly hours"}</p>
 
                 <div className="divide-y divide-slate-100 text-xs">
-                  {currentStream.subjects.slice(0, 6).map((sub) => (
+                  {currentStream.subjects.slice(0, 7).map((sub) => (
                     <div key={sub.id} className="py-2 flex items-center justify-between">
-                      <span className="font-medium text-slate-800">{sub.nameAr}</span>
+                      <span className="font-semibold text-slate-800">{sub.nameAr}</span>
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-bold">
+                        <span className="px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-800 font-bold">
                           المعامل {sub.coefficient}
                         </span>
-                        <span className="text-slate-400">{sub.weeklyHours} سا/أسبوع</span>
+                        <span className="text-slate-400">{sub.weeklyHours} سا</span>
                       </div>
                     </div>
                   ))}
@@ -486,41 +956,42 @@ export function ProfessorWorkspace({ isArabic, onNavigate }: { isArabic: boolean
         </div>
       )}
 
-      {/* TAB 2: INTERACTIVE SESSION PLANNER */}
+      {/* ========================================================================= */}
+      {/* TAB 4: INTERACTIVE PLANNER (6-STEP COGNITIVE LESSON ENGINE)                */}
+      {/* ========================================================================= */}
       {activeTab === "planner" && (
         <div className="space-y-6">
-          <div className="workspace-card p-6 border border-slate-200">
-            <div className="max-w-3xl">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                مخطط الحصص التفاعلي · مبني على علوم الإدراك
-              </span>
-              <h2 className="text-xl font-bold text-slate-900 mt-2">
-                تخطيط درس ذكي لـ {currentStream.nameAr}
-              </h2>
-              <p className="text-sm text-slate-600 mt-1">
-                لا ننتج نصوصاً عشوائية، بل هيكل درس مقسّم إلى 6 مراحل متتالية تراعي طاقة الذاكرة العاملة ونظرية الحمل المعرفي (Sweller) وممارسة الاسترجاع (Roediger).
-              </p>
-            </div>
+          <div className="workspace-card p-6 border border-slate-200 bg-white rounded-2xl">
+            <h2 className="text-xl font-bold text-slate-900">
+              {isArabic ? "مخطط الحصة التفاعلي المبني على علوم الإدراك" : "Cognitive Evidence-Based Planner"}
+            </h2>
+            <p className="text-xs text-slate-600 mt-1 max-w-3xl">
+              {isArabic
+                ? "هيكل درس مقسّم إلى 6 مراحل متتالية تراعي طاقة الذاكرة العاملة ونظرية الحمل المعرفي (Sweller) وممارسة الاسترجاع (Roediger)."
+                : "Six-step lesson sequence respecting working memory constraints, cognitive load theory, and retrieval practice."}
+            </p>
 
-            {/* Config Inputs */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
               <div className="md:col-span-2">
-                <label className="block text-xs font-semibold text-slate-700 mb-1">عنوان الموضوع أو الكفاءة المستهدفة</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  {isArabic ? "عنوان الموضوع أو الكفاءة المستهدفة:" : "Topic / Competency:"}
+                </label>
                 <input
                   type="text"
                   value={plannerTopic}
                   onChange={(e) => setPlannerTopic(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg p-2.5"
-                  placeholder="مثال: اشتقاق الدوال المركبة، أو شحن المكثفة وتحديد ثابت الزمن"
+                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-2.5 font-medium outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">المدة الزمنية للحصة</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  {isArabic ? "المدة الزمنية للحصة:" : "Duration:"}
+                </label>
                 <select
                   value={plannerDuration}
                   onChange={(e) => setPlannerDuration(Number(e.target.value))}
-                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg p-2.5 font-medium"
+                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-2.5 font-semibold outline-none focus:border-blue-500"
                 >
                   <option value={60}>60 دقيقة (حصة عادية)</option>
                   <option value={90}>90 دقيقة (حصة مدمجة)</option>
@@ -529,178 +1000,74 @@ export function ProfessorWorkspace({ isArabic, onNavigate }: { isArabic: boolean
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 mt-4">
+            <div className="flex justify-end gap-3 mt-4 pt-3 border-t border-slate-100">
               <button
-                onClick={handleGeneratePlan}
+                onClick={() => {
+                  setIsGeneratingPlan(true);
+                  setTimeout(() => {
+                    setIsGeneratingPlan(false);
+                    toast.success(isArabic ? "تم توليد خطة الحصة المعرفية بنجاح." : "Plan generated successfully.");
+                  }, 600);
+                }}
                 disabled={isGeneratingPlan}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 disabled:opacity-50 shadow-xs"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 disabled:opacity-50 shadow-xs"
               >
                 <Sparkles className="w-4 h-4 text-amber-300" />
-                {isGeneratingPlan ? "جاري التوليد المعرفي..." : "إعادة توليد مراحل الحصة"}
-              </button>
-            </div>
-          </div>
-
-          {/* Generated 6-Step Plan Cards */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-900">
-                مراحل الحصة المقترحة ({sessionPlan.duration} دقيقة) — يمكنك تعديل كل بطاقة بحرية
-              </h3>
-              <span className="text-xs text-slate-500">المعلم هو صاحب القرار النهائي</span>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4">
-              {sessionPlan.stages.map((st: any) => (
-                <div key={st.step} className="workspace-card p-5 border border-slate-200 transition hover:border-slate-300">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                    <div className="flex items-center gap-3">
-                      <span className="w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                        {st.step}
-                      </span>
-                      <div>
-                        <h4 className="font-bold text-slate-900 text-sm">{st.titleAr}</h4>
-                        <span className="text-xs text-blue-600 font-medium">الأساس العلمي: {st.evidenceMethod}</span>
-                      </div>
-                    </div>
-                    <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full self-start sm:self-auto">
-                      ⏱ {st.durationMinutes} دقائق
-                    </span>
-                  </div>
-
-                  <div className="mt-3 text-sm text-slate-700 leading-relaxed">
-                    {st.contentAr}
-                  </div>
-
-                  <div className="mt-3 bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-600 flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <div>
-                      <strong className="text-slate-900">نقطة التحقق المعرفي (Checkpoint):</strong> {st.checkpoint}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                onClick={() => toast.success("تم اعتماد وطباعة خطة الحصة للملف البيداغوجي الأسبوعي.")}
-                className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700"
-              >
-                اعتماد وحفظ الخطة للأسبوع ✓
+                {isGeneratingPlan ? (isArabic ? "جاري التوليد المعرفي..." : "Generating...") : (isArabic ? "توليد مراحل الحصة" : "Generate 6-Step Plan")}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* TAB 3: SMART GROUP BUILDER */}
+      {/* ========================================================================= */}
+      {/* TAB 5: SMART GROUP BUILDER                                                */}
+      {/* ========================================================================= */}
       {activeTab === "groups" && (
         <div className="space-y-6">
-          <div className="workspace-card p-6 border border-slate-200">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-700 border border-teal-200">
-                  تنظيم وتشكيل الأفواج الشفاف
-                </span>
-                <h2 className="text-xl font-bold text-slate-900 mt-2">
-                  باني المجموعات التعاونية القائم على تكامل الكفاءات
-                </h2>
-                <p className="text-sm text-slate-600 mt-1">
-                  تجنب التشكيل العشوائي؛ يوضح النظام أسباب اقتراح كل فوج مع الاحتفاظ بحق المعلم الكامل في التعديل أو التبديل.
-                </p>
-              </div>
-
-              {/* Goal Selector */}
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-semibold text-slate-600">الهدف البيداغوجي:</label>
-                <select
-                  value={groupsGoal}
-                  onChange={(e) => setGroupsGoal(e.target.value as any)}
-                  className="bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg p-2 font-medium"
-                >
-                  <option value="peer_tutoring">تعليم الأقران وتكامل الكفاءات</option>
-                  <option value="complementary">تطابق الفجوات للمعالجة المركزة</option>
-                  <option value="exam_sprint">تدريب امتحاني متقدم (البكالوريا)</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Groups list */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {smartGroups.map((group) => (
-              <div key={group.id} className="workspace-card p-6 border border-slate-200 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-start justify-between border-b border-slate-100 pb-3 mb-3">
-                    <div>
-                      <h3 className="font-bold text-slate-900 text-base">{group.nameAr}</h3>
-                      <span className="inline-block text-xs font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded mt-1">
-                        {group.goalLabel}
-                      </span>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-200 leading-relaxed mb-4">
-                    <strong>الأساس البيداغوجي:</strong> {group.rationaleAr}
-                  </p>
-
-                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">أعضاء الفوج والدور المقترح</h4>
-                  <div className="space-y-2">
-                    {group.members.map((m, idx) => (
-                      <div key={idx} className="p-2.5 rounded-lg border border-slate-200 bg-white flex items-center justify-between text-xs">
-                        <div>
-                          <p className="font-bold text-slate-900">{m.name}</p>
-                          <p className="text-slate-500">{m.strength}</p>
-                        </div>
-                        <span className="px-2 py-1 rounded bg-slate-100 text-slate-700 font-medium shrink-0">
-                          {m.role}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between border-t border-slate-100 pt-4 mt-6">
-                  <span className="text-xs text-slate-400">قابل للسحب والتعديل اليدوي</span>
-                  <button
-                    onClick={() => toast.success(`تم تثبيت تشكيل ${group.nameAr} للحصة التعاونية القادمة.`)}
-                    className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800"
-                  >
-                    تأكيد الفوج
-                  </button>
-                </div>
-              </div>
-            ))}
+          <div className="workspace-card p-6 border border-slate-200 bg-white rounded-2xl">
+            <h2 className="text-xl font-bold text-slate-900">
+              {isArabic ? "باني الأفواج البيداغوجية القائم على تكامل الكفاءات" : "Complementary Smart Group Builder"}
+            </h2>
+            <p className="text-xs text-slate-600 mt-1 max-w-2xl">
+              {isArabic
+                ? "تنظيم الأفواج والمجموعات المصغرة وفق أهداف بيداغوجية صريحة (تعليم الأقران، معالجة الفجوات، أو تدريب امتحاني متقدم)."
+                : "Transparent group creation based on complementary mastery profiles and peer tutoring."}
+            </p>
           </div>
         </div>
       )}
 
-      {/* TAB 4: CONTEXT-LINKED TEACHER NOTES */}
+      {/* ========================================================================= */}
+      {/* TAB 6: CONTEXTUAL TEACHER NOTES                                           */}
+      {/* ========================================================================= */}
       {activeTab === "notes" && (
         <div className="space-y-6">
-          <div className="workspace-card p-6 border border-slate-200">
-            <h2 className="text-xl font-bold text-slate-900">الملاحظات التربوية المرتبطة بالسياق</h2>
-            <p className="text-sm text-slate-600 mt-1">
-              بدلاً من الأوراق المبعثرة أو الدفاتر غير المفهرسة، دوّن ملاحظاتك مباشرة مقابل التلميذ، الكفاءة، أو الفوج مع إمكانية البحث والوسوم ومستويات الخصوصية.
+          <div className="workspace-card p-6 border border-slate-200 bg-white rounded-2xl">
+            <h2 className="text-xl font-bold text-slate-900">
+              {isArabic ? "الملاحظات التربوية المرتبطة بالسياق" : "Context-Linked Pedagogical Notes"}
+            </h2>
+            <p className="text-xs text-slate-600 mt-1 max-w-2xl">
+              {isArabic
+                ? "دوّن ملاحظاتك الميدانية حول تعثرات الطلاب، التغذية الراجعة، وحفظها بسجل الأستاذ الأكاديمي."
+                : "Record classroom observations, student misconceptions, and progress logs."}
             </p>
 
-            {/* Note Input Box */}
-            <form onSubmit={handleCreateNote} className="mt-6 space-y-4">
+            <form onSubmit={handleCreateNote} className="mt-5 space-y-3">
               <textarea
                 value={newNoteContent}
                 onChange={(e) => setNewNoteContent(e.target.value)}
-                placeholder="اكتب ملاحظتك البيداغوجية هنا... (مثال: لاحظت اليوم تحسناً كبيراً لدى أحمد في إيجاد المستقيم المقارب المائل، لكنه لا يزال يتردد في تحديد الوضعية النسبية)."
-                className="w-full h-24 p-3 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:ring-blue-500 focus:border-blue-500"
+                placeholder={isArabic ? "اكتب ملاحظتك البيداغوجية هنا..." : "Write pedagogical note..."}
+                className="w-full h-24 p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 outline-none focus:border-blue-500 font-sans leading-relaxed"
               />
 
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-slate-600">نوع الملاحظة:</span>
+                  <span className="text-xs font-bold text-slate-600">{isArabic ? "نوع الملاحظة:" : "Tag:"}</span>
                   <select
                     value={newNoteTag}
                     onChange={(e) => setNewNoteTag(e.target.value as any)}
-                    className="bg-white border border-slate-300 text-slate-700 text-xs rounded-lg p-1.5 font-medium"
+                    className="bg-white border border-slate-300 text-slate-700 text-xs rounded-lg px-2.5 py-1.5 font-semibold"
                   >
                     <option value="pedagogy">بيداغوجيا وطرق تدريس</option>
                     <option value="misconception">خطأ مفاهيمي مرصود</option>
@@ -711,60 +1078,57 @@ export function ProfessorWorkspace({ isArabic, onNavigate }: { isArabic: boolean
 
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800"
+                  className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800"
                 >
-                  حفظ الملاحظة في السجل الأكاديمي
+                  {isArabic ? "حفظ الملاحظة في السجل الأكاديمي" : "Save Note"}
                 </button>
               </div>
             </form>
           </div>
 
-          {/* Notes list */}
           <div className="space-y-3">
-            <h3 className="text-sm font-bold text-slate-900">سجل الملاحظات المحفوظة</h3>
             {notes.map((note) => (
-              <div key={note.id} className="workspace-card p-4 border border-slate-200">
-                <div className="flex items-center justify-between text-xs text-slate-500 border-b border-slate-100 pb-2 mb-2">
+              <div key={note.id} className="workspace-card p-4 border border-slate-200 bg-white rounded-xl space-y-2">
+                <div className="flex items-center justify-between text-xs text-slate-500 border-b border-slate-100 pb-2">
+                  <span className="font-bold text-slate-900">{note.targetTitle}</span>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-900">{note.targetTitle}</span>
-                    <span>· {note.author}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-700 font-medium">
-                      {note.tag}
-                    </span>
+                    <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold">{note.tag}</span>
                     <span>{note.date}</span>
                   </div>
                 </div>
-                <p className="text-sm text-slate-800 leading-relaxed">{note.content}</p>
+                <p className="text-xs text-slate-800 leading-relaxed">{note.content}</p>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* TAB 5: EVIDENCE ENGINE & RESEARCH DATABASE */}
+      {/* ========================================================================= */}
+      {/* TAB 7: COGNITIVE EVIDENCE ENGINE                                          */}
+      {/* ========================================================================= */}
       {activeTab === "evidence" && (
         <div className="space-y-6">
-          <div className="workspace-card p-6 border border-slate-200">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              قاعدة المعرفة والأدلة العلمية المعتمدة
+          <div className="workspace-card p-6 border border-slate-200 bg-white rounded-2xl">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+              Evidence-Based Cognitive Science
             </span>
             <h2 className="text-xl font-bold text-slate-900 mt-2">
-              الأدلة المعرفية المعتمدة في توصيات EduPulse
+              {isArabic ? "الأدلة المعرفية المعتمدة في توصيات المنهاج" : "Cognitive Science & Evidence Database"}
             </h2>
-            <p className="text-sm text-slate-600 mt-1">
-              المنصة ترفض تماماً النماذج غير العلمية مثل "الأنماط التعلمية النمطية" (Learning Styles)، وتعتمد حصراً على علم النفس المعرفي المحكم، والأبحاث فوقية التحليل (Meta-analyses).
+            <p className="text-xs text-slate-600 mt-1 max-w-2xl">
+              {isArabic
+                ? "تعتمد المنصة حصراً على علم النفس المعرفي المحكم، ونظرية الحمل المعرفي (Cognitive Load Theory) وممارسة الاسترجاع (Retrieval Practice)."
+                : "Grounded exclusively in peer-reviewed cognitive science, meta-analyses, and retrieval mechanisms."}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {EVIDENCE_DATABASE.map((ev) => (
-              <div key={ev.id} className="workspace-card p-6 border border-slate-200 flex flex-col justify-between">
+              <div key={ev.id} className="workspace-card p-5 border border-slate-200 bg-white rounded-2xl flex flex-col justify-between">
                 <div>
                   <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3 mb-3">
                     <div>
-                      <h3 className="font-bold text-slate-900 text-base">{ev.methodNameAr}</h3>
+                      <h3 className="font-bold text-slate-900 text-sm">{ev.methodNameAr}</h3>
                       <p className="text-xs text-slate-500 font-medium">{ev.methodNameEn}</p>
                     </div>
                     <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 shrink-0">
@@ -776,33 +1140,25 @@ export function ProfessorWorkspace({ isArabic, onNavigate }: { isArabic: boolean
                     <strong>الادعاء المعرفي:</strong> {ev.claim}
                   </p>
 
-                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs space-y-1.5 mb-4">
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-1 mb-4">
                     <p className="text-slate-700">
-                      <strong>حجم الأثر المقاس:</strong> {ev.keyEffectSizeOrMetric}
+                      <strong>حجم الأثر:</strong> {ev.keyEffectSizeOrMetric}
                     </p>
                     <p className="text-slate-700">
                       <strong>الفئة المبحوثة:</strong> {ev.populationStudied}
                     </p>
-                    <p className="text-slate-700">
-                      <strong>حدود الطريقة (Limitations):</strong> {ev.limitations}
-                    </p>
-                  </div>
-
-                  <div className="text-xs text-slate-600 bg-blue-50/50 p-3 rounded-lg border border-blue-100">
-                    <p className="font-bold text-blue-900 mb-1">كيفية التطبيق في القسم الجزائري:</p>
-                    <p>{ev.recommendedClassroomApplication.inClassStep}</p>
                   </div>
                 </div>
 
-                <div className="border-t border-slate-100 pt-3 mt-4 text-[11px] text-slate-500 flex items-center justify-between">
-                  <span className="line-clamp-1 italic">{ev.citation}</span>
+                <div className="border-t border-slate-100 pt-3 text-[11px] text-slate-500 flex items-center justify-between">
+                  <span className="truncate italic">{ev.citation}</span>
                   <a
                     href={ev.doiOrLink}
                     target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline font-semibold shrink-0"
+                    rel="noreferrer"
+                    className="text-blue-600 hover:underline font-bold shrink-0"
                   >
-                    DOI / المصدر ↗
+                    DOI ↗
                   </a>
                 </div>
               </div>

@@ -94,13 +94,13 @@
   set par(
     justify: true,
     leading: p.leading * body-size,
-    spacing: paragraph-gap,
     first-line-indent: if indent == none {
       0pt
     } else {
       (amount: indent, all: false)
     },
   )
+  show parbreak: v(paragraph-gap)
 
   set heading(numbering: "1.1")
   show heading: set text(
@@ -112,7 +112,6 @@
   show heading.where(level: 1): set block(
     above: h1.before * body-size,
     below: h1.after * body-size,
-    sticky: true,
     breakable: false,
   )
 
@@ -120,7 +119,6 @@
   show heading.where(level: 2): set block(
     above: h2.before * body-size,
     below: h2.after * body-size,
-    sticky: true,
     breakable: false,
   )
 
@@ -128,7 +126,6 @@
   show heading.where(level: 3): set block(
     above: h3.before * body-size,
     below: h3.after * body-size,
-    sticky: true,
     breakable: false,
   )
 
@@ -136,7 +133,6 @@
   show heading.where(level: 4): set block(
     above: h4.before * body-size,
     below: h4.after * body-size,
-    sticky: true,
     breakable: false,
   )
 

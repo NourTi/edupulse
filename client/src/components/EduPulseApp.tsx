@@ -25,6 +25,7 @@ import {
   Database,
   Download,
   FileText,
+  Globe,
   GraduationCap,
   MessageCircleQuestion,
   PackageOpen,
@@ -70,7 +71,7 @@ import { escapeReceiptHtml, formatReceiptContent } from "@/lib/receiptFormatting
 import { isDesktopRuntime, saveDesktopBackup } from "@/lib/desktopRuntime";
 import { loadDesktopWorkspace, saveDesktopWorkspace } from "@/lib/desktopRecords";
 import { buildWeeklyProgressMessage } from "@/lib/weeklyProgress";
-import MedusaCommercePanel from "./MedusaCommercePanel";
+import { GoogleWorkspaceHub } from "./GoogleWorkspaceHub";
 import { StudentSupportEvaluationPanel } from "./StudentSupportEvaluationPanel";
 import { InstitutionTeamPanel } from "./InstitutionTeamPanel";
 import AiConsolePanel from "./creator/AiConsolePanel";
@@ -495,9 +496,9 @@ export default function EduPulseApp() {
     { id: "cefr", label: "تقييم CEFR", icon: BarChart3, roles: ["admin", "teacher", "student"] },
     { id: "guardians", label: "التواصل مع الأولياء", icon: MessageCircle, roles: ["admin", "teacher", "counsellor"] },
     { id: "payments", label: "المدفوعات والإيصالات", icon: WalletCards, roles: ["admin", "finance_admin"] },
+    { id: "google_workspace", label: "بيئة Google الموحدة", icon: Globe, roles: ["admin", "teacher", "student", "guardian", "registrar", "finance_admin", "counsellor"] },
     { id: "creator", label: "استوديو المبدع", icon:  Sparkles, roles: ["admin", "teacher", "counsellor"] },
     { id: "ai-console", label: "وحدة الذكاء والمصادر", icon: Radar, roles: ["admin", "teacher", "counsellor"] },
-    { id: "commerce", label: "التجارة والخدمات", icon:   PackageOpen, roles: ["admin", "finance_admin"] },
     { id: "reports", label: "تقارير التقدم", icon: FileText, roles: ["admin", "teacher", "student"] },
     { id: "support-evaluation", label: "تقييم الدعم التعليمي", icon: BrainCircuit, roles: ["admin", "teacher", "counsellor"] },
     { id: "search", label: "بحث في السجل", icon: Search, roles: ["admin", "teacher", "student"] },
@@ -572,31 +573,31 @@ export default function EduPulseApp() {
             </div>
 
             {/* Direct Hero Typography rendered cleanly on the video without any bounding square */}
-            <div className="max-w-4xl">
-              <h1 className="animate-fade-rise text-display text-4xl sm:text-6xl md:text-7xl font-black leading-[1.08] tracking-tight text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)]">
+            <div className="max-w-3xl">
+              <h1 className="animate-fade-rise text-display text-2xl sm:text-4xl md:text-5xl font-extrabold leading-tight tracking-tight text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)]">
                 {isArabic ? (
                   <>كل طالب جزائري.<br /><span className="text-emerald-300 drop-shadow-[0_2px_16px_rgba(16,185,129,0.5)]">سجل إدراكي موحد.</span></>
                 ) : (
                   <>Every learner.<br /><span className="text-emerald-300">One clear record.</span></>
                 )}
               </h1>
-              <p className="animate-fade-rise-delay mt-5 max-w-2xl mx-auto text-base sm:text-lg font-medium leading-relaxed text-white/95 drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
+              <p className="animate-fade-rise-delay mt-3 max-w-xl mx-auto text-xs sm:text-sm md:text-base font-normal leading-relaxed text-white/90 drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
                 {isArabic ? "EduPulse يجمع التسجيل، معاملات البكالوريا الرسمية، الحضور، التقدم، تواصل الأولياء، والإيصالات في مساحة تعليمية سيادية، عربية أولاً، ومصممة للإنسان." : "EduPulse brings admissions, official BAC coefficients, attendance, spaced retrieval, guardian comms, and receipts into one sovereign education workspace."}
               </p>
             </div>
 
-            <div className="animate-fade-rise-delay-2 mt-8 flex flex-wrap justify-center gap-3.5">
+            <div className="animate-fade-rise-delay-2 mt-6 flex flex-wrap justify-center gap-3">
               <button 
                 onClick={() => { setInitialAuthTab("login"); setScreen("access"); }} 
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-400 px-7 py-3.5 text-sm font-bold text-slate-950 shadow-[0_12px_32px_rgba(52,211,153,0.35)] transition duration-200 hover:scale-105 hover:bg-emerald-300 active:scale-95 sm:text-base"
+                className="inline-flex items-center justify-center gap-1.5 rounded-full bg-emerald-400 px-5 py-2.5 text-xs sm:text-sm font-semibold text-slate-950 shadow-[0_8px_24px_rgba(52,211,153,0.3)] transition duration-200 hover:scale-102 hover:bg-emerald-300 active:scale-98"
               >
                 {isArabic ? "اختيار دورك ودخول المساحة" : "Choose your role & enter"}
-                <ArrowUpRight className="h-4 w-4" />
+                <ArrowUpRight className="h-3.5 w-3.5" />
               </button>
 
               <button 
                 onClick={() => scrollTo("admissions-pipeline")} 
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/50 bg-white/10 px-6 py-3.5 text-sm font-bold text-white shadow-[0_8px_24px_rgba(0,0,0,0.3)] backdrop-blur-md transition duration-200 hover:scale-105 hover:bg-white hover:text-slate-950 active:scale-95 sm:text-base"
+                className="inline-flex items-center justify-center gap-1.5 rounded-full border border-white/40 bg-white/10 px-4.5 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-[0_4px_16px_rgba(0,0,0,0.25)] backdrop-blur-md transition duration-200 hover:scale-102 hover:bg-white hover:text-slate-950 active:scale-98"
               >
                 {isArabic ? "استكشاف المنصة والشعب" : "Explore the platform"}
               </button>
@@ -654,7 +655,7 @@ export default function EduPulseApp() {
 
   const visibleNav = navItems.filter((item) => item.roles.includes(role));
   const navigate = (id: string) => { const destination = navItems.find(item => item.id === id); if (!destination || !destination.roles.includes(role)) { toast.error(isArabic ? "لا تملك صلاحية فتح هذه الوحدة." : "You do not have permission to open this module."); return; } if (id === "search") { setSearchOpen(true); setMobileMenu(false); return; } setActiveView(id); setMobileMenu(false); };
-  const dashboardTitle = ({ overview: "صباح واضح.", professor: "مركز قرار الأستاذ والمنهاج الجزائري.", student_intel: "ذكاء الطالب والتحضير للبكالوريا.", research_studio: "أستوديو البحث العلمي وتكاملات MCP.", registration: "تسجيل طالب جديد.", learners: "سجل الطلاب.", subjects: "مكتبة المواد الدراسية.", attendance: "حضور اليوم.", cefr: "تقدم اللغة الإنجليزية.", guardians: "تواصل إنساني واضح.", payments: "مدفوعات وإيصالات.", creator: "استوديو المبدع.", "ai-console": "الذكاء والبيانات العامة.", commerce: "التجارة والخدمات.", reports: "تقارير التقدم.", knowledge: "دليل المؤسسة.", team: "فريق المؤسسة.", ask: "اسأل المؤسسة.", crm: "نظام المعلم.", portal: "بوابة الطالب." } as Record<string, string>)[activeView] ?? "EduPulse";
+  const dashboardTitle = ({ overview: "صباح واضح.", professor: "مركز قرار الأستاذ والمنهاج الجزائري.", student_intel: "ذكاء الطالب والتحضير للبكالوريا.", research_studio: "أستوديو البحث العلمي وتكاملات MCP.", registration: "تسجيل طالب جديد.", learners: "سجل الطلاب.", subjects: "مكتبة المواد الدراسية.", attendance: "حضور اليوم.", cefr: "تقدم اللغة الإنجليزية.", guardians: "تواصل إنساني واضح.", payments: "مدفوعات وإيصالات.", google_workspace: "بيئة Google الموحدة — Sheets, Calendar, Docs, Tasks, Keep, Slides.", creator: "استوديو المبدع.", "ai-console": "الذكاء والبيانات العامة.", reports: "تقارير التقدم.", knowledge: "دليل المؤسسة.", team: "فريق المؤسسة.", ask: "اسأل المؤسسة.", crm: "نظام المعلم.", portal: "بوابة الطالب." } as Record<string, string>)[activeView] ?? "EduPulse";
 
   const renderView = () => {
     if (activeView === "professor") return <ProfessorWorkspace isArabic={isArabic} onNavigate={(view) => setActiveView(view)} />;
@@ -666,7 +667,7 @@ export default function EduPulseApp() {
     if (activeView === "ai-console") return <><SectionHeader eyebrow="AI console · free public data" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">بيانات عامة موثّقة، بلا بيانات طلاب.</em></>} copy="المساعد هنا يستدعي مصادر عامة مجانية (طقس، أسواق، أبحاث تربوية، مكتبة) ويجيب مع توثيق المصدر؛ لا يرسل أي سجل طالب، ولا يخترع جوابًا عند تعذر المصدر." /><AiConsolePanel /></>;
     if (activeView === "portal") return role === "guardian" ? <GuardianPortalPanel isArabic={isArabic} /> : <StudentPortalPanel isArabic={isArabic} />;
     if (activeView === "support-evaluation") return <><SectionHeader eyebrow="Evidence-based teacher support" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">فهم التقدم قبل اتخاذ القرار.</em></>} copy="يعرض هذا التقييم إشارات تعليمية قابلة للمراجعة، ولا يشخّص حالة نفسية أو طبية." /><StudentSupportEvaluationPanel isArabic={isArabic} /></>;
-    if (activeView === "commerce") return <><SectionHeader eyebrow="Medusa commerce boundary" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">خدمات مدفوعة، بحدود واضحة.</em></>} copy="Medusa يدير الكتالوج وحالة التجارة. EduPulse يحتفظ بالمؤسسة وسياق الطالب والصلاحيات." /><MedusaCommercePanel isArabic={isArabic} /></>;
+    if (activeView === "google_workspace") return <GoogleWorkspaceHub isArabic={isArabic} students={data.students} payments={data.payments} />;
     if (activeView === "overview") return <VividDashboard role={role} roleLabel={roleInfo[role].arabic} dateLabel={new Date().toLocaleDateString("ar-DZ", { weekday: "long", day: "numeric", month: "long" })} activeStudents={activeStudents} balanceDue={balanceDue} students={data.students} currentStudent={{ nameAr: currentStudent.nameAr, grade: currentStudent.grade, level: currentStudent.level, attendance: currentStudent.attendance, subjects: currentStudent.subjects.map(subject => subjectName(subject, "ar")) }} onNavigate={navigate} onRegister={() => setRegistrationOpen(true)} />;
 
     if (activeView === "registration") return <><SectionHeader eyebrow="Arabic-first registration" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">ابدأ بالمعلومات التي تحتاجها فقط.</em></>} copy="يتضمن النموذج الطالب وولي الأمر والصف والمواد. يمكن إضافة الحقول الخاصة بالمؤسسة في نسخة قاعدة البيانات المحلية المشفرة." action={<button onClick={() => setRegistrationOpen(true)} className="liquid-glass rounded-full px-5 py-3 text-sm">فتح النموذج</button>} /><RegistrationPanel registration={registration} setRegistration={setRegistration} toggleSubject={toggleSubject} submitRegistration={submitRegistration} /></>;

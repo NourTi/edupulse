@@ -2,13 +2,13 @@
 
 #show: report-theme.with(
   title: "EduPulse Platform Profile",
-  author: "Nour Mohammed Abdessamed",
+  author: "Nour Mohammed Abdessmed",
   rhythm: "report",
   running-header: true,
 )
 
 #set text(font: ("Noto Naskh Arabic", "Times New Roman"), size: 11.5pt)
-#set par(justify: true, leading: 0.82em, spacing: 0.72em, first-line-indent: 0em)
+#set par(justify: true, leading: 0.82em, first-line-indent: 0em)
 #show link: set text(fill: report-accent)
 
 #page(margin: (top: 27%, x: 2.2cm), numbering: none, header: none)[
@@ -25,7 +25,7 @@
     #v(1.2em)
     #text(size: 10pt, fill: luma(100))[Prepared for product, institutional, and educator use]
     #v(2.2em)
-    #text(size: 9pt, fill: luma(105))[Manus AI · 2026]
+    #text(size: 9pt, fill: luma(105))[Nour Mohammed Abdessmed · 2026]
   ]
 ]
 

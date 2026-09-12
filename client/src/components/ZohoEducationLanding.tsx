@@ -1722,7 +1722,7 @@ export function ZohoEducationLanding({ isArabic, onEnterWorkspace, onNavigateToV
           <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1 text-xs font-bold text-blue-200 backdrop-blur-sm mb-6">
             <span>{isArabic ? "جاهز للانطلاق بالموسم الدراسي الجديد" : "Ready for the 2026/2027 Academic Year"}</span>
           </div>
-          <h2 className="text-3xl font-extrabold tracking-tight sm:text-5xl font-display leading-[1.15]">
+          <h2 className="text-xl font-bold tracking-tight sm:text-3xl lg:text-4xl font-display leading-snug">
             {isArabic ? (
               <>
                 ارتقِ بإدارة مؤسستك التعليمية اليوم
@@ -1737,23 +1737,23 @@ export function ZohoEducationLanding({ isArabic, onEnterWorkspace, onNavigateToV
               </>
             )}
           </h2>
-          <p className="mt-5 text-base text-blue-100 max-w-2xl mx-auto leading-relaxed">
+          <p className="mt-3 text-xs sm:text-sm text-blue-100 max-w-xl mx-auto leading-relaxed">
             {isArabic
               ? "انضم إلى بيئة EduPulse المتكاملة. ابدأ بتجربة الأدوار، إدارة الأفواج، ومحاكي البكالوريا بنقرة واحدة."
               : "Launch your institutional workspace. Experience role-based cockpits, official curriculum planning, and BAC preparation tools."}
           </p>
 
-          <div className="mt-10 flex flex-wrap justify-center gap-4">
+          <div className="mt-7 flex flex-wrap justify-center gap-3">
             <button
               onClick={() => onEnterWorkspace("admin")}
-              className="rounded-xl bg-white px-8 py-4 text-sm font-extrabold text-blue-900 shadow-lg transition hover:bg-blue-50 hover:scale-[1.02] active:scale-[0.98]"
+              className="rounded-lg bg-white px-5 py-2.5 text-xs sm:text-sm font-semibold text-blue-900 shadow-md transition hover:bg-blue-50 active:scale-[0.98]"
             >
               {isArabic ? "الدخول لمساحة المؤسسة الآن" : "Launch Institution Workspace"}
-              <ArrowUpRight className="inline h-4 w-4 mr-1" />
+              <ArrowUpRight className="inline h-3.5 w-3.5 mr-1" />
             </button>
             <button
               onClick={() => onEnterWorkspace("teacher")}
-              className="rounded-xl border border-white/30 bg-white/10 px-8 py-4 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white/20"
+              className="rounded-lg border border-white/30 bg-white/10 px-5 py-2.5 text-xs sm:text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20 active:scale-[0.98]"
             >
               {isArabic ? "تجربة مركز قرار الأستاذ" : "Open Professor Cockpit"}
             </button>
