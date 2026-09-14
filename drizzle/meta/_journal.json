@@ -92,6 +92,13 @@
       "when": 1788562007417,
       "tag": "0012_creator_studio",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "5",
+      "when": 1788565000000,
+      "tag": "0013_learner_avatar_url",
+      "breakpoints": true
     }
   ]
 }

@@ -6,6 +6,9 @@
 dist/
 build/
 *.dist
+desktop-dist/
+client/desktop-dist/
+src-tauri/target/
 
 # Environment variables
 .env

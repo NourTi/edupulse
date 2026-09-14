@@ -49,11 +49,31 @@ const trpcClient = trpc.createClient({
         }
         return {};
       },
-      fetch(input, init) {
-        return globalThis.fetch(input, {
+      async fetch(input, init) {
+        const res = await globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
         });
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("application/json") && !contentType.includes("application/trpc")) {
+          const text = await res.text();
+          if (text.trim().startsWith("<")) {
+            return new Response(
+              JSON.stringify([{
+                error: {
+                  message: "الخادم قيد الإعداد أو قيد إعادة التشغيل. يرجى الانتظار...",
+                  data: { code: "SERVICE_UNAVAILABLE", httpStatus: res.status }
+                }
+              }]),
+              {
+                status: res.status === 200 ? 503 : res.status,
+                headers: { "content-type": "application/json" },
+              }
+            );
+          }
+          return new Response(text, { status: res.status, headers: res.headers });
+        }
+        return res;
       },
     }),
   ],

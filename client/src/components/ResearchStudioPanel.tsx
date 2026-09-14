@@ -34,8 +34,12 @@ import {
   Lightbulb,
   Copy,
   Paperclip,
+  Network,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ConnectedPapersGraphView } from "./ConnectedPapersGraphView";
+import { AcademicSearchExplorerPanel } from "./AcademicSearchExplorerPanel";
+import { DirectDocumentDownloaderPanel } from "./DirectDocumentDownloaderPanel";
 import {
   ACADEMIC_RESEARCH_FIELDS,
   READY_GOOGLE_SLIDES_TEMPLATES,
@@ -124,8 +128,8 @@ const ACADEMIC_PAPERS: SummarizedPaper[] = [
 export function ResearchStudioPanel({ isArabic }: { isArabic: boolean }) {
   // Main Navigation Tabs
   const [activeTab, setActiveTab] = useState<
-    "literature" | "slides" | "sheets" | "summarizer" | "roadmap" | "github" | "seminar"
-  >("literature");
+    "graph" | "academic_search" | "downloader" | "literature" | "slides" | "sheets" | "summarizer" | "roadmap" | "github" | "seminar"
+  >("graph");
 
   // Filter state
   const [selectedFieldId, setSelectedFieldId] = useState<string>("english_linguistics");
@@ -360,6 +364,9 @@ export function ResearchStudioPanel({ isArabic }: { isArabic: boolean }) {
         {/* Tab Navigation */}
         <div className="flex flex-wrap gap-2 border-t border-slate-100 mt-6 pt-4">
           {[
+            { id: "graph", label: isArabic ? "الرسم البياني للأوراق المتصلة" : "Connected Papers Graph", icon: Network, featured: true },
+            { id: "academic_search", label: isArabic ? "محرك البحث الأكاديمي الموحد" : "Academic Multi-Search", icon: Search },
+            { id: "downloader", label: isArabic ? "محمّل المستندات والأبحاث المباشر" : "Direct Document Downloader", icon: Download },
             { id: "literature", label: isArabic ? "مختبر الأدبيات والدراسات السابقة" : "Literature Review Lab", icon: BookOpen },
             { id: "slides", label: isArabic ? "عروض Google Slides وقوالب المناقشة" : "Google Slides Builder", icon: Presentation },
             { id: "sheets", label: isArabic ? "مصفوفات Google Sheets والعينات" : "Google Sheets Matrices", icon: FileSpreadsheet },
@@ -377,6 +384,8 @@ export function ResearchStudioPanel({ isArabic }: { isArabic: boolean }) {
                 className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition ${
                   active
                     ? "bg-blue-600 text-white shadow-xs"
+                    : tab.featured
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100/80"
                     : "bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200/80"
                 }`}
               >
@@ -387,6 +396,32 @@ export function ResearchStudioPanel({ isArabic }: { isArabic: boolean }) {
           })}
         </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* TAB: CONNECTED PAPERS VISUAL GRAPH */}
+      {/* ========================================================================= */}
+      {activeTab === "graph" && (
+        <ConnectedPapersGraphView isArabic={isArabic} />
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: UNIFIED ACADEMIC SEARCH ENGINE */}
+      {/* ========================================================================= */}
+      {activeTab === "academic_search" && (
+        <AcademicSearchExplorerPanel
+          isArabic={isArabic}
+          onSelectForGraph={(identifier) => {
+            setActiveTab("graph");
+          }}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: DIRECT DOCUMENT DOWNLOADER (SCRIBD & RESEARCH PAPERS) */}
+      {/* ========================================================================= */}
+      {activeTab === "downloader" && (
+        <DirectDocumentDownloaderPanel isArabic={isArabic} />
+      )}
 
       {/* ========================================================================= */}
       {/* TAB 1: LITERATURE REVIEW LAB & SEARCH */}

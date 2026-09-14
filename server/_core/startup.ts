@@ -39,5 +39,15 @@ export async function runStartupMigration() {
   // `SERIAL` alias emitted by Drizzle's generic mysql2 migrator.
   await ensureTiDBMigrationTable(db);
   await migrate(db, { migrationsFolder: path.resolve(process.cwd(), "drizzle") });
+  
+  // Ensure learners.avatarUrl column exists in all deployed environments
+  try {
+    await db.execute(sql.raw("ALTER TABLE `learners` ADD COLUMN IF NOT EXISTS `avatarUrl` MEDIUMTEXT;"));
+  } catch {
+    try {
+      await db.execute(sql.raw("ALTER TABLE `learners` ADD COLUMN `avatarUrl` MEDIUMTEXT;"));
+    } catch (_) {}
+  }
+
   console.log("[Database] Startup migrations applied successfully.");
 }

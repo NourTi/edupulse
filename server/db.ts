@@ -390,7 +390,46 @@ export async function activateMembership(userId: number, institutionId: string) 
 export async function createLearner(input: typeof learners.$inferInsert) {
   const db = await getDb();
   if (!db) throw new Error("Database is unavailable.");
-  await db.insert(learners).values(input);
+  try {
+    await db.insert(learners).values(input);
+  } catch (error) {
+    const errorStr = String(error);
+    console.warn(`[createLearner error, attempting auto-heal]: ${errorStr}`);
+
+    const isColumnMissing =
+      errorStr.includes("avatarUrl") ||
+      errorStr.includes("Unknown column") ||
+      errorStr.includes("ER_BAD_FIELD_ERROR") ||
+      errorStr.includes("no such column");
+
+    const isDataTooLong =
+      errorStr.includes("Data too long") ||
+      errorStr.includes("ER_DATA_TOO_LONG") ||
+      errorStr.includes("value too long");
+
+    if (isColumnMissing || isDataTooLong) {
+      // 1. Try to add or enlarge the column in the database
+      try {
+        await db.execute(sql.raw("ALTER TABLE `learners` ADD COLUMN `avatarUrl` MEDIUMTEXT;"));
+      } catch {
+        try {
+          await db.execute(sql.raw("ALTER TABLE `learners` MODIFY COLUMN `avatarUrl` MEDIUMTEXT;"));
+        } catch {}
+      }
+
+      // 2. Retry with full input
+      try {
+        await db.insert(learners).values(input);
+      } catch (retryError) {
+        console.warn("[createLearner retry with avatarUrl failed, inserting without avatarUrl to protect student record]", retryError);
+        // Fallback: exclude avatarUrl to ensure the learner record is ALWAYS saved
+        const { avatarUrl, ...inputWithoutAvatar } = input;
+        await db.insert(learners).values(inputWithoutAvatar as any);
+      }
+    } else {
+      throw error;
+    }
+  }
   return db.select().from(learners).where(eq(learners.id, input.id)).limit(1).then(rows => rows[0]);
 }
 

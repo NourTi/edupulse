@@ -50,6 +50,7 @@ export const ALGERIAN_DETAILED_GRADES: AlgerianGradeOption[] = [
   { id: "univ-l3", cycleAr: "التعليم العالي", gradeAr: "جامعي · تخرج ليسانس (L3)", en: "University L3 (Degree)" },
   { id: "univ-m1", cycleAr: "التعليم العالي", gradeAr: "جامعي · ماستر أبحاث / تخصص (M1)", en: "University M1" },
   { id: "univ-m2", cycleAr: "التعليم العالي", gradeAr: "جامعي · ماستر مناقشة المذكرة (M2)", en: "University M2 (Defense)" },
+  { id: "univ-phd", cycleAr: "التعليم العالي والبحث العلمي", gradeAr: "جامعي · طور الدكتوراه وبحث الأطروحة (PhD)", en: "Doctoral Research (PhD)" },
 ];
 
 export const AVAILABLE_SUBJECTS = [
@@ -126,19 +127,19 @@ export function AddStudentModal({ isOpen, onClose, isArabic, onStudentCreated }:
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement("canvas");
-        const MAX_WIDTH = 320;
-        const MAX_HEIGHT = 320;
+        const MAX_WIDTH = 160;
+        const MAX_HEIGHT = 160;
         let width = img.width;
         let height = img.height;
 
         if (width > height) {
           if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
+            height = Math.round(height * (MAX_WIDTH / width));
             width = MAX_WIDTH;
           }
         } else {
           if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
+            width = Math.round(width * (MAX_HEIGHT / height));
             height = MAX_HEIGHT;
           }
         }
@@ -148,7 +149,7 @@ export function AddStudentModal({ isOpen, onClose, isArabic, onStudentCreated }:
         const ctx = canvas.getContext("2d");
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
-          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.75);
           setAvatarDataUrl(compressedDataUrl);
         } else {
           setAvatarDataUrl(event.target?.result as string);

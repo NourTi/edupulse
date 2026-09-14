@@ -7,9 +7,11 @@ import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import {
+  Activity,
   ArrowLeft,
   ArrowUpRight,
   BarChart3,
+  Binary,
   Brain,
   BrainCircuit,
   Bell,
@@ -29,6 +31,8 @@ import {
   GraduationCap,
   MessageCircleQuestion,
   PackageOpen,
+  Palette,
+  Phone,
   LayoutDashboard,
   LibraryBig,
   Loader2,
@@ -79,6 +83,16 @@ import CreatorStudioPanel from "./creator/CreatorStudioPanel";
 import { ProfessorWorkspace } from "./ProfessorWorkspace";
 import { StudentIntelligencePanel } from "./StudentIntelligencePanel";
 import { ResearchStudioPanel } from "./ResearchStudioPanel";
+import { StudivexaHub } from "./studivexa/StudivexaHub";
+import { BookAndDocumentDownloader } from "./academic/BookAndDocumentDownloader";
+import { CollegeScorecardGuidance } from "./academic/CollegeScorecardGuidance";
+import { CurriculumTemplateStudio } from "./academic/CurriculumTemplateStudio";
+import { WolframStemSolver } from "./academic/WolframStemSolver";
+import { PersonalityProfiler } from "./academic/PersonalityProfiler";
+import { OsfResearchGateway } from "./academic/OsfResearchGateway";
+import { CambridgeEnglishStudio } from "./academic/CambridgeEnglishStudio";
+import { CloneDashboardView } from "./dashboard/CloneDashboardView";
+import { PhoneVerificationModal } from "./auth/PhoneVerificationModal";
 
 type Screen = "landing" | "access" | "workspace";
 type Role = "admin" | "finance_admin" | "registrar" | "teacher" | "counsellor" | "student" | "guardian";
@@ -249,6 +263,7 @@ export default function EduPulseApp() {
   const [registrationOpen, setRegistrationOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [phoneModalOpen, setPhoneModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileMenu, setMobileMenu] = useState(false);
   const [registration, setRegistration] = useState({ nameAr: "", name: "", guardian: "", phone: "", grade: "primary", subjects: ["arabic", "english", "mathematics"] });
@@ -486,6 +501,15 @@ export default function EduPulseApp() {
 
   const navItems = [
     { id: "overview", label: "نظرة عامة", icon: LayoutDashboard, roles: ["admin", "teacher", "student"] },
+    { id: "clone_dashboard", label: "لوحة التحكم والـ APIs", icon: Activity, roles: ["admin", "teacher", "student", "guardian", "registrar", "finance_admin", "counsellor"] },
+    { id: "cambridge_lexicon", label: "قاموس كامبريدج والصوتيات IPA", icon: BookOpen, roles: ["admin", "teacher", "student", "counsellor"] },
+    { id: "studivexa", label: "منصة Studivexa للطلبة", icon: Brain, roles: ["admin", "teacher", "student", "guardian"] },
+    { id: "book_downloader", label: "تنزيل الكتب و Archive.org", icon: Download, roles: ["admin", "teacher", "student", "counsellor"] },
+    { id: "template_studio", label: "استوديو APITemplate و Quoterism", icon: Palette, roles: ["admin", "teacher", "counsellor"] },
+    { id: "scorecard_guidance", label: "توجيه الثانوي College Scorecard", icon: GraduationCap, roles: ["admin", "teacher", "student", "counsellor"] },
+    { id: "osf_gateway", label: "بوابة أبحاث OSF المفتوحة", icon: Database, roles: ["admin", "teacher", "counsellor"] },
+    { id: "wolfram_stem", label: "محرك Wolfram|Alpha الحسابي", icon: Binary, roles: ["admin", "teacher", "student"] },
+    { id: "personality_profiler", label: "الملف النفسي Personality.fyi", icon: Sparkles, roles: ["admin", "teacher", "counsellor"] },
     { id: "professor", label: "مركز قرار الأستاذ", icon: Brain, roles: ["admin", "teacher", "counsellor"] },
     { id: "student_intel", label: "ذكاء الطالب والبكالوريا", icon: Sparkles, roles: ["admin", "teacher", "student", "guardian"] },
     { id: "research_studio", label: "أستوديو البحث وMCP", icon: Search, roles: ["admin", "teacher", "counsellor"] },
@@ -655,9 +679,48 @@ export default function EduPulseApp() {
 
   const visibleNav = navItems.filter((item) => item.roles.includes(role));
   const navigate = (id: string) => { const destination = navItems.find(item => item.id === id); if (!destination || !destination.roles.includes(role)) { toast.error(isArabic ? "لا تملك صلاحية فتح هذه الوحدة." : "You do not have permission to open this module."); return; } if (id === "search") { setSearchOpen(true); setMobileMenu(false); return; } setActiveView(id); setMobileMenu(false); };
-  const dashboardTitle = ({ overview: "صباح واضح.", professor: "مركز قرار الأستاذ والمنهاج الجزائري.", student_intel: "ذكاء الطالب والتحضير للبكالوريا.", research_studio: "أستوديو البحث العلمي وتكاملات MCP.", registration: "تسجيل طالب جديد.", learners: "سجل الطلاب.", subjects: "مكتبة المواد الدراسية.", attendance: "حضور اليوم.", cefr: "تقدم اللغة الإنجليزية.", guardians: "تواصل إنساني واضح.", payments: "مدفوعات وإيصالات.", google_workspace: "بيئة Google الموحدة — Sheets, Calendar, Docs, Tasks, Keep, Slides.", creator: "استوديو المبدع.", "ai-console": "الذكاء والبيانات العامة.", reports: "تقارير التقدم.", knowledge: "دليل المؤسسة.", team: "فريق المؤسسة.", ask: "اسأل المؤسسة.", crm: "نظام المعلم.", portal: "بوابة الطالب." } as Record<string, string>)[activeView] ?? "EduPulse";
+  const dashboardTitle = ({
+    overview: "صباح واضح.",
+    clone_dashboard: "لوحة التحكم الحية وواجهات الـ APIs ومفاتيح الربط.",
+    cambridge_lexicon: "قاموس كامبريدج وكاشط الصوتيات IPA لأساتذة الإنجليزية (Apify).",
+    studivexa: "منصة Studivexa للطلبة ومساعد المذاكرة الذكي.",
+    book_downloader: "بوابة تنزيل الكتب والأوراق العلمية وأرشيف الإنترنت.",
+    template_studio: "استوديو توليد القوالب الرسمية وحكم Quoterism.",
+    scorecard_guidance: "توجيه مؤسسات التعليم الثانوي والعالي (College Scorecard).",
+    osf_gateway: "بوابة الأبحاث والبيانات الأكاديمية المفتوحة (OSF).",
+    wolfram_stem: "المحرك الحسابي التفاعلي للعلوم والرياضيات (Wolfram|Alpha).",
+    personality_profiler: "الملف السلوكي والمعرفي والشخصي (Personality.fyi).",
+    professor: "مركز قرار الأستاذ والمنهاج الجزائري.",
+    student_intel: "ذكاء الطالب والتحضير للبكالوريا.",
+    research_studio: "أستوديو البحث العلمي وتكاملات MCP.",
+    registration: "تسجيل طالب جديد.",
+    learners: "سجل الطلاب.",
+    subjects: "مكتبة المواد الدراسية.",
+    attendance: "حضور اليوم.",
+    cefr: "تقدم اللغة الإنجليزية.",
+    guardians: "تواصل إنساني واضح.",
+    payments: "مدفوعات وإيصالات.",
+    google_workspace: "بيئة Google الموحدة — Sheets, Calendar, Docs, Tasks, Keep, Slides.",
+    creator: "استوديو المبدع.",
+    "ai-console": "الذكاء والبيانات العامة.",
+    reports: "تقارير التقدم.",
+    knowledge: "دليل المؤسسة.",
+    team: "فريق المؤسسة.",
+    ask: "اسأل المؤسسة.",
+    crm: "نظام المعلم.",
+    portal: "بوابة الطالب."
+  } as Record<string, string>)[activeView] ?? "EduPulse";
 
   const renderView = () => {
+    if (activeView === "clone_dashboard") return <CloneDashboardView isArabic={isArabic} onOpenPhoneModal={() => setPhoneModalOpen(true)} onNavigateTab={(tab) => setActiveView(tab)} />;
+    if (activeView === "cambridge_lexicon") return <CambridgeEnglishStudio isArabic={isArabic} />;
+    if (activeView === "studivexa") return <StudivexaHub isArabic={isArabic} />;
+    if (activeView === "book_downloader") return <BookAndDocumentDownloader isArabic={isArabic} />;
+    if (activeView === "template_studio") return <CurriculumTemplateStudio isArabic={isArabic} />;
+    if (activeView === "scorecard_guidance") return <CollegeScorecardGuidance isArabic={isArabic} />;
+    if (activeView === "osf_gateway") return <OsfResearchGateway isArabic={isArabic} />;
+    if (activeView === "wolfram_stem") return <WolframStemSolver isArabic={isArabic} />;
+    if (activeView === "personality_profiler") return <PersonalityProfiler isArabic={isArabic} />;
     if (activeView === "professor") return <ProfessorWorkspace isArabic={isArabic} onNavigate={(view) => setActiveView(view)} />;
     if (activeView === "student_intel") return <StudentIntelligencePanel isArabic={isArabic} />;
     if (activeView === "research_studio") return <ResearchStudioPanel isArabic={isArabic} />;
@@ -694,7 +757,38 @@ export default function EduPulseApp() {
 
   if (searchOpen) return <LocalSearchOverlay query={searchQuery} results={searchResults} onQueryChange={setSearchQuery} onClose={() => setSearchOpen(false)} onSelect={(destination) => { navigate(destination); setSearchOpen(false); setSearchQuery(""); }} />;
 
-  return <main className="min-h-screen bg-[hsl(201_100%_13%)] text-white" dir={direction}><div className="mx-auto flex min-h-screen max-w-[1600px]"><aside className={`fixed inset-y-0 z-40 w-72 border-l border-white/10 bg-[#00364A] px-5 py-6 transition-transform lg:static lg:translate-x-0 ${mobileMenu ? "translate-x-0" : "translate-x-full"} ${direction === "ltr" ? "right-auto left-0 lg:border-r lg:border-l-0" : "right-0"}`}><button onClick={() => setScreen("landing")} className="mb-12 flex items-center gap-3 text-right"><LogoMark className="h-9 w-9" /><span className="text-display text-3xl">EduPulse<sup className="text-xs align-top">•</sup></span></button><div className="mb-7 flex items-center justify-between"><div><p className="text-xs text-white/45">الدور الحالي</p><p className="mt-1 text-sm">{roleInfo[role].arabic}</p></div><button onClick={() => setScreen("access")} className="rounded-full p-2 text-white/55 hover:bg-white/7 hover:text-white" title="Change role"><ChevronRight className="h-4 w-4" /></button></div><nav className="space-y-1">{visibleNav.map((item) => { const Icon = item.icon; return <button key={item.id} onClick={() => navigate(item.id)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${activeView === item.id ? "bg-white text-[#00364A]" : "text-white/55 hover:bg-white/6 hover:text-white"}`}><Icon className="h-4 w-4" />{item.label}</button>; })}</nav><div className="mt-auto absolute inset-x-5 bottom-6 surface-panel rounded-2xl p-4"><div className="flex items-center gap-2 text-sm"><ShieldCheck className="h-4 w-4 text-emerald-200" />{desktopRuntime ? "تطبيق سطح المكتب" : "سجل محلي"}</div><p className="mt-2 text-xs leading-5 text-white/55">{desktopRuntime ? "تُحفظ النسخ الاحتياطية في موقع تختاره على جهازك." : "واجهة دور محلي للتجربة. تصدير ونسخ احتياطي جاهزان للمراجعة."}</p><button onClick={downloadBackup} className="mt-4 flex w-full items-center justify-between border-t border-white/10 pt-3 text-xs text-white/75 hover:text-white">تصدير السجل <Download className="h-3.5 w-3.5" /></button></div></aside>{mobileMenu && <button onClick={() => setMobileMenu(false)} className="fixed inset-0 z-30 bg-black/55 lg:hidden" aria-label="Close navigation" />}<section className="workspace-scope min-w-0 flex-1 px-5 py-5 lg:px-8 lg:py-7"><header className="mb-10 flex items-center justify-between gap-4"><div className="flex items-center gap-3 lg:hidden"><button onClick={() => setMobileMenu(true)} className="liquid-glass rounded-full p-2.5"><Menu className="h-4 w-4" /></button><LogoMark className="h-8 w-8" /></div><div className="hidden max-w-md flex-1 items-center gap-2 rounded-full border border-white/10 bg-white/4 px-4 py-2 text-sm text-white/45 md:flex"><Search className="h-4 w-4" />بحث في السجل المحلي <span className="mr-auto rounded border border-white/10 px-1.5 py-0.5 text-[10px]">⌘ K</span></div><div className="mr-auto flex items-center gap-2"><button onClick={() => setLanguage(isArabic ? "en" : "ar")} className="rounded-full px-3 py-2 text-xs text-white/60 hover:text-white">{isArabic ? "EN" : "العربية"}</button><button onClick={() => toast.info("التنبيهات ستظهر عند تفعيل قائمة المهام في نسخة سطح المكتب.")} className="relative rounded-full p-2.5 text-white/70 hover:bg-white/6 hover:text-white"><Bell className="h-5 w-5" /><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-amber-200" /></button><button onClick={() => { setScreen("landing"); toast.info("تم إنهاء جلسة الدور المحلي."); }} className="rounded-full p-2.5 text-white/60 hover:bg-white/6 hover:text-white" title="Logout"><LogOut className="h-5 w-5" /></button></div></header>{loading ? <div className="flex min-h-[60vh] items-center justify-center text-white/60"><span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" /> <span className="mr-3">فتح السجل المحلي</span></div> : renderView()}</section></div>{registrationOpen && <Modal title="تسجيل طالب جديد" onClose={() => setRegistrationOpen(false)}><RegistrationPanel registration={registration} setRegistration={setRegistration} toggleSubject={toggleSubject} submitRegistration={submitRegistration} compact /></Modal>}{paymentOpen && <Modal title="تسجيل دفعة" onClose={() => setPaymentOpen(false)}><form onSubmit={savePayment} className="space-y-5"><label className="block text-xs text-white/50">الطالب<select value={paymentForm.studentId} onChange={(event) => setPaymentForm({ ...paymentForm, studentId: event.target.value })} className="mt-2 w-full control-light px-4 py-3 text-sm">{data.students.map((student) => <option key={student.id} value={student.id}>{student.nameAr}</option>)}</select></label><label className="block text-xs text-white/50">المبلغ (د.ج)<input value={paymentForm.amount} inputMode="numeric" onChange={(event) => setPaymentForm({ ...paymentForm, amount: event.target.value })} className="mt-2 w-full control-light px-4 py-3 text-sm" placeholder="مثال: 6000" /></label><label className="block text-xs text-white/50">طريقة الدفع<select value={paymentForm.method} onChange={(event) => setPaymentForm({ ...paymentForm, method: event.target.value })} className="mt-2 w-full control-light px-4 py-3 text-sm"><option>Cash</option><option>Bank transfer</option><option>Cheque</option></select></label><button className="liquid-glass w-full rounded-full px-5 py-3 text-sm">حفظ الدفعة وإنشاء إيصال</button></form></Modal>}</main>;
+  return <main className="min-h-screen bg-[hsl(201_100%_13%)] text-white" dir={direction}><div className="mx-auto flex min-h-screen max-w-[1600px]"><aside className={`fixed inset-y-0 z-40 w-72 border-l border-white/10 bg-[#00364A] px-5 py-6 transition-transform lg:static lg:translate-x-0 ${mobileMenu ? "translate-x-0" : "translate-x-full"} ${direction === "ltr" ? "right-auto left-0 lg:border-r lg:border-l-0" : "right-0"}`}><button onClick={() => setScreen("landing")} className="mb-12 flex items-center gap-3 text-right"><LogoMark className="h-9 w-9" /><span className="text-display text-3xl">EduPulse<sup className="text-xs align-top">•</sup></span></button><div className="mb-7 flex items-center justify-between"><div><p className="text-xs text-white/45">الدور الحالي</p><p className="mt-1 text-sm">{roleInfo[role].arabic}</p></div><button onClick={() => setScreen("access")} className="rounded-full p-2 text-white/55 hover:bg-white/7 hover:text-white" title="Change role"><ChevronRight className="h-4 w-4" /></button></div><nav className="space-y-1">{visibleNav.map((item) => { const Icon = item.icon; return <button key={item.id} onClick={() => navigate(item.id)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${activeView === item.id ? "bg-white text-[#00364A]" : "text-white/55 hover:bg-white/6 hover:text-white"}`}><Icon className="h-4 w-4" />{item.label}</button>; })}</nav><div className="mt-auto absolute inset-x-5 bottom-6 surface-panel rounded-2xl p-4"><div className="flex items-center gap-2 text-sm"><ShieldCheck className="h-4 w-4 text-emerald-200" />{desktopRuntime ? "تطبيق سطح المكتب" : "سجل محلي"}</div><p className="mt-2 text-xs leading-5 text-white/55">{desktopRuntime ? "تُحفظ النسخ الاحتياطية في موقع تختاره على جهازك." : "واجهة دور محلي للتجربة. تصدير ونسخ احتياطي جاهزان للمراجعة."}</p><button onClick={downloadBackup} className="mt-4 flex w-full items-center justify-between border-t border-white/10 pt-3 text-xs text-white/75 hover:text-white">تصدير السجل <Download className="h-3.5 w-3.5" /></button></div></aside>{mobileMenu && <button onClick={() => setMobileMenu(false)} className="fixed inset-0 z-30 bg-black/55 lg:hidden" aria-label="Close navigation" />}<section className="workspace-scope min-w-0 flex-1 px-5 py-5 lg:px-8 lg:py-7"><header className="mb-10 flex items-center justify-between gap-4"><div className="flex items-center gap-3 lg:hidden"><button onClick={() => setMobileMenu(true)} className="liquid-glass rounded-full p-2.5"><Menu className="h-4 w-4" /></button><LogoMark className="h-8 w-8" /></div><div className="hidden max-w-md flex-1 items-center gap-2 rounded-full border border-white/10 bg-white/4 px-4 py-2 text-sm text-white/45 md:flex"><Search className="h-4 w-4" />بحث في السجل المحلي <span className="mr-auto rounded border border-white/10 px-1.5 py-0.5 text-[10px]">⌘ K</span></div>          <div className="mr-auto flex items-center gap-2">
+            <button
+              onClick={() => setPhoneModalOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-white/85 hover:bg-white/10 hover:text-white transition"
+              title={isArabic ? "التحقق بالهاتف - NumLookup" : "Phone Verification"}
+            >
+              <Phone className="h-3.5 w-3.5 text-blue-300" />
+              <span className="hidden md:inline">{isArabic ? "التحقق بالهاتف" : "Phone OTP"}</span>
+            </button>
+            <button
+              onClick={() => setActiveView("clone_dashboard")}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition ${
+                activeView === "clone_dashboard"
+                  ? "bg-blue-600 text-white font-semibold shadow-sm"
+                  : "border border-white/15 bg-white/5 text-white/85 hover:bg-white/10"
+              }`}
+            >
+              <Activity className="h-3.5 w-3.5 text-emerald-300" />
+              <span className="hidden md:inline">{isArabic ? "لوحة المؤشرات" : "Live API"}</span>
+            </button>
+            <button onClick={() => setLanguage(isArabic ? "en" : "ar")} className="rounded-full px-3 py-2 text-xs text-white/60 hover:text-white">{isArabic ? "EN" : "العربية"}</button>
+            <button onClick={() => toast.info("التنبيهات ستظهر عند تفعيل قائمة المهام في نسخة سطح المكتب.")} className="relative rounded-full p-2.5 text-white/70 hover:bg-white/6 hover:text-white"><Bell className="h-5 w-5" /><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-amber-200" /></button>
+            <button onClick={() => { setScreen("landing"); toast.info("تم إنهاء جلسة الدور المحلي."); }} className="rounded-full p-2.5 text-white/60 hover:bg-white/6 hover:text-white" title="Logout"><LogOut className="h-5 w-5" /></button>
+          </div>
+        </header>
+        {loading ? <div className="flex min-h-[60vh] items-center justify-center text-white/60"><span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" /> <span className="mr-3">فتح السجل المحلي</span></div> : renderView()}
+      </section>
+    </div>
+    {registrationOpen && <Modal title="تسجيل طالب جديد" onClose={() => setRegistrationOpen(false)}><RegistrationPanel registration={registration} setRegistration={setRegistration} toggleSubject={toggleSubject} submitRegistration={submitRegistration} compact /></Modal>}
+    {paymentOpen && <Modal title="تسجيل دفعة" onClose={() => setPaymentOpen(false)}><form onSubmit={savePayment} className="space-y-5"><label className="block text-xs text-white/50">الطالب<select value={paymentForm.studentId} onChange={(event) => setPaymentForm({ ...paymentForm, studentId: event.target.value })} className="mt-2 w-full control-light px-4 py-3 text-sm">{data.students.map((student) => <option key={student.id} value={student.id}>{student.nameAr}</option>)}</select></label><label className="block text-xs text-white/50">المبلغ (د.ج)<input value={paymentForm.amount} inputMode="numeric" onChange={(event) => setPaymentForm({ ...paymentForm, amount: event.target.value })} className="mt-2 w-full control-light px-4 py-3 text-sm" placeholder="مثال: 6000" /></label><label className="block text-xs text-white/50">طريقة الدفع<select value={paymentForm.method} onChange={(event) => setPaymentForm({ ...paymentForm, method: event.target.value })} className="mt-2 w-full control-light px-4 py-3 text-sm"><option>Cash</option><option>Bank transfer</option><option>Cheque</option></select></label><button className="liquid-glass w-full rounded-full px-5 py-3 text-sm">حفظ الدفعة وإنشاء إيصال</button></form></Modal>}
+    <PhoneVerificationModal isOpen={phoneModalOpen} onClose={() => setPhoneModalOpen(false)} isArabic={isArabic} />
+  </main>;
 }
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {

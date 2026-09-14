@@ -68,6 +68,12 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
+
+  // Direct Document & Research Paper Proxy Route (Scribd & Open Access Papers)
+  app.get("/api/academic/file-proxy", async (req, res) => {
+    const { handleFileProxy } = await import("../knowledge/documentDownloader");
+    await handleFileProxy(req, res);
+  });
   app.get("/api/health/database", async (_req, res) => {
     const health = await checkDatabaseHealth();
     res.status(health.reachable ? 200 : 503).json({ service: "database", ...health });
@@ -102,6 +108,12 @@ async function startServer() {
       createContext,
     })
   );
+
+  // Catch-all 404 for unhandled API requests (must always return JSON, never HTML)
+  app.all("/api/*", (_req, res) => {
+    res.status(404).json({ error: "API endpoint not found", code: "NOT_FOUND" });
+  });
+
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
@@ -109,7 +121,9 @@ async function startServer() {
     serveStatic(app);
   }
 
-  const port = parseInt(process.env.PORT || "3000", 10);
+  // In this environment, nginx listens on 8080 and proxies traffic to 3000.
+  // We must bind to port 3000 (never attempt to bind to 8080 which causes EADDRINUSE).
+  const port = process.env.PORT && process.env.PORT !== "8080" ? parseInt(process.env.PORT, 10) : 3000;
   server.listen(port, "0.0.0.0", () => {
     console.log(`Server running on http://0.0.0.0:${port}/`);
   });

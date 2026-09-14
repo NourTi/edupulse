@@ -3,6 +3,7 @@
   "appId": "1:151793149234:web:19d7e18263f0ba8571632b",
   "apiKey": "AIzaSyBA5Z4_PwSPHN1rFrPnmvG_fsv3euMCPsU",
   "authDomain": "future-coyote-qpqwl.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-edupulse-cf88162f-0346-4f2e-8f11-31e25fd95274",
   "storageBucket": "future-coyote-qpqwl.firebasestorage.app",
   "messagingSenderId": "151793149234",
   "measurementId": "",

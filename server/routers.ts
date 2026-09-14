@@ -81,6 +81,21 @@ import { commerceReportCsv, subscriptionCycleDays } from "./commerce/reporting";
 import { buildSupportEvaluation } from "./ai/evaluation";
 import { freeDataHealth } from "./knowledge/freeData";
 import { buildPolishPrompt, planConsoleTurn, runConsoleTool, shouldPolish as shouldPolishConsole } from "./knowledge/aiConsole";
+import { searchAcademicHub, buildConnectedPapersGraph } from "./knowledge/academicSearch";
+import { resolveDocument } from "./knowledge/documentDownloader";
+import { searchArchiveOrg, getArchiveItemMetadata } from "./integrations/archiveOrg";
+import { searchCollegeScorecard } from "./integrations/collegeScorecard";
+import { searchOsfShare } from "./integrations/osfShare";
+import { ALGERIAN_CURRICULUM_TEMPLATES, renderTemplateWithApiTemplate } from "./integrations/apiTemplate";
+import { queryWolframAlphaLLM } from "./integrations/wolframAlpha";
+import { evaluateStudentPersonality } from "./integrations/personalityFyi";
+import { fetchLessonQuote } from "./integrations/quoterism";
+import { validateAndSendPhoneVerification, verifyPhoneOtp } from "./integrations/numLookup";
+import {
+  searchCambridgeDictionary,
+  fetchApifyDatasetItems,
+  triggerCambridgeScraperRun,
+} from "./integrations/cambridgeDictionary";
 
 const schoolRoles = ["owner", "admin", "registrar", "finance_admin", "teacher", "counsellor", "student", "guardian"] as const;
 type SchoolRole = (typeof schoolRoles)[number];
@@ -480,14 +495,39 @@ export const appRouter = router({
     })).mutation(async ({ ctx, input }) => {
       const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
       await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "registrar", "teacher"]);
+      const learnerId = `learner_${nanoid(16)}`;
+      let finalAvatarUrl: string | undefined = undefined;
+
+      if (input.avatarDataUrl && input.avatarDataUrl.trim().length > 0) {
+        const rawAvatar = input.avatarDataUrl.trim();
+        if (rawAvatar.startsWith("data:image/")) {
+          const match = rawAvatar.match(/^data:(image\/(?:png|jpeg|jpg|webp|gif));base64,(.+)$/i);
+          if (match) {
+            try {
+              const mimeType = match[1].toLowerCase();
+              const ext = mimeType.includes("jpeg") || mimeType.includes("jpg") ? "jpg" : mimeType.split("/")[1] || "png";
+              const buffer = Buffer.from(match[2], "base64");
+              const stored = await storagePut(`learners/${learnerId}/avatar.${ext}`, buffer, mimeType);
+              finalAvatarUrl = stored.url;
+            } catch (storageErr) {
+              console.warn("[createLearner storagePut fallback]", storageErr);
+              // If storage upload fails, only keep base64 if it's within a safe size (<65KB)
+              finalAvatarUrl = rawAvatar.length <= 65535 ? rawAvatar : undefined;
+            }
+          }
+        } else if (rawAvatar.startsWith("http://") || rawAvatar.startsWith("https://") || rawAvatar.startsWith("/")) {
+          finalAvatarUrl = rawAvatar;
+        }
+      }
+
       const learner = await createLearner({
-        id: `learner_${nanoid(16)}`,
+        id: learnerId,
         institutionId,
         name: input.name,
         nameAr: input.nameAr,
         grade: input.grade,
         phone: input.phone,
-        avatarUrl: input.avatarDataUrl,
+        avatarUrl: finalAvatarUrl,
         status: input.status,
         createdById: ctx.user.id
       });
@@ -771,6 +811,192 @@ export const appRouter = router({
       } catch {
         mark(sourceIntent, "provider_error", matches.length); return { answer: isArabic ? "تعذر إنشاء إجابة الآن، لكن هذه المصادر قد تساعدك. يرجى المحاولة مرة أخرى أو التواصل مع المؤسسة." : "I could not generate an answer right now, but the sources below may help. Please try again or contact the institution.", sources: toSourceReferences(matches) };
       }
+    }),
+  }),
+  academic: router({
+    search: publicProcedure
+      .input(
+        z.object({
+          query: z.string().trim().min(1).max(300),
+          source: z.enum(["all", "openalex", "semanticscholar", "crossref", "europepmc"]).default("all"),
+          limit: z.number().int().min(1).max(30).default(12),
+        })
+      )
+      .query(async ({ input }) => {
+        return searchAcademicHub(input.query, input.source, input.limit);
+      }),
+    connectedGraph: publicProcedure
+      .input(
+        z.object({
+          identifier: z.string().trim().min(1).max(500),
+        })
+      )
+      .query(async ({ input }) => {
+        return buildConnectedPapersGraph(input.identifier);
+      }),
+    resolveDocument: publicProcedure
+      .input(
+        z.object({
+          urlOrIdentifier: z.string().trim().min(1).max(1000),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return resolveDocument(input.urlOrIdentifier);
+      }),
+  }),
+  integrations: router({
+    archiveOrgSearch: publicProcedure
+      .input(
+        z.object({
+          query: z.string().trim().min(1).max(300),
+          mediatype: z.string().default("texts"),
+          limit: z.number().int().min(1).max(30).default(12),
+        })
+      )
+      .query(async ({ input }) => {
+        return searchArchiveOrg(input.query, input.mediatype, input.limit);
+      }),
+    archiveOrgItem: publicProcedure
+      .input(
+        z.object({
+          identifier: z.string().trim().min(1).max(255),
+        })
+      )
+      .query(async ({ input }) => {
+        return getArchiveItemMetadata(input.identifier);
+      }),
+    collegeScorecard: publicProcedure
+      .input(
+        z.object({
+          query: z.string().trim().max(200).default(""),
+          state: z.string().trim().max(10).optional(),
+          limit: z.number().int().min(1).max(25).default(10),
+        })
+      )
+      .query(async ({ input }) => {
+        return searchCollegeScorecard(input.query, input.state, input.limit);
+      }),
+    osfShare: publicProcedure
+      .input(
+        z.object({
+          query: z.string().trim().min(1).max(300),
+          limit: z.number().int().min(1).max(30).default(10),
+        })
+      )
+      .query(async ({ input }) => {
+        return searchOsfShare(input.query, input.limit);
+      }),
+    listTemplates: publicProcedure.query(async () => {
+      return ALGERIAN_CURRICULUM_TEMPLATES;
+    }),
+    renderTemplate: publicProcedure
+      .input(
+        z.object({
+          templateId: z.string().trim(),
+          customData: z.record(z.string(), z.any()),
+          format: z.enum(["pdf", "image"]).default("pdf"),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return renderTemplateWithApiTemplate(input.templateId, input.customData, input.format);
+      }),
+    wolframAlpha: publicProcedure
+      .input(
+        z.object({
+          query: z.string().trim().min(1).max(500),
+        })
+      )
+      .query(async ({ input }) => {
+        return queryWolframAlphaLLM(input.query);
+      }),
+    personality: publicProcedure
+      .input(
+        z.object({
+          studentName: z.string().trim().min(1).max(100),
+          observedBehaviors: z.array(z.string()).default([]),
+        })
+      )
+      .query(async ({ input }) => {
+        return evaluateStudentPersonality(input.studentName, input.observedBehaviors);
+      }),
+    quoterism: publicProcedure
+      .input(
+        z.object({
+          category: z.string().default("general_pedagogy"),
+          topicKeyword: z.string().optional(),
+        })
+      )
+      .query(async ({ input }) => {
+        return fetchLessonQuote(input.category, input.topicKeyword);
+      }),
+    sendPhoneOtp: publicProcedure
+      .input(
+        z.object({
+          phoneNumber: z.string().trim().min(8).max(25),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return validateAndSendPhoneVerification(input.phoneNumber);
+      }),
+    verifyPhoneOtp: publicProcedure
+      .input(
+        z.object({
+          phoneNumber: z.string().trim().min(8).max(25),
+          code: z.string().trim().min(4).max(8),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return verifyPhoneOtp(input.phoneNumber, input.code);
+      }),
+    cambridgeSearch: publicProcedure
+      .input(
+        z.object({
+          query: z.string().trim().max(100).default(""),
+        })
+      )
+      .query(async ({ input }) => {
+        return searchCambridgeDictionary(input.query);
+      }),
+    cambridgeRunActor: protectedProcedure
+      .input(
+        z.object({
+          startWords: z.array(z.string().trim().min(1).max(60)).min(1).max(20),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return triggerCambridgeScraperRun(input.startWords);
+      }),
+    cambridgeSyncDataset: publicProcedure.mutation(async () => {
+      const items = await fetchApifyDatasetItems();
+      return { success: true, count: items.length, items };
+    }),
+  }),
+  cambridge: router({
+    search: publicProcedure
+      .input(
+        z.object({
+          query: z.string().trim().max(100).default(""),
+        })
+      )
+      .query(async ({ input }) => {
+        return searchCambridgeDictionary(input.query);
+      }),
+    curatedBank: publicProcedure.query(async () => {
+      const items = await fetchApifyDatasetItems();
+      return items;
+    }),
+    triggerScraper: protectedProcedure
+      .input(
+        z.object({
+          startWords: z.array(z.string().trim().min(1).max(60)).min(1).max(20),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return triggerCambridgeScraperRun(input.startWords);
+      }),
+    syncDataset: publicProcedure.mutation(async () => {
+      const items = await fetchApifyDatasetItems();
+      return { success: true, count: items.length, items };
     }),
   }),
 });
