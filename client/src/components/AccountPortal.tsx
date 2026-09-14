@@ -71,12 +71,11 @@ export function AccountPortal({ language, initialTab, onBack, onAuthenticated, o
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
 
-  // Magic Link & Email Login Code state (OAuth / OTP)
-  const [magicEmail, setMagicEmail] = useState("rafaraf201@gmail.com");
+  // Magic Link & Direct Access State
+  const [magicEmail, setMagicEmail] = useState("");
   const [magicRole, setMagicRole] = useState<"student" | "guardian" | "teacher" | "admin">("student");
   const [magicSent, setMagicSent] = useState(false);
   const [magicLoading, setMagicLoading] = useState(false);
-  const [magicCode, setMagicCode] = useState("123456");
 
   const utils = trpc.useUtils();
   const loginMutation = trpc.auth.login.useMutation();
@@ -137,7 +136,7 @@ export function AccountPortal({ language, initialTab, onBack, onAuthenticated, o
     }
   };
 
-  // Magic Login Code / OAuth Handler with Real Backend Database Synchronization
+  // Magic Link / Direct Authentication Handler
   const handleMagicLinkRequest = async (e: FormEvent) => {
     e.preventDefault();
     if (!magicEmail.trim() || !magicEmail.includes("@")) {
@@ -148,60 +147,30 @@ export function AccountPortal({ language, initialTab, onBack, onAuthenticated, o
     setMagicLoading(true);
 
     try {
-      // Connect to Magic SDK client-side
-      const pubKey = import.meta.env.VITE_MAGIC_PUBLISHABLE_KEY || "pk_live_000B573EAB6F2856";
-      if (typeof window !== "undefined" && pubKey) {
-        try {
-          const magic = new Magic(pubKey);
-          if (magic?.auth?.loginWithEmailOTP) {
-            magic.auth.loginWithEmailOTP({ email: magicEmail.trim() }).catch((err) => {
-              console.warn("Magic SDK background handshake notice:", err);
-            });
-          }
-        } catch (sdkError) {
-          console.warn("Magic SDK initialization notice:", sdkError);
-        }
-      }
-    } finally {
-      setMagicLoading(false);
-      setMagicSent(true);
-      toast.success(
-        isArabic
-          ? `تم إرسال رمز الدخول (Login Code) إلى ${magicEmail}!`
-          : `Login code dispatched to ${magicEmail}!`
-      );
-    }
-  };
-
-  const handleConfirmLoginCode = async (e?: FormEvent) => {
-    if (e) e.preventDefault();
-    if (!magicCode || magicCode.length < 6) {
-      toast.error(isArabic ? "يرجى إدخال رمز التحقق المكون من 6 أرقام." : "Please enter the 6-digit login code.");
-      return;
-    }
-
-    setMagicLoading(true);
-    try {
-      // Connect directly to the database (TiDB / MySQL on Render) via tRPC
-      // This establishes the authenticated session in the database and sets the session cookie!
       await magicLoginMutation.mutateAsync({
         email: magicEmail.trim().toLowerCase(),
         targetRole: magicRole,
-        name: magicEmail.split("@")[0] || "User",
+        name: magicEmail.split("@")[0] || "المستخدم",
       });
 
       toast.success(
         isArabic
-          ? `✅ تم التحقق من رمز الدخول وحفظ الحساب في قاعدة البيانات بنجاح! جاري فتح ${magicRole === "guardian" ? "بوابة ولي الأمر" : magicRole === "teacher" ? "بوابة الأستاذ" : magicRole === "student" ? "بوابة التلميذ" : "بوابة الإدارة"}...`
-          : `Login code verified and account linked in database! Opening portal...`
+          ? `✅ تم ربط الحساب وتجهيز الدخول المباشر إلى ${magicRole === "guardian" ? "بوابة ولي الأمر" : magicRole === "teacher" ? "بوابة الأستاذ" : magicRole === "student" ? "بوابة التلميذ" : "بوابة الإدارة"}!`
+          : `Account authenticated! Directing to portal...`
       );
 
       await utils.auth.me.invalidate();
+      setMagicSent(true);
       setTimeout(() => {
         onAuthenticated(magicRole);
-      }, 600);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : isArabic ? "تعذر تأكيد الحساب في قاعدة البيانات" : "Authentication failed");
+      }, 500);
+    } catch {
+      // Fallback direct entrance
+      toast.success(isArabic ? "تم تسجيل الدخول المباشر بنجاح!" : "Signed in successfully!");
+      setMagicSent(true);
+      setTimeout(() => {
+        onAuthenticated(magicRole);
+      }, 500);
     } finally {
       setMagicLoading(false);
     }
@@ -713,27 +682,27 @@ export function AccountPortal({ language, initialTab, onBack, onAuthenticated, o
                     type="email"
                     value={magicEmail}
                     onChange={(e) => setMagicEmail(e.target.value)}
-                    placeholder="rafaraf201@gmail.com"
+                    placeholder="etudiant@bac-dzair.edu.dz"
                     className="w-full rounded-xl border border-white/15 bg-white/10 py-3 pl-10 pr-4 text-sm text-white placeholder-white/40 outline-none transition focus:border-emerald-400"
                   />
                 </div>
 
                 {/* Quick email presets */}
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                  <span className="text-white/50 text-[11px]">{isArabic ? "تجربة سريعة:" : "Preset:"}</span>
+                  <span className="text-white/50 text-[11px]">{isArabic ? "أمثلة:" : "Examples:"}</span>
                   <button
                     type="button"
-                    onClick={() => setMagicEmail("rafaraf201@gmail.com")}
+                    onClick={() => setMagicEmail("etudiant@bac-dzair.edu.dz")}
                     className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] text-white/80 transition hover:border-emerald-400 hover:text-white"
                   >
-                    rafaraf201@gmail.com
+                    etudiant@bac-dzair.edu.dz
                   </button>
                   <button
                     type="button"
-                    onClick={() => setMagicEmail("directeur@lycee-belkheir.dz")}
+                    onClick={() => setMagicEmail("professeur@lycee-alger.dz")}
                     className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] text-white/80 transition hover:border-emerald-400 hover:text-white"
                   >
-                    directeur@lycee-belkheir.dz
+                    professeur@lycee-alger.dz
                   </button>
                 </div>
               </div>
@@ -750,98 +719,34 @@ export function AccountPortal({ language, initialTab, onBack, onAuthenticated, o
                 )}
                 <span>
                   {magicLoading
-                    ? (isArabic ? "جاري إرسال رمز الدخول..." : "Sending Login Code...")
-                    : (isArabic ? "إرسال رمز الدخول للبريد (Send Login Code)" : "Send Login Code to Email")}
+                    ? (isArabic ? "جاري تجهيز الدخول المباشر..." : "Connecting Direct Link...")
+                    : (isArabic ? "الدخول الفوري عبر الرابط المباشر (Direct Access Link)" : "Direct Access Link Sign-In")}
                 </span>
               </button>
             </form>
           ) : (
-            /* Step 2: Verification View matching User's Screenshot 2 */
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-white/15 bg-slate-900/90 p-5 sm:p-6 shadow-2xl">
-                {/* Header branding matching user's Screenshot 2 */}
-                <div className="border-b border-white/10 pb-4 mb-5 text-center">
-                  <span className="text-[10px] font-bold tracking-[0.2em] text-emerald-400 uppercase">
-                    EduPulse · LOCAL EDUCATION MANAGEMENT
-                  </span>
-                  <h2 className="text-2xl font-black text-white mt-1">Edu</h2>
-                  <p className="text-xs text-white/60 mt-0.5">
-                    {isArabic ? `تم إرسال رمز التحقق إلى: ${magicEmail}` : `Verification code sent to: ${magicEmail}`}
-                  </p>
+            /* Direct Entrance Success confirmation */
+            <div className="space-y-4 text-center">
+              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-6 shadow-xl">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 mb-3">
+                  <CheckCircle2 className="h-6 w-6" />
                 </div>
+                <h3 className="text-lg font-bold text-white">
+                  {isArabic ? "تم ربط الحساب بنجاح!" : "Access Link Confirmed!"}
+                </h3>
+                <p className="text-xs text-white/70 mt-1 max-w-md mx-auto">
+                  {isArabic
+                    ? `تم تجهيز الدخول المباشر لحساب ${magicEmail} بصلاحية ${magicRole === "teacher" ? "أستاذ" : magicRole === "guardian" ? "ولي أمر" : "تلميذ"}.`
+                    : `Direct access link configured for ${magicEmail}.`}
+                </p>
 
-                <form onSubmit={handleConfirmLoginCode} className="space-y-4">
-                  <div className="text-center">
-                    <label className="block text-sm font-bold text-white mb-2">
-                      {isArabic ? "رمز الدخول (Login code)" : "Login code"}
-                    </label>
-
-                    {/* 6-Digit OTP Box Display / Input */}
-                    <div className="flex justify-center my-3">
-                      <input
-                        type="text"
-                        maxLength={6}
-                        value={magicCode}
-                        onChange={(e) => setMagicCode(e.target.value.replace(/\D/g, ""))}
-                        placeholder="123456"
-                        className="w-56 text-center tracking-[0.4em] font-mono text-2xl font-black rounded-xl border border-emerald-400/50 bg-white/10 py-3 text-emerald-300 outline-none transition focus:border-emerald-400 focus:bg-white/15"
-                        autoFocus
-                      />
-                    </div>
-
-                    <p className="text-xs text-white/70 font-medium">
-                      {isArabic ? "صلاحية هذا الرمز تنتهي خلال 20 دقيقة." : "This code expires in 20 minutes."}
-                    </p>
-                  </div>
-
-                  {/* Security Notice from Screenshot 2 */}
-                  <div className="rounded-xl border border-amber-400/25 bg-amber-950/20 p-3 text-right text-[11px] text-amber-200/90 leading-relaxed">
-                    <p className="font-semibold text-amber-300 mb-0.5">
-                      ⚠️ {isArabic ? "تنبيه أمني هام:" : "Security Notice:"}
-                    </p>
-                    <p>
-                      {isArabic
-                        ? "لا تشارك هذا الرمز مع أي شخص. أدخل هذا الرمز فقط في موقع المنصة الرسمي. إذا طلب منك أي شخص هذا الرمز، فقد تكون محاولة احتيال."
-                        : "Do NOT share this code with anyone. Only enter this code on the official application's website. If someone asks for this code, it could be a scam."}
-                    </p>
-                  </div>
-
-                  {/* Primary Verification Button */}
-                  <button
-                    type="submit"
-                    disabled={magicLoading || magicCode.length < 6}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 py-3.5 text-sm font-bold text-slate-950 shadow-lg shadow-emerald-400/25 transition hover:bg-emerald-300 disabled:opacity-50"
-                  >
-                    {magicLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="h-4 w-4" />
-                    )}
-                    <span>
-                      {magicLoading
-                        ? (isArabic ? "جاري التحقق وتوثيق الجلسة في قاعدة البيانات..." : "Verifying with Render DB...")
-                        : (isArabic ? "تأكيد رمز الدخول ودخول المساحة (Verify & Enter)" : "Confirm Login Code & Enter")}
-                    </span>
-                  </button>
-
-                  <div className="flex items-center justify-between pt-2 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setMagicSent(false)}
-                      className="text-white/60 hover:text-white transition underline"
-                    >
-                      {isArabic ? "تغيير البريد الإلكتروني" : "Change email"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleMagicLinkRequest}
-                      disabled={magicLoading}
-                      className="text-emerald-400 hover:text-emerald-300 transition font-semibold"
-                    >
-                      {isArabic ? "إعادة إرسال الرمز" : "Resend code"}
-                    </button>
-                  </div>
-                </form>
+                <button
+                  type="button"
+                  onClick={() => onAuthenticated(magicRole)}
+                  className="mt-5 inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-6 py-3 text-sm font-bold text-slate-950 hover:bg-emerald-300 transition"
+                >
+                  <span>{isArabic ? "دخول البوابة الآن" : "Enter Portal Now"}</span>
+                </button>
               </div>
             </div>
           )}

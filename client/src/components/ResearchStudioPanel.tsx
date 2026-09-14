@@ -40,6 +40,7 @@ import { toast } from "sonner";
 import { ConnectedPapersGraphView } from "./ConnectedPapersGraphView";
 import { AcademicSearchExplorerPanel } from "./AcademicSearchExplorerPanel";
 import { DirectDocumentDownloaderPanel } from "./DirectDocumentDownloaderPanel";
+import { ModernThesisRoadmap } from "./academic/ModernThesisRoadmap";
 import {
   ACADEMIC_RESEARCH_FIELDS,
   READY_GOOGLE_SLIDES_TEMPLATES,
@@ -417,7 +418,7 @@ export function ResearchStudioPanel({ isArabic }: { isArabic: boolean }) {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB: DIRECT DOCUMENT DOWNLOADER (SCRIBD & RESEARCH PAPERS) */}
+      {/* TAB: DIRECT DOCUMENT DOWNLOADER (ARCHIVE & RESEARCH PAPERS) */}
       {/* ========================================================================= */}
       {activeTab === "downloader" && (
         <DirectDocumentDownloaderPanel isArabic={isArabic} />
@@ -1020,53 +1021,9 @@ export function ResearchStudioPanel({ isArabic }: { isArabic: boolean }) {
               </div>
             </div>
 
-            {/* 4-Phase Thesis & Research Roadmap */}
-            <div className="mt-6 space-y-6">
-              <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                <ListTodo className="w-4 h-4 text-blue-600" />
-                {isArabic ? "خارطة طريق إنجاز الأطروحة والأوراق العلمية (MESRS Roadmap):" : "Thesis & Dissertation Milestones:"}
-              </h4>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {DEFAULT_RESEARCH_ROADMAP.map((phase, pIdx) => (
-                  <div key={pIdx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h5 className="font-bold text-xs text-slate-900">{isArabic ? phase.phaseAr : phase.phaseEn}</h5>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
-                        {isArabic ? `المرحلة ${pIdx + 1}` : `Phase ${pIdx + 1}`}
-                      </span>
-                    </div>
-
-                    <div className="space-y-2 text-xs">
-                      {phase.milestones.map((m, mIdx) => (
-                        <div
-                          key={mIdx}
-                          className="flex items-start justify-between gap-3 p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs"
-                        >
-                          <div className="flex items-start gap-2">
-                            <span
-                              className={`w-4 h-4 mt-0.5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold ${
-                                m.status === "completed"
-                                  ? "bg-emerald-500 text-white"
-                                  : m.status === "in_progress"
-                                  ? "bg-amber-500 text-white"
-                                  : "bg-slate-200 text-slate-600"
-                              }`}
-                            >
-                              {m.status === "completed" ? "✓" : mIdx + 1}
-                            </span>
-                            <span className="font-medium text-slate-800 leading-snug">{m.titleAr}</span>
-                          </div>
-                          <div className="text-left shrink-0 text-[11px] text-slate-500">
-                            <span className="block font-semibold text-slate-700">{m.deadlineWeek}</span>
-                            <span>{m.timeEstimateHours}h</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+            {/* Modernized Interactive 4-Phase Thesis & Research Roadmap */}
+            <div className="mt-8 pt-6 border-t border-slate-100">
+              <ModernThesisRoadmap isArabic={isArabic} />
             </div>
           </div>
         </div>

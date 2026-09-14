@@ -12,6 +12,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { trpc } from "../../lib/trpc";
+import { InteractiveSpiderEvaluation } from "./InteractiveSpiderEvaluation";
 
 interface PersonalityProfilerProps {
   isArabic?: boolean;
@@ -188,7 +189,11 @@ export function PersonalityProfiler({ isArabic = true }: PersonalityProfilerProp
             </div>
           ) : null}
         </div>
-      </div>
+      {/* Interactive Spider Cognitive Radar & Teacher Decision Linkage */}
+      <InteractiveSpiderEvaluation
+        isArabic={isArabic}
+        studentName={studentName}
+      />
     </div>
   );
 }

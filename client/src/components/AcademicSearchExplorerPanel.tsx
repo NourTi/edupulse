@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Search,
   BookOpen,
@@ -25,27 +25,123 @@ interface AcademicSearchExplorerProps {
 export function AcademicSearchExplorerPanel({ isArabic, onSelectForGraph }: AcademicSearchExplorerProps) {
   const [queryInput, setQueryInput] = useState("artificial intelligence in higher education personalized learning");
   const [activeQuery, setActiveQuery] = useState("artificial intelligence in higher education personalized learning");
-  const [source, setSource] = useState<"all" | "openalex" | "semanticscholar" | "crossref" | "europepmc">("all");
+  const [source, setSource] = useState<"all" | "openalex" | "semanticscholar" | "crossref" | "europepmc" | "osf">("all");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const triggerDownload = (url: string, filename?: string) => {
+    try {
+      const a = document.createElement("a");
+      a.href = url;
+      if (filename) a.download = filename;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch {
+      window.location.href = url;
+    }
+  };
+
+  const resolveDocMutation = trpc.academic.resolveDocument.useMutation({
+    onSuccess: (data: any) => {
+      setDownloadingId(null);
+      if (data.success && (data.proxyDownloadUrl || data.downloadUrl)) {
+        toast.success(isArabic ? "تم استخراج وتجهيز المستند وبدء التحميل المباشر" : "Document resolved, starting direct download");
+        triggerDownload(data.proxyDownloadUrl || data.downloadUrl, data.filename);
+      } else {
+        toast.error(data.message || (isArabic ? "تعذر استخراج المستند الأكاديمي" : "Could not resolve paper document"));
+      }
+    },
+    onError: (err: any) => {
+      setDownloadingId(null);
+      toast.error(err.message);
+    },
+  });
 
   const searchQuery = trpc.academic.search.useQuery(
     {
       query: activeQuery,
-      source,
+      source: source === "osf" ? "all" : source,
       limit: 15,
     },
     {
-      enabled: Boolean(activeQuery),
+      enabled: Boolean(activeQuery) && source !== "osf",
       staleTime: 5 * 60 * 1000,
     }
   );
 
-  const papers = searchQuery.data || [];
+  const osfQuery = trpc.integrations.osfShare.useQuery(
+    {
+      query: activeQuery,
+      limit: 15,
+    },
+    {
+      enabled: Boolean(activeQuery) && (source === "all" || source === "osf"),
+      staleTime: 5 * 60 * 1000,
+    }
+  );
+
+  const papers = useMemo(() => {
+    if (source === "osf") {
+      const osfItems = osfQuery.data || [];
+      return osfItems.map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        authors: item.contributors.length > 0 ? item.contributors : ["OSF Research Group"],
+        year: item.datePublished ? parseInt(item.datePublished.slice(0, 4)) : null,
+        citationCount: 0,
+        venue: item.provider || "Open Science Framework (OSF)",
+        doi: item.doi,
+        source: "OSF",
+        openAccess: true,
+        landingPageUrl: item.url,
+        pdfUrl: item.downloadUrl,
+        abstract: item.description,
+      }));
+    }
+
+    const basePapers = [...(searchQuery.data || [])];
+    if (source === "all" && osfQuery.data && osfQuery.data.length > 0) {
+      const osfMapped = osfQuery.data.slice(0, 3).map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        authors: item.contributors.length > 0 ? item.contributors : ["OSF Open Science"],
+        year: item.datePublished ? parseInt(item.datePublished.slice(0, 4)) : null,
+        citationCount: 0,
+        venue: item.provider || "OSF Preprints",
+        doi: item.doi,
+        source: "OSF",
+        openAccess: true,
+        landingPageUrl: item.url,
+        pdfUrl: item.downloadUrl,
+        abstract: item.description,
+      }));
+      return [...basePapers, ...osfMapped];
+    }
+
+    return basePapers;
+  }, [source, searchQuery.data, osfQuery.data]);
+
+  const isLoading = source === "osf" ? osfQuery.isLoading : searchQuery.isLoading;
 
   const handleSearch = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!queryInput.trim()) return;
     setActiveQuery(queryInput.trim());
+  };
+
+  const handleDownload = (paper: any) => {
+    if (paper.pdfUrl && paper.pdfUrl.endsWith(".pdf")) {
+      triggerDownload(paper.pdfUrl, `${paper.title.slice(0, 45).replace(/[^a-zA-Z0-9_\u0600-\u06FF\s-]/g, "")}.pdf`);
+      toast.success(isArabic ? "بدء تحميل ملف PDF..." : "Starting PDF download...");
+      return;
+    }
+
+    setDownloadingId(paper.id);
+    toast.info(isArabic ? "جارٍ استخراج وتجهيز المستند عبر مستودعات الوصول المفتوح..." : "Resolving open-access document...");
+    resolveDocMutation.mutate({ urlOrIdentifier: paper.doi || paper.title });
   };
 
   const handleCopyCitation = (paper: any) => {
@@ -93,10 +189,10 @@ export function AcademicSearchExplorerPanel({ isArabic, onSelectForGraph }: Acad
 
           <button
             type="submit"
-            disabled={searchQuery.isLoading}
+            disabled={isLoading}
             className="bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm px-6 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors shrink-0 shadow-xs disabled:opacity-50"
           >
-            {searchQuery.isLoading ? (
+            {isLoading ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin" />
                 <span>{isArabic ? "جارٍ البحث..." : "Searching..."}</span>
@@ -125,6 +221,17 @@ export function AcademicSearchExplorerPanel({ isArabic, onSelectForGraph }: Acad
             }`}
           >
             🌐 {isArabic ? "الكل (مدمج وموحّد)" : "All Sources"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSource("osf")}
+            className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+              source === "osf"
+                ? "bg-teal-600 text-white shadow-xs"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+            }`}
+          >
+            🔬 {isArabic ? "بوابة OSF للعلوم المفتوحة" : "OSF Open Science"}
           </button>
           <button
             type="button"
@@ -175,7 +282,7 @@ export function AcademicSearchExplorerPanel({ isArabic, onSelectForGraph }: Acad
 
       {/* Results List */}
       <div className="space-y-4">
-        {searchQuery.isLoading && (
+        {isLoading && (
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 border border-slate-200 dark:border-slate-800 text-center space-y-3">
             <RefreshCw className="w-8 h-8 animate-spin mx-auto text-blue-600" />
             <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
@@ -184,7 +291,7 @@ export function AcademicSearchExplorerPanel({ isArabic, onSelectForGraph }: Acad
           </div>
         )}
 
-        {!searchQuery.isLoading && papers.length === 0 && (
+        {!isLoading && papers.length === 0 && (
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 border border-slate-200 dark:border-slate-800 text-center text-slate-500">
             {isArabic ? "لم يتم العثور على أوراق تطابق هذا البحث. جرب كلمات مفتاحية أخرى أو معرّف DOI." : "No papers found for this search. Try different keywords or a DOI."}
           </div>
@@ -250,28 +357,23 @@ export function AcademicSearchExplorerPanel({ isArabic, onSelectForGraph }: Acad
                   </button>
                 )}
 
-                {/* Direct Download */}
-                {paper.pdfUrl ? (
-                  <a
-                    href={paper.pdfUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs"
-                  >
+                {/* Direct Download Button */}
+                <button
+                  onClick={() => handleDownload(paper)}
+                  disabled={downloadingId === paper.id}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs disabled:opacity-60"
+                >
+                  {downloadingId === paper.id ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
                     <Download className="w-3.5 h-3.5" />
-                    <span>{isArabic ? "تحميل PDF" : "Download PDF"}</span>
-                  </a>
-                ) : (
-                  <a
-                    href={`/api/academic/file-proxy?url=${encodeURIComponent(paper.landingPageUrl || `https://doi.org/${paper.doi}`)}&filename=${encodeURIComponent(paper.title.slice(0, 40))}.pdf`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>{isArabic ? "استخراج المستند" : "Extract Document"}</span>
-                  </a>
-                )}
+                  )}
+                  <span>
+                    {downloadingId === paper.id
+                      ? isArabic ? "جارٍ التجهيز..." : "Preparing..."
+                      : isArabic ? "تحميل PDF المباشر" : "Download PDF"}
+                  </span>
+                </button>
 
                 {/* External Link */}
                 {paper.landingPageUrl && (

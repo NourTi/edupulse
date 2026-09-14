@@ -151,8 +151,7 @@ async function requireInstitutionRole(userId: number, institutionId: string, all
     if (!membership || membership.status !== "active") {
       const user = await getUserById(userId);
       const isOwner = user?.role === "admin" || 
-        user?.email?.toLowerCase() === (process.env.OWNER_OPEN_ID?.toLowerCase() ?? "rafaraf201@gmail.com") ||
-        user?.email?.toLowerCase() === "rafaraf@gmail.com";
+        user?.email?.toLowerCase() === (process.env.OWNER_OPEN_ID?.toLowerCase() ?? "admin@edupulse.edu.dz");
       if (isOwner) {
         await createMembership({
           id: `mem_owner_${userId}_${nanoid(6)}`,
@@ -172,7 +171,7 @@ async function requireInstitutionRole(userId: number, institutionId: string, all
   }
 
   const user = await getUserById(userId);
-  if (user?.role === "admin" || user?.email?.toLowerCase() === (process.env.OWNER_OPEN_ID?.toLowerCase() ?? "rafaraf201@gmail.com") || user?.email?.toLowerCase() === "rafaraf@gmail.com") {
+  if (user?.role === "admin" || user?.email?.toLowerCase() === (process.env.OWNER_OPEN_ID?.toLowerCase() ?? "admin@edupulse.edu.dz")) {
     return { id: `mem_virtual_${userId}`, institutionId, userId, role: "owner", status: "active" } as any;
   }
 

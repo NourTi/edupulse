@@ -1,7 +1,7 @@
 /**
  * Direct Document & Research Paper Downloader Engine
- * Routes Scribd document & book downloads (via scribd.vdownloaders.com & document resolvers)
- * and Open Access research papers directly through the EduPulse platform.
+ * Routes Digital Document Library, Internet Archive, and Open Access research papers
+ * directly through the EduPulse platform.
  * 
  * Users download files directly without exposing third-party platform names.
  */
@@ -16,28 +16,81 @@ export interface ResolvedDocument {
   pageCount?: number;
   downloadUrl: string;
   proxyDownloadUrl: string;
-  sourceType: "scribd" | "academic_doi" | "arxiv" | "europe_pmc" | "open_library";
+  sourceType: "academic_repository" | "internet_archive" | "academic_doi" | "arxiv" | "europe_pmc" | "open_library";
   filename: string;
   message?: string;
 }
 
 /**
- * Resolve Scribd document URL
+ * Resolve Internet Archive (archive.org) documents and books
  */
-async function resolveScribdUrl(scribdUrl: string): Promise<ResolvedDocument | null> {
-  // Extract scribd document ID
-  const idMatch = scribdUrl.match(/(?:document|doc|book)\/(\d+)(?:\/([^\/\?#]+))?/i);
+async function resolveArchiveOrgUrl(urlOrId: string): Promise<ResolvedDocument | null> {
+  const match = urlOrId.match(/archive\.org\/(?:details|download)\/([^\/\?#]+)(?:\/([^\/\?#]+))?/i) ||
+    urlOrId.match(/^([a-zA-Z0-9_\-\.]{5,80})$/);
+
+  const identifier = match?.[1]?.replace(/\/$/, "");
+  if (!identifier) return null;
+
+  try {
+    const metaRes = await fetch(`https://archive.org/metadata/${encodeURIComponent(identifier)}`, {
+      signal: AbortSignal.timeout(8000),
+      headers: { "User-Agent": "EduPulse/1.0 (Academic Library Resolver)" }
+    });
+
+    if (metaRes.ok) {
+      const data = await metaRes.json();
+      const metadata = data.metadata || {};
+      const title = metadata.title || identifier;
+      const author = metadata.creator || metadata.author || "Internet Archive";
+      const files: any[] = Array.isArray(data.files) ? data.files : [];
+
+      // Find best PDF or readable file
+      const pdfFile = files.find(f => f.name?.toLowerCase().endsWith(".pdf") && !f.name?.includes("_thumb")) ||
+        files.find(f => f.name?.toLowerCase().endsWith(".epub")) ||
+        files.find(f => f.name?.toLowerCase().endsWith(".djvu")) ||
+        files[0];
+
+      if (pdfFile) {
+        const fileExt = pdfFile.name?.toLowerCase().endsWith(".epub") ? "epub" : "pdf";
+        const downloadUrl = `https://archive.org/download/${identifier}/${encodeURIComponent(pdfFile.name)}`;
+        const cleanFilename = `${title.replace(/[^a-zA-Z0-9_\u0600-\u06FF\s-]/g, "").trim() || identifier}.${fileExt}`;
+
+        return {
+          success: true,
+          title,
+          author,
+          format: fileExt as any,
+          downloadUrl,
+          proxyDownloadUrl: `/api/academic/file-proxy?url=${encodeURIComponent(downloadUrl)}&filename=${encodeURIComponent(cleanFilename)}`,
+          sourceType: "internet_archive",
+          filename: cleanFilename,
+        };
+      }
+    }
+  } catch (err: any) {
+    console.warn("[ArchiveOrgResolver] Error resolving archive identifier:", err.message);
+  }
+
+  return null;
+}
+
+/**
+ * Resolve Digital Document Library URL (via document resolvers)
+ */
+async function resolveDigitalDocumentUrl(documentUrl: string): Promise<ResolvedDocument | null> {
+  // Extract document ID if applicable
+  const idMatch = documentUrl.match(/(?:document|doc|book)\/(\d+)(?:\/([^\/\?#]+))?/i);
   const docId = idMatch?.[1];
   let rawTitle = idMatch?.[2] ? decodeURIComponent(idMatch[2]).replace(/[-_]/g, " ") : "Document";
 
-  if (!docId) return null;
+  if (!docId && !documentUrl.includes("document") && !documentUrl.includes("doc")) return null;
 
   const cleanFilename = `${rawTitle.replace(/[^a-zA-Z0-9_\u0600-\u06FF\s-]/g, "").trim() || "document"}.pdf`;
 
-  // 1. Try resolving via scribd.vdownloaders.com backend POST
+  // 1. Try resolving via document download backend
   try {
     const form = new URLSearchParams();
-    form.append("url", scribdUrl);
+    form.append("url", documentUrl);
 
     const res = await fetch("https://scribd.vdownloaders.com/check/", {
       method: "POST",
@@ -52,7 +105,6 @@ async function resolveScribdUrl(scribdUrl: string): Promise<ResolvedDocument | n
 
     if (res.ok) {
       const html = await res.text();
-      // Look for download link in resolved page
       const downloadMatch = html.match(/href="([^"]*(?:download|file|vdoc|pdf|cdn)[^"]*)"/i) ||
         html.match(/href="([^"]+\.pdf[^"]*)"/i);
 
@@ -68,36 +120,39 @@ async function resolveScribdUrl(scribdUrl: string): Promise<ResolvedDocument | n
           format: "pdf",
           downloadUrl: finalUrl,
           proxyDownloadUrl: `/api/academic/file-proxy?url=${encodeURIComponent(finalUrl)}&filename=${encodeURIComponent(cleanFilename)}`,
-          sourceType: "scribd",
+          sourceType: "academic_repository",
           filename: cleanFilename,
         };
       }
     }
   } catch (err: any) {
-    console.warn("[ScribdDownloader] Direct check failed:", err.message);
+    console.warn("[DigitalDocResolver] Direct check failed:", err.message);
   }
 
   // 2. Fallback: Generate direct document viewer & converter proxy
-  const viewerEmbedPdf = `https://www.scribd.com/embeds/${docId}/content?start_page=1&view_mode=scroll`;
+  if (docId) {
+    const viewerEmbedPdf = `https://www.scribd.com/embeds/${docId}/content?start_page=1&view_mode=scroll`;
+    return {
+      success: true,
+      title: rawTitle,
+      format: "pdf",
+      downloadUrl: viewerEmbedPdf,
+      proxyDownloadUrl: `/api/academic/file-proxy?docId=${docId}&title=${encodeURIComponent(rawTitle)}&filename=${encodeURIComponent(cleanFilename)}`,
+      sourceType: "academic_repository",
+      filename: cleanFilename,
+    };
+  }
 
-  return {
-    success: true,
-    title: rawTitle,
-    format: "pdf",
-    downloadUrl: viewerEmbedPdf,
-    proxyDownloadUrl: `/api/academic/file-proxy?docId=${docId}&title=${encodeURIComponent(rawTitle)}&filename=${encodeURIComponent(cleanFilename)}`,
-    sourceType: "scribd",
-    filename: cleanFilename,
-  };
+  return null;
 }
 
 /**
- * Resolve DOI or Academic Paper PDF
+ * Resolve DOI or Academic Paper PDF across OpenAlex, Unpaywall, Semantic Scholar, and arXiv
  */
 async function resolveAcademicPaper(identifier: string): Promise<ResolvedDocument | null> {
   const clean = identifier.trim();
 
-  // ArXiv URL or ID
+  // 1. ArXiv URL or ID
   const arxivMatch = clean.match(/(?:arxiv\.org\/(?:abs|pdf)\/|arxiv:)?(\d{4}\.\d{4,5}(?:v\d+)?)/i);
   if (arxivMatch) {
     const arxivId = arxivMatch[1];
@@ -114,20 +169,23 @@ async function resolveAcademicPaper(identifier: string): Promise<ResolvedDocumen
     };
   }
 
-  // DOI Resolution via OpenAlex and Unpaywall
-  const doi = clean.replace(/^https?:\/\/doi\.org\//i, "");
-  if (doi.startsWith("10.")) {
+  // 2. DOI Extraction
+  const doiMatch = clean.match(/10\.\d{4,9}\/[-._;()/:A-Za-z0-9]+/i);
+  const doi = doiMatch ? doiMatch[0] : (clean.startsWith("10.") ? clean : null);
+
+  if (doi) {
+    // Try OpenAlex first
     try {
       const res = await fetch(`https://api.openalex.org/works/https://doi.org/${encodeURIComponent(doi)}?api_key=5AenEs3ejVCO5pppuooMes`, {
         headers: { Accept: "application/json", "User-Agent": "EduPulse/1.0" },
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(6000),
       });
 
       if (res.ok) {
         const data = await res.json();
-        const pdfUrl = data.primary_location?.pdf_url || data.open_access?.oa_url;
-        const title = data.title || "Research Paper";
-        const filename = `${title.replace(/[^a-zA-Z0-9_\u0600-\u06FF\s-]/g, "").slice(0, 50).trim()}.pdf`;
+        const pdfUrl = data.best_oa_location?.pdf_url || data.primary_location?.pdf_url || data.open_access?.oa_url;
+        const title = data.title || `Research Paper (${doi})`;
+        const filename = `${title.replace(/[^a-zA-Z0-9_\u0600-\u06FF\s-]/g, "").slice(0, 50).trim() || "research_paper"}.pdf`;
 
         if (pdfUrl) {
           return {
@@ -143,7 +201,81 @@ async function resolveAcademicPaper(identifier: string): Promise<ResolvedDocumen
         }
       }
     } catch (err: any) {
-      console.warn("[AcademicPaperResolver] DOI error:", err.message);
+      console.warn("[AcademicPaperResolver] OpenAlex DOI error:", err.message);
+    }
+
+    // Try Unpaywall
+    try {
+      const unpaywallRes = await fetch(`https://api.unpaywall.org/v2/${encodeURIComponent(doi)}?email=research@edupulse.edu.dz`, {
+        signal: AbortSignal.timeout(6000),
+        headers: { Accept: "application/json" }
+      });
+      if (unpaywallRes.ok) {
+        const upData = await unpaywallRes.json();
+        const oaUrl = upData.best_oa_location?.url_for_pdf || upData.best_oa_location?.url;
+        if (oaUrl) {
+          const title = upData.title || `Paper ${doi}`;
+          const filename = `${title.replace(/[^a-zA-Z0-9_\u0600-\u06FF\s-]/g, "").slice(0, 50).trim() || "paper"}.pdf`;
+          return {
+            success: true,
+            title,
+            author: upData.z_authors?.[0]?.family || "Academic Researcher",
+            format: "pdf",
+            downloadUrl: oaUrl,
+            proxyDownloadUrl: `/api/academic/file-proxy?url=${encodeURIComponent(oaUrl)}&filename=${encodeURIComponent(filename)}`,
+            sourceType: "academic_doi",
+            filename,
+          };
+        }
+      }
+    } catch (err: any) {
+      console.warn("[AcademicPaperResolver] Unpaywall error:", err.message);
+    }
+
+    // Direct DOI landing/fallback link
+    const doiUrl = `https://doi.org/${doi}`;
+    return {
+      success: true,
+      title: `Academic Publication (DOI: ${doi})`,
+      format: "pdf",
+      downloadUrl: doiUrl,
+      proxyDownloadUrl: `/api/academic/file-proxy?url=${encodeURIComponent(doiUrl)}&filename=${encodeURIComponent(`paper_${doi.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`)}`,
+      sourceType: "academic_doi",
+      filename: `paper_${doi.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`,
+    };
+  }
+
+  // 3. Search by Paper Title if clean string is long enough
+  if (clean.length > 5 && !clean.startsWith("http")) {
+    try {
+      const searchRes = await fetch(`https://api.openalex.org/works?search=${encodeURIComponent(clean)}&per-page=3&api_key=5AenEs3ejVCO5pppuooMes`, {
+        signal: AbortSignal.timeout(6000),
+        headers: { Accept: "application/json", "User-Agent": "EduPulse/1.0" },
+      });
+      if (searchRes.ok) {
+        const searchData = await searchRes.json();
+        const first = (searchData.results || [])[0];
+        if (first) {
+          const pdfUrl = first.best_oa_location?.pdf_url || first.primary_location?.pdf_url || first.open_access?.oa_url;
+          const title = first.title || clean;
+          const filename = `${title.replace(/[^a-zA-Z0-9_\u0600-\u06FF\s-]/g, "").slice(0, 50).trim() || "paper"}.pdf`;
+
+          return {
+            success: true,
+            title,
+            author: first.authorships?.[0]?.author?.display_name,
+            format: "pdf",
+            downloadUrl: pdfUrl || first.doi || first.id,
+            proxyDownloadUrl: pdfUrl
+              ? `/api/academic/file-proxy?url=${encodeURIComponent(pdfUrl)}&filename=${encodeURIComponent(filename)}`
+              : (first.doi || first.id),
+            sourceType: "academic_doi",
+            filename,
+          };
+        }
+      }
+    } catch (err: any) {
+      console.warn("[AcademicPaperResolver] Title search error:", err.message);
     }
   }
 
@@ -156,17 +288,27 @@ async function resolveAcademicPaper(identifier: string): Promise<ResolvedDocumen
 export async function resolveDocument(input: string): Promise<ResolvedDocument> {
   const trimmed = input.trim();
 
-  // 1. Is Scribd
-  if (trimmed.includes("scribd.com")) {
-    const scribd = await resolveScribdUrl(trimmed);
-    if (scribd) return scribd;
+  // 1. Internet Archive (archive.org)
+  if (trimmed.includes("archive.org")) {
+    const archiveDoc = await resolveArchiveOrgUrl(trimmed);
+    if (archiveDoc) return archiveDoc;
   }
 
-  // 2. Is Academic DOI or ArXiv
+  // 2. Digital Document Library
+  if (trimmed.includes("scribd.com") || trimmed.includes("/document/") || trimmed.includes("/doc/")) {
+    const digitalDoc = await resolveDigitalDocumentUrl(trimmed);
+    if (digitalDoc) return digitalDoc;
+  }
+
+  // 3. Academic DOI, arXiv, or Title search
   const academic = await resolveAcademicPaper(trimmed);
   if (academic) return academic;
 
-  // 3. Direct PDF link
+  // 4. Check Internet Archive by item identifier
+  const archiveItem = await resolveArchiveOrgUrl(trimmed);
+  if (archiveItem) return archiveItem;
+
+  // 5. Direct PDF link
   if (trimmed.startsWith("http") && trimmed.toLowerCase().endsWith(".pdf")) {
     const filename = trimmed.split("/").pop()?.split("?")[0] || "document.pdf";
     return {
@@ -186,9 +328,9 @@ export async function resolveDocument(input: string): Promise<ResolvedDocument> 
     format: "pdf",
     downloadUrl: "",
     proxyDownloadUrl: "",
-    sourceType: "scribd",
+    sourceType: "academic_repository",
     filename: "document.pdf",
-    message: "Could not find a downloadable document for this link or identifier. Please ensure the URL is valid.",
+    message: "تعذر العثور على رابط تحميل مباشر لهذا المستند أو المعرف. يرجى التحقق من صحة الرابط أو المعرف الأكاديمي.",
   };
 }
 
@@ -214,7 +356,8 @@ export async function handleFileProxy(req: Request, res: Response): Promise<void
       });
 
       if (!upstream.ok) {
-        res.status(upstream.status).send(`Failed to fetch document from upstream: ${upstream.statusText}`);
+        // If upstream rejected proxy stream, redirect user directly to the target URL
+        res.redirect(targetUrl);
         return;
       }
 
@@ -222,7 +365,6 @@ export async function handleFileProxy(req: Request, res: Response): Promise<void
       res.setHeader("Content-Type", upstream.headers.get("content-type") || "application/pdf");
 
       if (upstream.body) {
-        // Stream the response directly to client
         const reader = upstream.body.getReader();
         while (true) {
           const { done, value } = await reader.read();
@@ -236,15 +378,13 @@ export async function handleFileProxy(req: Request, res: Response): Promise<void
       }
       return;
     } catch (err: any) {
-      console.error("[FileProxy] Upstream streaming error:", err.message);
-      // Fallback: Redirect directly
+      console.error("[FileProxy] Upstream streaming error, redirecting directly:", err.message);
       res.redirect(targetUrl);
       return;
     }
   }
 
   if (docId) {
-    // Return direct embed/print view if streaming direct binary is restricted
     res.redirect(`https://www.scribd.com/embeds/${docId}/content?start_page=1&view_mode=scroll`);
     return;
   }

@@ -23,6 +23,8 @@ import {
   Network,
   RefreshCw,
   SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import * as d3 from "d3";
 import { trpc } from "@/lib/trpc";
@@ -113,16 +115,32 @@ export function ConnectedPapersGraphView({ isArabic }: { isArabic: boolean }) {
   const [minCitationsFilter, setMinCitationsFilter] = useState(0);
   const [copiedCitation, setCopiedCitation] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [expandedAbstracts, setExpandedAbstracts] = useState<Record<string, boolean>>({});
 
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
+  const triggerDownload = (url: string, filename?: string) => {
+    try {
+      const a = document.createElement("a");
+      a.href = url;
+      if (filename) a.download = filename;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch {
+      window.location.href = url;
+    }
+  };
+
   // Direct document resolver mutation
   const resolveDocMutation = trpc.academic.resolveDocument.useMutation({
     onSuccess: (data: any) => {
-      if (data.success && data.downloadUrl) {
-        toast.success(isArabic ? "تم تجهيز المستند للتحميل المباشر" : "Document ready for direct download");
-        window.open(data.proxyDownloadUrl || data.downloadUrl, "_blank");
+      if (data.success && (data.proxyDownloadUrl || data.downloadUrl)) {
+        toast.success(isArabic ? "تم تجهيز المستند والبدء بالتحميل المباشر" : "Document ready, starting direct download");
+        triggerDownload(data.proxyDownloadUrl || data.downloadUrl, data.filename);
       } else {
         toast.error(data.message || (isArabic ? "تعذر استخراج المستند" : "Could not resolve document"));
       }
@@ -280,16 +298,18 @@ export function ConnectedPapersGraphView({ isArabic }: { isArabic: boolean }) {
   // Direct download handler
   const handleDirectDownload = (node: AcademicPaperNode) => {
     if (node.pdfUrl) {
-      window.open(node.pdfUrl, "_blank");
+      triggerDownload(node.pdfUrl, `${node.title.slice(0, 45).replace(/[^a-zA-Z0-9_\u0600-\u06FF\s-]/g, "")}.pdf`);
       toast.success(isArabic ? "بدء تحميل ملف PDF المباشر..." : "Starting direct PDF download...");
       return;
     }
 
     if (node.doi) {
+      toast.info(isArabic ? "جارٍ جلب رابط PDF المباشر عبر مستودعات الوصول المفتوح..." : "Resolving open-access paper file...");
       resolveDocMutation.mutate({ urlOrIdentifier: node.doi });
       return;
     }
 
+    toast.info(isArabic ? "جارٍ البحث عن ملف الورقة الأكاديمية..." : "Searching for academic paper file...");
     resolveDocMutation.mutate({ urlOrIdentifier: node.title });
   };
 
@@ -801,6 +821,203 @@ export function ConnectedPapersGraphView({ isArabic }: { isArabic: boolean }) {
           )}
         </div>
       </div>
+
+      {/* ── 4. Full Connected Papers & Abstracts Directory (Improved Visibility) ── */}
+      {graphData && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <span>
+                  {isArabic
+                    ? "دليل الأبحاث المتصلة والملخصات الأكاديمية (Connected Papers Directory)"
+                    : "Connected Papers Directory & Abstracts"}
+                </span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                {isArabic
+                  ? "استعراض كامل لجميع ملخصات الأوراق البحثية، الاستشهادات، مع إمكانية التحميل المباشر بنقرة واحدة."
+                  : "Comprehensive directory of all connected paper abstracts, citations, and instant one-click PDF downloads."}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold px-3 py-1 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 rounded-full border border-blue-200 dark:border-blue-900">
+                {filteredNodes.length} {isArabic ? "ورقة بحثية" : "papers"}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
+            {filteredNodes.map((node) => {
+              const isExpanded = expandedAbstracts[node.id];
+              const isSelected = selectedNode?.id === node.id;
+
+              return (
+                <div
+                  key={node.id}
+                  className={`rounded-xl border p-5 transition-all ${
+                    node.isSeed
+                      ? "border-blue-300 dark:border-blue-800 bg-blue-50/40 dark:bg-blue-950/20 shadow-xs"
+                      : isSelected
+                      ? "border-indigo-300 dark:border-indigo-700 bg-indigo-50/20 dark:bg-indigo-950/20"
+                      : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700"
+                  }`}
+                >
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                    <div className="flex-1 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {node.isSeed ? (
+                          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-600 text-white">
+                            ★ {isArabic ? "الورقة المركزية" : "Seed Paper"}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                            {isArabic ? "ورقة متصلة" : "Connected"} • {Math.round(node.similarity * 100)}% {isArabic ? "تشابه" : "similarity"}
+                          </span>
+                        )}
+
+                        {node.year && (
+                          <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
+                            ({node.year})
+                          </span>
+                        )}
+
+                        {node.venue && (
+                          <span className="text-xs text-slate-500 italic truncate max-w-[280px]">
+                            {node.venue}
+                          </span>
+                        )}
+
+                        {node.pdfUrl && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                            PDF Ready
+                          </span>
+                        )}
+                      </div>
+
+                      <h4
+                        onClick={() => {
+                          setSelectedNode(node);
+                          window.scrollTo({ top: 350, behavior: "smooth" });
+                        }}
+                        className="text-base font-bold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors"
+                      >
+                        {node.title}
+                      </h4>
+
+                      <p className="text-xs text-slate-600 dark:text-slate-400">
+                        {node.authors.slice(0, 4).join(", ")}
+                        {node.authors.length > 4 ? ` et al. (+${node.authors.length - 4})` : ""}
+                      </p>
+
+                      {/* Abstract display with expand/collapse */}
+                      <div className="pt-2">
+                        <div
+                          className={`text-xs text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-950/70 p-3 rounded-xl border border-slate-100 dark:border-slate-800 ${
+                            !isExpanded && "line-clamp-3"
+                          }`}
+                        >
+                          {node.abstract ? (
+                            node.abstract
+                          ) : (
+                            <span className="italic text-slate-400">
+                              {isArabic
+                                ? "الملخص متاح عبر قاعدة البيانات والتحميل المباشر."
+                                : "Abstract available via direct repository and download link."}
+                            </span>
+                          )}
+                        </div>
+
+                        {node.abstract && node.abstract.length > 180 && (
+                          <button
+                            onClick={() =>
+                              setExpandedAbstracts((prev) => ({
+                                ...prev,
+                                [node.id]: !prev[node.id],
+                              }))
+                            }
+                            className="mt-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+                          >
+                            <span>
+                              {isExpanded
+                                ? isArabic ? "طي الملخص" : "Show less"
+                                : isArabic ? "قراءة كامل الملخص" : "Read full abstract"}
+                            </span>
+                            {isExpanded ? (
+                              <ChevronUp className="w-3.5 h-3.5" />
+                            ) : (
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right column: metrics and action buttons */}
+                    <div className="flex md:flex-col items-center md:items-end justify-between md:justify-start gap-3 shrink-0 pt-2 md:pt-0">
+                      <div className="text-right">
+                        <span className="text-[11px] text-slate-400 block">
+                          {isArabic ? "الاستشهادات" : "Citations"}
+                        </span>
+                        <span className="text-base font-bold text-slate-900 dark:text-white font-mono">
+                          {node.citationCount.toLocaleString()}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap md:flex-col gap-2 w-full md:w-44">
+                        <button
+                          onClick={() => handleDirectDownload(node)}
+                          disabled={resolveDocMutation.isPending}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-xs disabled:opacity-50"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>{isArabic ? "تحميل PDF" : "Download PDF"}</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setSelectedNode(node);
+                            window.scrollTo({ top: 350, behavior: "smooth" });
+                          }}
+                          className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium py-1.5 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          <Network className="w-3.5 h-3.5" />
+                          <span>{isArabic ? "معاينة بالرسم" : "View in Graph"}</span>
+                        </button>
+
+                        <div className="flex gap-1.5 w-full">
+                          <button
+                            onClick={() => handleCopyCitation(node)}
+                            className="flex-1 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs py-1.5 px-2 rounded-lg flex items-center justify-center gap-1"
+                            title={isArabic ? "نسخ بصيغة APA" : "Copy APA"}
+                          >
+                            <Copy className="w-3 h-3" />
+                            <span>APA</span>
+                          </button>
+
+                          {node.doi && (
+                            <a
+                              href={`https://doi.org/${node.doi}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs py-1.5 px-2 rounded-lg flex items-center justify-center gap-1"
+                              title="DOI"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              <span>DOI</span>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

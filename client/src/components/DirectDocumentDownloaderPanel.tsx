@@ -111,8 +111,8 @@ export function DirectDocumentDownloaderPanel({ isArabic }: { isArabic: boolean 
                   onKeyDown={(e) => e.key === "Enter" && handleResolveAndDownload()}
                   placeholder={
                     isArabic
-                      ? "ألصق رابط المستند (مثال: رابط Scribd، أو DOI، أو رابط PDF أو كتاب)..."
-                      : "Paste document URL (e.g. Scribd doc URL, DOI, or book link)..."
+                      ? "ألصق رابط المستند أو رابط أرشيف الإنترنت أو معرف DOI أو ورقة ArXiv..."
+                      : "Paste document URL, Internet Archive link, DOI, or arXiv paper..."
                   }
                   className="w-full bg-transparent text-sm sm:text-base text-white placeholder:text-slate-400 outline-none"
                 />
@@ -143,13 +143,13 @@ export function DirectDocumentDownloaderPanel({ isArabic }: { isArabic: boolean 
             <span className="text-slate-400">{isArabic ? "جرّب روابط سريعة:" : "Quick try:"}</span>
             <button
               onClick={() => {
-                const u = "https://www.scribd.com/doc/36341/Business-Plan-Template";
+                const u = "https://archive.org/details/algeria_bac_chemistry";
                 setInputUrl(u);
                 handleResolveAndDownload(u);
               }}
               className="bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded-lg transition-colors border border-white/10"
             >
-              📄 Scribd Doc Sample
+              🏛️ {isArabic ? "أرشيف الوثائق التعليمية" : "Educational Archive"}
             </button>
             <button
               onClick={() => {

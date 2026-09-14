@@ -122,8 +122,8 @@ export function BookAndDocumentDownloader({ isArabic = true }: BookAndDocumentDo
             </h2>
             <p className="mt-1 text-xs text-slate-500">
               {isArabic
-                ? "يدعم روابط الكتب والمستندات (Scribd)، أوراق ArXiv، معرفات DOI الأكاديمية، والملفات المباشرة."
-                : "Supports document URLs, book identifiers, arXiv IDs, DOIs, and direct academic PDF repositories."}
+                ? "يدعم روابط المستودعات والمكتبات الرقمية، أرشيف الإنترنت (Internet Archive)، أوراق ArXiv، معرفات DOI الأكاديمية، والملفات المباشرة."
+                : "Supports digital library documents, Internet Archive, arXiv papers, academic DOIs, and direct repositories."}
             </p>
 
             <form onSubmit={handleResolve} className="mt-4 flex flex-col sm:flex-row gap-3">
@@ -132,8 +132,8 @@ export function BookAndDocumentDownloader({ isArabic = true }: BookAndDocumentDo
                 onChange={(e) => setDocumentInput(e.target.value)}
                 placeholder={
                   isArabic
-                    ? "الصق رابط المستند أو الكتاب هنا (مثال: https://www.scribd.com/doc/... أو 10.1038/...)"
-                    : "Paste document URL or DOI (e.g., scribd URL, arxiv ID, doi)..."
+                    ? "الصق رابط المستند أو معرف الأرشيف أو DOI (مثال: archive.org/details/... أو 10.1038/...)"
+                    : "Paste document URL, archive.org ID, arXiv or DOI (e.g., 10.1038/..., 2301.07041)..."
                 }
                 className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
               />
@@ -151,7 +151,7 @@ export function BookAndDocumentDownloader({ isArabic = true }: BookAndDocumentDo
             <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-500">
               <span>{isArabic ? "روابط سريعة للتجربة:" : "Quick samples:"}</span>
               {[
-                { label: "Scribd Chemistry Guide", url: "https://www.scribd.com/document/512398472/algeria-chemistry-bac" },
+                { label: isArabic ? "دليل الكيمياء للبكالوريا" : "Chemistry BAC Guide", url: "https://archive.org/details/algeria_bac_chemistry" },
                 { label: "arXiv Physics (Quantum Waves)", url: "2301.07041" },
                 { label: "Nature Science DOI", url: "10.1038/nature12373" },
               ].map((sample, idx) => (

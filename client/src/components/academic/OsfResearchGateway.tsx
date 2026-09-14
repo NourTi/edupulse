@@ -14,8 +14,10 @@ import {
   Users,
   CheckCircle2,
   Loader2,
+  Download,
 } from "lucide-react";
 import { trpc } from "../../lib/trpc";
+import { toast } from "sonner";
 
 interface OsfResearchGatewayProps {
   isArabic?: boolean;
@@ -25,6 +27,50 @@ export function OsfResearchGateway({ isArabic = true }: OsfResearchGatewayProps)
   const [isEnabled, setIsEnabled] = useState(true);
   const [searchQuery, setSearchQuery] = useState("artificial intelligence education machine learning");
   const [activeQuery, setActiveQuery] = useState("artificial intelligence education machine learning");
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const triggerDownload = (url: string, filename?: string) => {
+    try {
+      const a = document.createElement("a");
+      a.href = url;
+      if (filename) a.download = filename;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch {
+      window.location.href = url;
+    }
+  };
+
+  const resolveDocMutation = trpc.academic.resolveDocument.useMutation({
+    onSuccess: (data: any) => {
+      setDownloadingId(null);
+      if (data.success && (data.proxyDownloadUrl || data.downloadUrl)) {
+        toast.success(isArabic ? "تم استخراج وتجهيز المستند وبدء التحميل المباشر" : "Document resolved, starting direct download");
+        triggerDownload(data.proxyDownloadUrl || data.downloadUrl, data.filename);
+      } else {
+        toast.error(data.message || (isArabic ? "تعذر استخراج المستند الأكاديمي" : "Could not resolve paper document"));
+      }
+    },
+    onError: (err: any) => {
+      setDownloadingId(null);
+      toast.error(err.message);
+    },
+  });
+
+  const handleDownload = (item: any) => {
+    if (item.downloadUrl && item.downloadUrl.endsWith(".pdf")) {
+      triggerDownload(item.downloadUrl, `${item.title.slice(0, 45).replace(/[^a-zA-Z0-9_\u0600-\u06FF\s-]/g, "")}.pdf`);
+      toast.success(isArabic ? "بدء تحميل ملف PDF..." : "Starting PDF download...");
+      return;
+    }
+
+    setDownloadingId(item.id);
+    toast.info(isArabic ? "جارٍ استخراج وتجهيز المستند عبر مستودعات الوصول المفتوح..." : "Resolving open-access document...");
+    resolveDocMutation.mutate({ urlOrIdentifier: item.doi || item.url || item.title });
+  };
 
   const osfQuery = trpc.integrations.osfShare.useQuery(
     { query: activeQuery, limit: 12 },
@@ -180,19 +226,33 @@ export function OsfResearchGateway({ isArabic = true }: OsfResearchGatewayProps)
                     )}
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
                     <span className="text-[11px] text-slate-400">{item.provider || "OSF Datasets"}</span>
-                    {item.url && (
-                      <a
-                        href={item.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-bold text-cyan-700 hover:text-cyan-900"
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleDownload(item)}
+                        disabled={downloadingId === item.id}
+                        className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-200 transition disabled:opacity-50"
                       >
-                        <span>{isArabic ? "فتح المستند" : "View"}</span>
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    )}
+                        {downloadingId === item.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Download className="h-3 w-3" />
+                        )}
+                        <span>{downloadingId === item.id ? (isArabic ? "جارٍ التجهيز..." : "Preparing...") : (isArabic ? "تحميل PDF" : "Download PDF")}</span>
+                      </button>
+                      {item.url && (
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-slate-900"
+                        >
+                          <span>{isArabic ? "المصدر" : "View"}</span>
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

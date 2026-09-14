@@ -5,9 +5,6 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
-  Key,
-  Copy,
-  Check,
   Send,
   Sparkles,
 } from "lucide-react";
@@ -31,9 +28,6 @@ export function PhoneVerificationModal({
   const [otpCode, setOtpCode] = useState("");
   const [step, setStep] = useState<"enter_phone" | "enter_otp">("enter_phone");
   const [carrierInfo, setCarrierInfo] = useState<any>(null);
-  const [copiedKey, setCopiedKey] = useState(false);
-
-  const defaultApiKey = "num_live_GtX4eOYWwoE1uoEa0c60IrKASHVraweeeIpOHRsu";
 
   const sendOtpMutation = trpc.integrations.sendPhoneOtp.useMutation();
   const verifyOtpMutation = trpc.integrations.verifyPhoneOtp.useMutation();
@@ -86,13 +80,6 @@ export function PhoneVerificationModal({
     }
   };
 
-  const copyApiKey = () => {
-    navigator.clipboard.writeText(defaultApiKey);
-    setCopiedKey(true);
-    setTimeout(() => setCopiedKey(false), 2000);
-    toast.success(isArabic ? "تم نسخ مفتاح API بنجاح" : "API key copied");
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" dir={isArabic ? "rtl" : "ltr"}>
       <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-100">
@@ -111,30 +98,12 @@ export function PhoneVerificationModal({
           </div>
           <div>
             <h3 className="text-base font-bold text-slate-900">
-              {isArabic ? "التحقق السريع عبر رقم الهاتف" : "Phone Verification (NumLookup)"}
+              {isArabic ? "التحقق السريع عبر رقم الهاتف" : "Phone Verification"}
             </h3>
             <p className="text-xs text-slate-500">
-              {isArabic ? "تسجيل دخول آمن وفوري للأساتذة والطلبة" : "Fast passwordless sign-in for students & teachers"}
+              {isArabic ? "تسجيل دخول وتأكيد آمن وفوري للأساتذة والطلبة" : "Fast secure verification for students & teachers"}
             </p>
           </div>
-        </div>
-
-        {/* NumLookup Live API Key Banner (from dashboard screenshot) */}
-        <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
-          <div className="flex items-center justify-between mb-1">
-            <span className="font-semibold text-slate-700 flex items-center gap-1.5">
-              <Key className="h-3.5 w-3.5 text-blue-600" />
-              <span>NumLookupAPI Live Key</span>
-            </span>
-            <button
-              onClick={copyApiKey}
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800"
-            >
-              {copiedKey ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-              <span>{copiedKey ? (isArabic ? "تم النسخ" : "Copied") : isArabic ? "نسخ" : "Copy"}</span>
-            </button>
-          </div>
-          <p className="font-mono text-[10px] text-slate-500 truncate">{defaultApiKey}</p>
         </div>
 
         {/* Step 1: Phone Input */}

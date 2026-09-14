@@ -91,8 +91,8 @@ import { WolframStemSolver } from "./academic/WolframStemSolver";
 import { PersonalityProfiler } from "./academic/PersonalityProfiler";
 import { OsfResearchGateway } from "./academic/OsfResearchGateway";
 import { CambridgeEnglishStudio } from "./academic/CambridgeEnglishStudio";
-import { CloneDashboardView } from "./dashboard/CloneDashboardView";
 import { PhoneVerificationModal } from "./auth/PhoneVerificationModal";
+import { AlgerianOfficialRegistrationForm, type AlgerianStudentRegistrationData } from "./academic/AlgerianOfficialRegistrationForm";
 
 type Screen = "landing" | "access" | "workspace";
 type Role = "admin" | "finance_admin" | "registrar" | "teacher" | "counsellor" | "student" | "guardian";
@@ -421,6 +421,41 @@ export default function EduPulseApp() {
     toast.success(authUser && !desktopRuntime && (accountRole === "admin" || accountRole === "registrar") ? "تم تسجيل الطالب في قاعدة المؤسسة." : "تم تسجيل الطالب في السجل المحلي.");
   };
 
+  const handleOfficialRegistrationSuccess = async (studentData: AlgerianStudentRegistrationData) => {
+    const fullNameAr = `${studentData.firstNameAr} ${studentData.familyNameAr}`.trim();
+    const fullNameFr = `${studentData.firstNameFr} ${studentData.familyNameFr}`.trim();
+    const newStudent: Student = {
+      id: studentData.nationalStudentId || `s-${Date.now()}`,
+      name: fullNameFr || fullNameAr,
+      nameAr: fullNameAr,
+      grade: studentData.grade,
+      guardian: studentData.guardianNameAr,
+      phone: studentData.guardianPhone,
+      level: "A1",
+      attendance: 100,
+      subjects: ["arabic", "english", "mathematics"],
+      status: "New",
+      phoneVerified: true,
+      guardianConsent: true,
+    };
+    if (authUser && !desktopRuntime && (accountRole === "admin" || accountRole === "registrar")) {
+      try {
+        await createLearnerMutation.mutateAsync({
+          name: newStudent.name,
+          nameAr: newStudent.nameAr,
+          grade: newStudent.grade,
+          phone: newStudent.phone,
+          status: "new",
+        });
+        await serverLearnersQuery.refetch();
+      } catch (e) {
+        console.warn("Learner server registration fallback:", e);
+      }
+    }
+    await updateData({ ...data, students: [newStudent, ...data.students] });
+    setRegistrationOpen(false);
+  };
+
   const printArabicReceipt = (payment: Payment) => {
     const student = data.students.find((item) => item.id === payment.studentId);
     const receiptWindow = window.open("", "edupulse-receipt", "width=760,height=920");
@@ -500,37 +535,36 @@ export default function EduPulseApp() {
   };
 
   const navItems = [
-    { id: "overview", label: "نظرة عامة", icon: LayoutDashboard, roles: ["admin", "teacher", "student"] },
-    { id: "clone_dashboard", label: "لوحة التحكم والـ APIs", icon: Activity, roles: ["admin", "teacher", "student", "guardian", "registrar", "finance_admin", "counsellor"] },
-    { id: "cambridge_lexicon", label: "قاموس كامبريدج والصوتيات IPA", icon: BookOpen, roles: ["admin", "teacher", "student", "counsellor"] },
-    { id: "studivexa", label: "منصة Studivexa للطلبة", icon: Brain, roles: ["admin", "teacher", "student", "guardian"] },
-    { id: "book_downloader", label: "تنزيل الكتب و Archive.org", icon: Download, roles: ["admin", "teacher", "student", "counsellor"] },
-    { id: "template_studio", label: "استوديو APITemplate و Quoterism", icon: Palette, roles: ["admin", "teacher", "counsellor"] },
-    { id: "scorecard_guidance", label: "توجيه الثانوي College Scorecard", icon: GraduationCap, roles: ["admin", "teacher", "student", "counsellor"] },
-    { id: "osf_gateway", label: "بوابة أبحاث OSF المفتوحة", icon: Database, roles: ["admin", "teacher", "counsellor"] },
-    { id: "wolfram_stem", label: "محرك Wolfram|Alpha الحسابي", icon: Binary, roles: ["admin", "teacher", "student"] },
-    { id: "personality_profiler", label: "الملف النفسي Personality.fyi", icon: Sparkles, roles: ["admin", "teacher", "counsellor"] },
-    { id: "professor", label: "مركز قرار الأستاذ", icon: Brain, roles: ["admin", "teacher", "counsellor"] },
-    { id: "student_intel", label: "ذكاء الطالب والبكالوريا", icon: Sparkles, roles: ["admin", "teacher", "student", "guardian"] },
-    { id: "research_studio", label: "أستوديو البحث وMCP", icon: Search, roles: ["admin", "teacher", "counsellor"] },
-    { id: "registration", label: "تسجيل الطالب", icon: UserRoundPlus, roles: ["admin", "registrar"] },
-    { id: "learners", label: "الطلاب", icon: UsersRound, roles: ["admin", "registrar", "teacher", "counsellor"] },
-    { id: "subjects", label: "المواد والمنهاج", icon: LibraryBig, roles: ["admin", "teacher", "student"] },
-    { id: "attendance", label: "الحضور", icon: ClipboardCheck, roles: ["admin", "registrar", "teacher", "counsellor"] },
-    { id: "cefr", label: "تقييم CEFR", icon: BarChart3, roles: ["admin", "teacher", "student"] },
-    { id: "guardians", label: "التواصل مع الأولياء", icon: MessageCircle, roles: ["admin", "teacher", "counsellor"] },
-    { id: "payments", label: "المدفوعات والإيصالات", icon: WalletCards, roles: ["admin", "finance_admin"] },
-    { id: "google_workspace", label: "بيئة Google الموحدة", icon: Globe, roles: ["admin", "teacher", "student", "guardian", "registrar", "finance_admin", "counsellor"] },
-    { id: "creator", label: "استوديو المبدع", icon:  Sparkles, roles: ["admin", "teacher", "counsellor"] },
-    { id: "ai-console", label: "وحدة الذكاء والمصادر", icon: Radar, roles: ["admin", "teacher", "counsellor"] },
-    { id: "reports", label: "تقارير التقدم", icon: FileText, roles: ["admin", "teacher", "student"] },
-    { id: "support-evaluation", label: "تقييم الدعم التعليمي", icon: BrainCircuit, roles: ["admin", "teacher", "counsellor"] },
-    { id: "search", label: "بحث في السجل", icon: Search, roles: ["admin", "teacher", "student"] },
-    { id: "knowledge", label: "مصادر المؤسسة", icon: BookOpen, roles: ["admin"] },
-    { id: "team", label: "فريق المؤسسة", icon: ShieldCheck, roles: ["admin"] },
-    { id: "ask", label: "اسأل المؤسسة", icon: MessageCircleQuestion, roles: ["admin", "teacher", "student"] },
-    { id: "crm", label: "نظام المعلم", icon: ClipboardCheck, roles: ["admin", "teacher", "counsellor"] },
-    { id: "portal", label: role === "guardian" ? "بوابة ولي الأمر" : "بوابة الطالب", icon: UserRoundCheck, roles: ["student", "guardian"] },
+    { id: "overview", label: isArabic ? "نظرة عامة" : "Overview", icon: LayoutDashboard, roles: ["admin", "teacher", "student"] },
+    { id: "studivexa", label: isArabic ? "المساعد الدراسي الذكي" : "Smart AI Study Partner", icon: Brain, roles: ["admin", "student", "guardian"] },
+    { id: "cambridge_lexicon", label: isArabic ? "القاموس المتقدم والصوتيات IPA" : "Advanced Lexicon & IPA Phonetics", icon: BookOpen, roles: ["admin", "student", "counsellor"] },
+    { id: "wolfram_stem", label: isArabic ? "المساعد الرياضي والحسابي المتقدم" : "Advanced STEM & Math Solver", icon: Binary, roles: ["admin", "teacher", "student"] },
+    { id: "student_intel", label: isArabic ? "ذكاء الطالب والبكالوريا" : "Student Intel & BAC Prep", icon: Sparkles, roles: ["admin", "student", "guardian"] },
+    { id: "book_downloader", label: isArabic ? "المكتبة الرقمية والمراجع الأكاديمية" : "Digital Academic Library", icon: Download, roles: ["admin", "teacher", "student", "counsellor"] },
+    { id: "scorecard_guidance", label: isArabic ? "التوجيه الجامعي واستكشاف التخصصات" : "University Guidance & Scorecard", icon: GraduationCap, roles: ["admin", "teacher", "student", "counsellor"] },
+    { id: "professor", label: isArabic ? "مركز قرار الأستاذ" : "Professor Decision Center", icon: Brain, roles: ["admin", "teacher", "counsellor"] },
+    { id: "research_studio", label: isArabic ? "أستوديو البحث العلمي وMCP" : "Research Studio & MCP", icon: Search, roles: ["admin", "teacher", "counsellor"] },
+    { id: "template_studio", label: isArabic ? "استوديو المذكرات والشهادات البيداغوجية" : "Curriculum & Certificate Studio", icon: Palette, roles: ["admin", "teacher", "counsellor"] },
+    { id: "personality_profiler", label: isArabic ? "الملف النفسي والنمط الإدراكي للتلميذ" : "Student Cognitive & Personality Profile", icon: Sparkles, roles: ["admin", "teacher", "counsellor"] },
+    { id: "osf_gateway", label: isArabic ? "بوابة الأبحاث والمسودات الأكاديمية" : "Scholarly Research Gateway", icon: Database, roles: ["admin", "teacher", "counsellor"] },
+    { id: "registration", label: isArabic ? "تسجيل التلميذ (الرقمنة)" : "Official Registration", icon: UserRoundPlus, roles: ["admin", "registrar"] },
+    { id: "learners", label: isArabic ? "الطلاب" : "Learners", icon: UsersRound, roles: ["admin", "registrar", "teacher", "counsellor"] },
+    { id: "subjects", label: isArabic ? "المواد والمنهاج" : "Subjects", icon: LibraryBig, roles: ["admin", "teacher", "student"] },
+    { id: "attendance", label: isArabic ? "الحضور والغياب" : "Attendance", icon: ClipboardCheck, roles: ["admin", "registrar", "teacher", "counsellor"] },
+    { id: "cefr", label: isArabic ? "تقييم الكفاءات CEFR" : "CEFR Assessment", icon: BarChart3, roles: ["admin", "teacher", "student"] },
+    { id: "guardians", label: isArabic ? "التواصل مع الأولياء" : "Guardian Comms", icon: MessageCircle, roles: ["admin", "teacher", "counsellor"] },
+    { id: "payments", label: isArabic ? "المدفوعات والإيصالات" : "Payments", icon: WalletCards, roles: ["admin", "finance_admin"] },
+    { id: "google_workspace", label: isArabic ? "بيئة Google الموحدة" : "Google Workspace", icon: Globe, roles: ["admin", "teacher", "student", "guardian", "registrar", "finance_admin", "counsellor"] },
+    { id: "creator", label: isArabic ? "استوديو المبدع" : "Creator Studio", icon: Sparkles, roles: ["admin", "teacher", "counsellor"] },
+    { id: "ai-console", label: isArabic ? "وحدة الذكاء والمصادر" : "AI Console", icon: Radar, roles: ["admin", "teacher", "counsellor"] },
+    { id: "reports", label: isArabic ? "تقارير التقدم" : "Progress Reports", icon: FileText, roles: ["admin", "teacher", "student"] },
+    { id: "support-evaluation", label: isArabic ? "تقييم الدعم التعليمي" : "Support Evaluation", icon: BrainCircuit, roles: ["admin", "teacher", "counsellor"] },
+    { id: "search", label: isArabic ? "بحث في السجل" : "Search", icon: Search, roles: ["admin", "teacher", "student"] },
+    { id: "knowledge", label: isArabic ? "مصادر المؤسسة" : "Institution Knowledge", icon: BookOpen, roles: ["admin"] },
+    { id: "team", label: isArabic ? "فريق المؤسسة" : "Team", icon: ShieldCheck, roles: ["admin"] },
+    { id: "ask", label: isArabic ? "اسأل المؤسسة" : "Ask", icon: MessageCircleQuestion, roles: ["admin", "teacher", "student"] },
+    { id: "crm", label: isArabic ? "نظام المعلم" : "Teacher CRM", icon: ClipboardCheck, roles: ["admin", "teacher", "counsellor"] },
+    { id: "portal", label: role === "guardian" ? (isArabic ? "بوابة ولي الأمر" : "Guardian Portal") : (isArabic ? "بوابة التلميذ" : "Student Portal"), icon: UserRoundCheck, roles: ["student", "guardian"] },
   ];
 
   const landingNav = [
@@ -681,18 +715,17 @@ export default function EduPulseApp() {
   const navigate = (id: string) => { const destination = navItems.find(item => item.id === id); if (!destination || !destination.roles.includes(role)) { toast.error(isArabic ? "لا تملك صلاحية فتح هذه الوحدة." : "You do not have permission to open this module."); return; } if (id === "search") { setSearchOpen(true); setMobileMenu(false); return; } setActiveView(id); setMobileMenu(false); };
   const dashboardTitle = ({
     overview: "صباح واضح.",
-    clone_dashboard: "لوحة التحكم الحية وواجهات الـ APIs ومفاتيح الربط.",
-    cambridge_lexicon: "قاموس كامبريدج وكاشط الصوتيات IPA لأساتذة الإنجليزية (Apify).",
-    studivexa: "منصة Studivexa للطلبة ومساعد المذاكرة الذكي.",
-    book_downloader: "بوابة تنزيل الكتب والأوراق العلمية وأرشيف الإنترنت.",
-    template_studio: "استوديو توليد القوالب الرسمية وحكم Quoterism.",
-    scorecard_guidance: "توجيه مؤسسات التعليم الثانوي والعالي (College Scorecard).",
-    osf_gateway: "بوابة الأبحاث والبيانات الأكاديمية المفتوحة (OSF).",
-    wolfram_stem: "المحرك الحسابي التفاعلي للعلوم والرياضيات (Wolfram|Alpha).",
-    personality_profiler: "الملف السلوكي والمعرفي والشخصي (Personality.fyi).",
-    professor: "مركز قرار الأستاذ والمنهاج الجزائري.",
+    studivexa: "المساعد الدراسي الذكي والتحضير للدروس والامتحانات.",
+    cambridge_lexicon: "القاموس المتقدم والصوتيات الدولية IPA.",
+    wolfram_stem: "المساعد الرياضي والحسابي المتقدم والمعادلات العلمية.",
     student_intel: "ذكاء الطالب والتحضير للبكالوريا.",
+    book_downloader: "المكتبة الرقمية والمراجع الأكاديمية وأرشيف المعرفة.",
+    scorecard_guidance: "التوجيه الجامعي واستكشاف التخصصات الأكاديمية.",
+    professor: "مركز قرار الأستاذ والمنهاج الجزائري.",
     research_studio: "أستوديو البحث العلمي وتكاملات MCP.",
+    template_studio: "استوديو المذكرات والشهادات البيداغوجية الرسمية.",
+    personality_profiler: "الملف النفسي والنمط الإدراكي للتلميذ.",
+    osf_gateway: "بوابة الأبحاث والمسودات الأكاديمية المفتوحة.",
     registration: "تسجيل طالب جديد.",
     learners: "سجل الطلاب.",
     subjects: "مكتبة المواد الدراسية.",
@@ -712,18 +745,17 @@ export default function EduPulseApp() {
   } as Record<string, string>)[activeView] ?? "EduPulse";
 
   const renderView = () => {
-    if (activeView === "clone_dashboard") return <CloneDashboardView isArabic={isArabic} onOpenPhoneModal={() => setPhoneModalOpen(true)} onNavigateTab={(tab) => setActiveView(tab)} />;
-    if (activeView === "cambridge_lexicon") return <CambridgeEnglishStudio isArabic={isArabic} />;
     if (activeView === "studivexa") return <StudivexaHub isArabic={isArabic} />;
-    if (activeView === "book_downloader") return <BookAndDocumentDownloader isArabic={isArabic} />;
-    if (activeView === "template_studio") return <CurriculumTemplateStudio isArabic={isArabic} />;
-    if (activeView === "scorecard_guidance") return <CollegeScorecardGuidance isArabic={isArabic} />;
-    if (activeView === "osf_gateway") return <OsfResearchGateway isArabic={isArabic} />;
-    if (activeView === "wolfram_stem") return <WolframStemSolver isArabic={isArabic} />;
-    if (activeView === "personality_profiler") return <PersonalityProfiler isArabic={isArabic} />;
-    if (activeView === "professor") return <ProfessorWorkspace isArabic={isArabic} onNavigate={(view) => setActiveView(view)} />;
+    if (activeView === "cambridge_lexicon") return <CambridgeEnglishStudio isArabic={isArabic} />;
+    if (activeView === "wolfram_stem") return <WolframStemSolver isArabic={isArabic} userRole={role} />;
     if (activeView === "student_intel") return <StudentIntelligencePanel isArabic={isArabic} />;
+    if (activeView === "book_downloader") return <BookAndDocumentDownloader isArabic={isArabic} />;
+    if (activeView === "scorecard_guidance") return <CollegeScorecardGuidance isArabic={isArabic} />;
+    if (activeView === "professor") return <ProfessorWorkspace isArabic={isArabic} onNavigate={(view) => setActiveView(view)} />;
     if (activeView === "research_studio") return <ResearchStudioPanel isArabic={isArabic} />;
+    if (activeView === "template_studio") return <CurriculumTemplateStudio isArabic={isArabic} />;
+    if (activeView === "personality_profiler") return <PersonalityProfiler isArabic={isArabic} />;
+    if (activeView === "osf_gateway") return <OsfResearchGateway isArabic={isArabic} />;
     if (activeView === "team") return <><SectionHeader eyebrow="Institution administration" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">فريق بصلاحيات واضحة.</em></>} copy="أنشئ دعوات المستخدمين، وراجع حالة كل عضوية، واحتفظ بحدود المؤسسة واضحة." /><InstitutionTeamPanel isArabic={isArabic} institutionId={membershipsQuery.data?.[0]?.institution.id} /></>;
     if (activeView === "crm") return <EducatorCRMPanel isArabic={isArabic} desktopRuntime={desktopRuntime} />;
     if (activeView === "creator") return <><SectionHeader eyebrow="Creator Studio" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">من الرسم البياني إلى الخطة — بروتوكول جزائري.</em></>} copy="استوديوك الخاص: أنشئ الأفواج، حلّل الرسم البياني، أنشئ الخطط والاختبارات — كلها مستندة إلى البرنامج الرسمي." /><CreatorStudioPanel /></>;
@@ -733,7 +765,7 @@ export default function EduPulseApp() {
     if (activeView === "google_workspace") return <GoogleWorkspaceHub isArabic={isArabic} students={data.students} payments={data.payments} />;
     if (activeView === "overview") return <VividDashboard role={role} roleLabel={roleInfo[role].arabic} dateLabel={new Date().toLocaleDateString("ar-DZ", { weekday: "long", day: "numeric", month: "long" })} activeStudents={activeStudents} balanceDue={balanceDue} students={data.students} currentStudent={{ nameAr: currentStudent.nameAr, grade: currentStudent.grade, level: currentStudent.level, attendance: currentStudent.attendance, subjects: currentStudent.subjects.map(subject => subjectName(subject, "ar")) }} onNavigate={navigate} onRegister={() => setRegistrationOpen(true)} />;
 
-    if (activeView === "registration") return <><SectionHeader eyebrow="Arabic-first registration" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">ابدأ بالمعلومات التي تحتاجها فقط.</em></>} copy="يتضمن النموذج الطالب وولي الأمر والصف والمواد. يمكن إضافة الحقول الخاصة بالمؤسسة في نسخة قاعدة البيانات المحلية المشفرة." action={<button onClick={() => setRegistrationOpen(true)} className="liquid-glass rounded-full px-5 py-3 text-sm">فتح النموذج</button>} /><RegistrationPanel registration={registration} setRegistration={setRegistration} toggleSubject={toggleSubject} submitRegistration={submitRegistration} /></>;
+    if (activeView === "registration") return <><SectionHeader eyebrow="Official Algerian Registration" title={<>{dashboardTitle}<br /><em className="not-italic text-white/55">استمارة التسجيل الرسمية وفق المنظومة التربوية الجزائرية.</em></>} copy="نموذج رسمي متكامل يشمل رقم التعريف المدرسي الوطني (NIE)، الهوية باللاتينية والعربية، الطور والشعبة، ولي الأمر، الملف الصحي والوثائق الرسمية للطباعة والحفظ." action={<button onClick={() => setRegistrationOpen(true)} className="liquid-glass rounded-full px-5 py-3 text-sm">فتح الاستمارة الرسمية</button>} /><AlgerianOfficialRegistrationForm isArabic={isArabic} onSuccess={handleOfficialRegistrationSuccess} /></>;
 
     if (activeView === "learners") return <StudentInformationPanel students={data.students} onAdd={() => setRegistrationOpen(true)} isArabic={isArabic} />;
 
@@ -761,21 +793,10 @@ export default function EduPulseApp() {
             <button
               onClick={() => setPhoneModalOpen(true)}
               className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-white/85 hover:bg-white/10 hover:text-white transition"
-              title={isArabic ? "التحقق بالهاتف - NumLookup" : "Phone Verification"}
+              title={isArabic ? "التحقق برقم الهاتف" : "Phone Verification"}
             >
               <Phone className="h-3.5 w-3.5 text-blue-300" />
-              <span className="hidden md:inline">{isArabic ? "التحقق بالهاتف" : "Phone OTP"}</span>
-            </button>
-            <button
-              onClick={() => setActiveView("clone_dashboard")}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition ${
-                activeView === "clone_dashboard"
-                  ? "bg-blue-600 text-white font-semibold shadow-sm"
-                  : "border border-white/15 bg-white/5 text-white/85 hover:bg-white/10"
-              }`}
-            >
-              <Activity className="h-3.5 w-3.5 text-emerald-300" />
-              <span className="hidden md:inline">{isArabic ? "لوحة المؤشرات" : "Live API"}</span>
+              <span className="hidden md:inline">{isArabic ? "التحقق بالهاتف" : "Phone Verification"}</span>
             </button>
             <button onClick={() => setLanguage(isArabic ? "en" : "ar")} className="rounded-full px-3 py-2 text-xs text-white/60 hover:text-white">{isArabic ? "EN" : "العربية"}</button>
             <button onClick={() => toast.info("التنبيهات ستظهر عند تفعيل قائمة المهام في نسخة سطح المكتب.")} className="relative rounded-full p-2.5 text-white/70 hover:bg-white/6 hover:text-white"><Bell className="h-5 w-5" /><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-amber-200" /></button>
@@ -785,7 +806,7 @@ export default function EduPulseApp() {
         {loading ? <div className="flex min-h-[60vh] items-center justify-center text-white/60"><span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" /> <span className="mr-3">فتح السجل المحلي</span></div> : renderView()}
       </section>
     </div>
-    {registrationOpen && <Modal title="تسجيل طالب جديد" onClose={() => setRegistrationOpen(false)}><RegistrationPanel registration={registration} setRegistration={setRegistration} toggleSubject={toggleSubject} submitRegistration={submitRegistration} compact /></Modal>}
+    {registrationOpen && <Modal title="استمارة تسجيل تلميذ جديد (الرقمنة)" onClose={() => setRegistrationOpen(false)}><AlgerianOfficialRegistrationForm isArabic={isArabic} compact onSuccess={handleOfficialRegistrationSuccess} onCancel={() => setRegistrationOpen(false)} /></Modal>}
     {paymentOpen && <Modal title="تسجيل دفعة" onClose={() => setPaymentOpen(false)}><form onSubmit={savePayment} className="space-y-5"><label className="block text-xs text-white/50">الطالب<select value={paymentForm.studentId} onChange={(event) => setPaymentForm({ ...paymentForm, studentId: event.target.value })} className="mt-2 w-full control-light px-4 py-3 text-sm">{data.students.map((student) => <option key={student.id} value={student.id}>{student.nameAr}</option>)}</select></label><label className="block text-xs text-white/50">المبلغ (د.ج)<input value={paymentForm.amount} inputMode="numeric" onChange={(event) => setPaymentForm({ ...paymentForm, amount: event.target.value })} className="mt-2 w-full control-light px-4 py-3 text-sm" placeholder="مثال: 6000" /></label><label className="block text-xs text-white/50">طريقة الدفع<select value={paymentForm.method} onChange={(event) => setPaymentForm({ ...paymentForm, method: event.target.value })} className="mt-2 w-full control-light px-4 py-3 text-sm"><option>Cash</option><option>Bank transfer</option><option>Cheque</option></select></label><button className="liquid-glass w-full rounded-full px-5 py-3 text-sm">حفظ الدفعة وإنشاء إيصال</button></form></Modal>}
     <PhoneVerificationModal isOpen={phoneModalOpen} onClose={() => setPhoneModalOpen(false)} isArabic={isArabic} />
   </main>;

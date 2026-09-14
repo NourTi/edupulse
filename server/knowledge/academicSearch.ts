@@ -3,7 +3,7 @@
  * Integrates:
  * 1. OpenAlex API (Key: 5AenEs3ejVCO5pppuooMes)
  * 2. Semantic Scholar Graph API
- * 3. CrossRef REST API (Polite Pool: mailto:rafaraf201@gmail.com)
+ * 3. CrossRef REST API (Polite Pool: research@edupulse.edu.dz)
  * 4. Europe PMC RESTful API (Biomedical & Life Sciences)
  */
 
@@ -64,7 +64,7 @@ export interface ConnectedPapersGraph {
 }
 
 const OPENALEX_KEY = process.env.OPENALEX_API_KEY?.trim() || "5AenEs3ejVCO5pppuooMes";
-const POLITE_EMAIL = process.env.CROSSREF_MAILTO?.trim() || "rafaraf201@gmail.com";
+const POLITE_EMAIL = process.env.CROSSREF_MAILTO?.trim() || "research@edupulse.edu.dz";
 const TIMEOUT_MS = 10_000;
 
 // Cache map for fast repeated requests

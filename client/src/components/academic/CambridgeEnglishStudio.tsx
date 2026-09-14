@@ -100,30 +100,79 @@ export function CambridgeEnglishStudio({ isArabic = true }: { isArabic?: boolean
     }
   });
 
-  // Handle Search Input Debounce
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setSearchQuery(val);
-    const timeout = setTimeout(() => {
-      setDebouncedQuery(val);
-    }, 350);
-    return () => clearTimeout(timeout);
+  // Handle Search Input Debounce with useEffect
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(searchQuery.trim());
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  const handleInstantSearch = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setDebouncedQuery(searchQuery.trim());
   };
 
-  // Play Audio Helper
-  const playAudio = (url: string, id: string) => {
-    if (!url) {
-      toast.error(isArabic ? "التسجيل الصوتي غير متوفر لهذه الكلمة" : "Audio not available for this entry");
+  // Web Speech Synthesis Fallback Helper (Works 100% reliably in all modern browsers)
+  const speakWithSynthesis = (word: string, accent: "uk" | "us") => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(word);
+      utterance.lang = accent === "uk" ? "en-GB" : "en-US";
+      utterance.rate = 0.88;
+      utterance.pitch = 1.0;
+      utterance.onend = () => setPlayingAudio(null);
+      utterance.onerror = () => setPlayingAudio(null);
+      window.speechSynthesis.speak(utterance);
+    } else {
+      setPlayingAudio(null);
+      toast.info(isArabic ? "الصوت غير مدعوم في متصفحك" : "Speech not supported in browser");
+    }
+  };
+
+  // Play Audio Helper with automatic failover
+  const playAudio = (rawUrl: string, id: string, wordText?: string, accent: "uk" | "us" = "uk") => {
+    const word = wordText || selectedWord?.headword || activeWord?.headword || "";
+    setPlayingAudio(id);
+
+    const fallback = () => {
+      if (word) {
+        speakWithSynthesis(word, accent);
+      } else {
+        setPlayingAudio(null);
+        toast.error(isArabic ? "تعذر تشغيل الصوت" : "Could not play sound");
+      }
+    };
+
+    if (!rawUrl || rawUrl.trim() === "") {
+      fallback();
       return;
     }
-    setPlayingAudio(id);
-    const audio = new Audio(url);
-    audio.play().catch((err) => {
-      console.warn("Audio playback error:", err);
-      toast.error(isArabic ? "تعذر تشغيل الملف الصوتي" : "Could not play audio");
-      setPlayingAudio(null);
-    });
-    audio.onended = () => setPlayingAudio(null);
+
+    const normalizedUrl = rawUrl.startsWith("//") ? `https:${rawUrl}` : rawUrl;
+
+    try {
+      const audio = new Audio();
+      audio.crossOrigin = "anonymous";
+      audio.src = normalizedUrl;
+
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            audio.onended = () => setPlayingAudio(null);
+          })
+          .catch((err) => {
+            console.warn("Audio tag error or hotlink protection, falling back to speech synthesis:", err);
+            fallback();
+          });
+      }
+      audio.onerror = () => {
+        fallback();
+      };
+    } catch {
+      fallback();
+    }
   };
 
   // Copy helper
@@ -200,25 +249,46 @@ export function CambridgeEnglishStudio({ isArabic = true }: { isArabic?: boolean
 
       {/* Main Search Bar & Quick Categories */}
       <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
-        <div className="relative">
-          <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={handleSearchChange}
-            placeholder={
-              isArabic
-                ? "ابحث عن أي كلمة بالإنجليزية (مثال: curriculum, phonetics, assessment, pedagogy)..."
-                : "Search any English word (e.g., curriculum, phonetics, assessment, pedagogy)..."
-            }
-            className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm font-medium transition"
-          />
-          {searchQueryHook.isFetching && (
-            <div className="absolute right-4 top-1/2 -translate-y-1/2">
-              <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />
-            </div>
-          )}
-        </div>
+        <form onSubmit={handleInstantSearch} className="relative flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={
+                isArabic
+                  ? "ابحث عن أي كلمة بالإنجليزية واضغط Enter (مثال: curriculum, phonetics, assessment, pedagogy)..."
+                  : "Search any English word and hit Enter (e.g., curriculum, phonetics, assessment, pedagogy)..."
+              }
+              className="w-full pl-12 pr-10 py-3.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm font-medium transition"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setDebouncedQuery("");
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 text-xs font-bold"
+                title="Clear"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          <button
+            type="submit"
+            className="px-5 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition shadow-sm shrink-0 flex items-center gap-2"
+          >
+            {searchQueryHook.isFetching ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <Search className="w-4 h-4" />
+            )}
+            <span>{isArabic ? "بحث في القاموس" : "Search"}</span>
+          </button>
+        </form>
 
         {/* Quick Filter Pills */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
@@ -387,13 +457,13 @@ export function CambridgeEnglishStudio({ isArabic = true }: { isArabic?: boolean
                   </div>
 
                   <button
-                    onClick={() => playAudio(activeWord.uk_audio_url, `uk-${activeWord.headword}`)}
+                    onClick={() => playAudio(activeWord.uk_audio_url, `uk-${activeWord.headword}`, activeWord.headword, "uk")}
                     className={`h-11 w-11 rounded-xl flex items-center justify-center transition shadow-xs ${
                       playingAudio === `uk-${activeWord.headword}`
-                        ? "bg-blue-600 text-white animate-pulse"
+                        ? "bg-blue-600 text-white animate-pulse ring-2 ring-blue-400"
                         : "bg-white text-blue-700 border border-slate-200 hover:bg-blue-50"
                     }`}
-                    title={isArabic ? "استماع للنطق البريطاني" : "Play UK Audio"}
+                    title={isArabic ? "استماع للنطق البريطاني (تسجيل وصوتي ذكي)" : "Play UK Audio (Authentic + Voice Fallback)"}
                   >
                     <Volume2 className="w-5 h-5" />
                   </button>
@@ -421,13 +491,13 @@ export function CambridgeEnglishStudio({ isArabic = true }: { isArabic?: boolean
                   </div>
 
                   <button
-                    onClick={() => playAudio(activeWord.us_audio_url, `us-${activeWord.headword}`)}
+                    onClick={() => playAudio(activeWord.us_audio_url, `us-${activeWord.headword}`, activeWord.headword, "us")}
                     className={`h-11 w-11 rounded-xl flex items-center justify-center transition shadow-xs ${
                       playingAudio === `us-${activeWord.headword}`
-                        ? "bg-blue-600 text-white animate-pulse"
+                        ? "bg-blue-600 text-white animate-pulse ring-2 ring-blue-400"
                         : "bg-white text-blue-700 border border-slate-200 hover:bg-blue-50"
                     }`}
-                    title={isArabic ? "استماع للنطق الأمريكي" : "Play US Audio"}
+                    title={isArabic ? "استماع للنطق الأمريكي (تسجيل وصوتي ذكي)" : "Play US Audio (Authentic + Voice Fallback)"}
                   >
                     <Volume2 className="w-5 h-5" />
                   </button>
