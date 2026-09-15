@@ -38,13 +38,13 @@ export const postHeroModules: Module[] = [
   { id: "crm", icon: UsersRound, ar: "نظام المعلم الميداني", en: "Educator CRM", tone: "from-blue-400 to-indigo-500" },
   { id: "reports", icon: FileText, ar: "التقارير الأكاديمية", en: "Academic Reports", tone: "from-slate-600 to-slate-800" },
   { id: "portal", icon: GraduationCap, ar: "بوابة الطالب الذاتية", en: "Self-Service Portal", tone: "from-teal-400 to-cyan-600" },
-  { id: "ask", icon: Sparkles, ar: "أدوات ومساعد الذكاء", en: "Zia & AI Assistant", tone: "from-yellow-400 to-amber-500" },
+  { id: "ask", icon: Sparkles, ar: "أدوات ومساعد الذكاء", en: "AI Pedagogical Assistant", tone: "from-yellow-400 to-amber-500" },
 ];
 
 export function PostHeroModuleStrip({ onSelect, isArabic }: Props) {
   return (
     <section id="module-suite" className="relative overflow-hidden border-y border-slate-200 bg-white px-6 py-16 text-slate-900 sm:px-8 sm:py-20">
-      {/* Zoho-inspired subtle mesh and clear background */}
+      {/* Platform subtle mesh and clear background */}
       <div className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-blue-100/50 blur-3xl" />
       <div className="pointer-events-none absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-teal-100/40 blur-3xl" />
 
@@ -53,7 +53,7 @@ export function PostHeroModuleStrip({ onSelect, isArabic }: Props) {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-bold text-blue-700">
             <span>نظام التشغيل المدرسي المتكامل</span>
             <span className="text-slate-400">·</span>
-            <span>Zoho Education & Academic Cockpit</span>
+            <span>EduPulse Academic Cockpit</span>
           </div>
           <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-5xl font-display">
             {isArabic ? (

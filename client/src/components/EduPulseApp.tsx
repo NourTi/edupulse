@@ -27,6 +27,7 @@ import {
   Database,
   Download,
   FileText,
+  FileUp,
   Globe,
   GraduationCap,
   MessageCircleQuestion,
@@ -62,7 +63,7 @@ import { EducatorCRMPanel } from "./EducatorCRMPanel";
 import { VividDashboard } from "./VividDashboard";
 import { PostHeroModuleStrip } from "./PostHeroModuleStrip";
 import AboutSection from "./AboutSection";
-import ZohoEducationLanding from "./ZohoEducationLanding";
+import EduPulseLandingShowcase from "./EduPulseLandingShowcase";
 import { StudentInformationPanel } from "./StudentInformationPanel";
 import { GradebookPanel } from "./GradebookPanel";
 import { StudentPortalPanel } from "@/components/StudentPortalPanel";
@@ -91,6 +92,7 @@ import { WolframStemSolver } from "./academic/WolframStemSolver";
 import { PersonalityProfiler } from "./academic/PersonalityProfiler";
 import { OsfResearchGateway } from "./academic/OsfResearchGateway";
 import { CambridgeEnglishStudio } from "./academic/CambridgeEnglishStudio";
+import { TeacherDocumentStudio } from "./TeacherDocumentStudio";
 import { PhoneVerificationModal } from "./auth/PhoneVerificationModal";
 import { AlgerianOfficialRegistrationForm, type AlgerianStudentRegistrationData } from "./academic/AlgerianOfficialRegistrationForm";
 
@@ -112,8 +114,8 @@ const VIDEO_URL = "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIX
 function LogoMark({ className = "h-8 w-8" }: { className?: string }) {
   return <svg aria-label="EduPulse" role="img" viewBox="0 0 48 48" className={className} fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="42" height="42" rx="13" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.55)"/><path d="M14 29c4-8 8-12 12-12 3 0 5 2 8 7" stroke="white" strokeWidth="2.5" strokeLinecap="round"/><path d="M14 34c5-6 9-9 13-9 3 0 5 1 7 4" stroke="#B6F2E4" strokeWidth="2.5" strokeLinecap="round"/><circle cx="15" cy="16" r="2.5" fill="#F9D58A"/></svg>;
 }
-const ADMISSIONS_IMAGE = "/manus-storage/edupulse-admissions-desk_4d301878.jpg";
-const LEARNING_IMAGE = "/manus-storage/edupulse-learning-room_8022d35a.jpg";
+const ADMISSIONS_IMAGE = "/storage/edupulse-admissions-desk_4d301878.jpg";
+const LEARNING_IMAGE = "/storage/edupulse-learning-room_8022d35a.jpg";
 
 const SUBJECTS: Subject[] = [
   { id: "arabic", name: "Arabic Language", nameAr: "اللغة العربية", group: "Languages" },
@@ -242,7 +244,7 @@ function buildReceiptMarkup(payment: Payment, student: Student | undefined, bran
     paidAt: payment.paidAt,
     logoDataUrl: brand.logoDataUrl,
   });
-  const safeLogo = receipt.logoDataUrl && (/^data:image\/(png|jpeg|webp);base64,/i.test(receipt.logoDataUrl) || receipt.logoDataUrl.startsWith("/manus-storage/")) ? `<img src="${escapeReceiptHtml(receipt.logoDataUrl)}" alt="شعار المؤسسة" style="max-width:132px;max-height:72px;object-fit:contain" />` : "";
+  const safeLogo = receipt.logoDataUrl && (/^data:image\/(png|jpeg|webp);base64,/i.test(receipt.logoDataUrl) || receipt.logoDataUrl.startsWith("/storage/")) ? `<img src="${escapeReceiptHtml(receipt.logoDataUrl)}" alt="شعار المؤسسة" style="max-width:132px;max-height:72px;object-fit:contain" />` : "";
   const englishLabels: Record<string, string> = { "اسم الطالب": "Student", "ولي الأمر": "Guardian", "طريقة الدفع": "Payment method", "الحالة": "Status" };
   const rows = receipt.rows.map(([label, value]) => `<tr><td class="label"><span>${escapeReceiptHtml(label)}</span><small style="display:block;margin-top:3px;direction:ltr;text-align:right;color:#8a9ba0;font-size:11px">${englishLabels[label] ?? ""}</small></td><td>${escapeReceiptHtml(value)}</td></tr>`).join("");
   return `<main dir="rtl" lang="ar" style="box-sizing:border-box;width:100%;min-height:100%;padding:48px;background:#ffffff;color:#00364A;font-family:Arial,'Tahoma',sans-serif;text-align:right"><section style="display:flex;direction:rtl;justify-content:space-between;align-items:flex-start;gap:32px;border-bottom:2px solid #00364A;padding-bottom:24px"><div><div style="font:42px Georgia,serif;letter-spacing:-1px">${escapeReceiptHtml(receipt.schoolName)}</div><div style="font-size:13px;line-height:1.8;color:#58727c">سجل تعليمي محلي · PAYMENT RECEIPT · إيصال دفع</div>${safeLogo ? `<div style="margin-top:16px">${safeLogo}</div>` : ""}</div><div style="font-size:13px;line-height:2;color:#4a5e65;text-align:left;direction:rtl">رقم الإيصال / Receipt: ${escapeReceiptHtml(receipt.receiptNumber)}<br>تاريخ الدفع / Paid on: ${escapeReceiptHtml(receipt.paidAt)}<br>نوع العملية / Method: ${escapeReceiptHtml(receipt.rows[2]?.[1] ?? payment.method)}</div></section><div style="font:38px Georgia,serif;margin:36px 0;direction:rtl">${escapeReceiptHtml(receipt.amountLabel)}</div><table style="width:100%;border-collapse:collapse;direction:rtl;font-size:15px"><tbody>${rows}</tbody></table><p style="margin-top:40px;padding-top:20px;border-top:1px solid #e5edf0;font-size:12px;line-height:1.9;color:#60747c">تم إنشاء هذا الإيصال من مساحة EduPulse المحلية. / Generated locally by EduPulse. احتفظ بنسخة للرجوع إليها.</p></main>`;
@@ -543,6 +545,7 @@ export default function EduPulseApp() {
     { id: "book_downloader", label: isArabic ? "المكتبة الرقمية والمراجع الأكاديمية" : "Digital Academic Library", icon: Download, roles: ["admin", "teacher", "student", "counsellor"] },
     { id: "scorecard_guidance", label: isArabic ? "التوجيه الجامعي واستكشاف التخصصات" : "University Guidance & Scorecard", icon: GraduationCap, roles: ["admin", "teacher", "student", "counsellor"] },
     { id: "professor", label: isArabic ? "مركز قرار الأستاذ" : "Professor Decision Center", icon: Brain, roles: ["admin", "teacher", "counsellor"] },
+    { id: "teacher_documents", label: isArabic ? "استيراد وتعديل المذكرات (PDF/DOCX)" : "Teacher Documents Studio (PDF/DOCX)", icon: FileUp, roles: ["admin", "teacher"] },
     { id: "research_studio", label: isArabic ? "أستوديو البحث العلمي وMCP" : "Research Studio & MCP", icon: Search, roles: ["admin", "teacher", "counsellor"] },
     { id: "template_studio", label: isArabic ? "استوديو المذكرات والشهادات البيداغوجية" : "Curriculum & Certificate Studio", icon: Palette, roles: ["admin", "teacher", "counsellor"] },
     { id: "personality_profiler", label: isArabic ? "الملف النفسي والنمط الإدراكي للتلميذ" : "Student Cognitive & Personality Profile", icon: Sparkles, roles: ["admin", "teacher", "counsellor"] },
@@ -588,7 +591,7 @@ export default function EduPulseApp() {
           loop 
           muted 
           playsInline 
-          poster="/manus-storage/edupulse-cinematic-school-fallback_a69e1a92.jpg"
+          poster="/storage/edupulse-cinematic-school-fallback_a69e1a92.jpg"
         >
           <source src={VIDEO_URL} type="video/mp4" />
         </video>
@@ -688,7 +691,7 @@ export default function EduPulseApp() {
         }
       }} />
       <AboutSection isArabic={isArabic} />
-      <ZohoEducationLanding
+      <EduPulseLandingShowcase
         isArabic={isArabic}
         onEnterWorkspace={(targetRole?: string) => {
           if (targetRole && ["admin", "teacher", "student", "guardian", "inspector"].includes(targetRole)) {
@@ -706,9 +709,62 @@ export default function EduPulseApp() {
   }
 
   if (screen === "access") {
-    if (authLoading) return <main className="relative flex min-h-screen items-center justify-center bg-[hsl(201_100%_13%)] text-white"><Loader2 className="h-6 w-6 animate-spin" /></main>;
-    if (!authUser) return <main className="relative min-h-screen overflow-hidden bg-[hsl(201_100%_13%)] text-white" dir={direction}><video className="absolute inset-0 z-0 h-full w-full object-cover opacity-40" autoPlay loop muted playsInline><source src={VIDEO_URL} type="video/mp4" /></video><div className="relative z-10 mx-auto flex min-h-screen max-w-6xl items-center justify-center px-6 py-8"><AccountPortal language={language} initialTab={initialAuthTab} onBack={() => setScreen("landing")} onLanguageChange={setLanguage} onAuthenticated={(targetRole) => { const chosen = (targetRole as Role) || accountRole; setRole(chosen); setScreen("workspace"); setActiveView(chosen === "guardian" || chosen === "student" ? "portal" : "overview"); }} /></div></main>;
-    return <main className="relative min-h-screen overflow-hidden bg-[hsl(201_100%_13%)] text-white" dir={direction}><video className="absolute inset-0 z-0 h-full w-full object-cover opacity-40" autoPlay loop muted playsInline><source src={VIDEO_URL} type="video/mp4" /></video><div className="relative z-10 mx-auto flex min-h-screen max-w-4xl flex-col px-6 py-6 sm:px-8"><header className="flex items-center justify-between"><button onClick={() => setScreen("landing")} className="flex items-center gap-2 text-sm text-white/70 hover:text-white"><ArrowLeft className="h-4 w-4" />{isArabic ? "العودة للمنصة" : "Back to platform"}</button><button onClick={() => setLanguage(isArabic ? "en" : "ar")} className="text-xs text-white/60">{isArabic ? "EN" : "العربية"}</button></header><div className="flex flex-1 items-center justify-center py-16"><div className="surface-panel w-full max-w-xl rounded-[2rem] p-8 text-center"><LogoMark className="mx-auto h-12 w-12" /><p className="text-display mt-6 text-5xl">{isArabic ? "أهلاً بك مجدداً." : "Welcome back."}</p><p className="mt-4 text-sm leading-7 text-white/55">{authUser.name || authUser.email} · {roleInfo[accountRole].arabic}</p><button onClick={() => enterWorkspace(accountRole)} className="liquid-glass mt-8 rounded-xl px-7 py-3.5 text-sm">{isArabic ? "فتح لوحة العمل" : "Open workspace"}<ArrowUpRight className="ml-2 inline h-4 w-4" /></button><button onClick={() => authLogout()} className="mt-5 block w-full text-xs text-white/45 transition hover:text-white">{isArabic ? "تسجيل الخروج" : "Sign out"}</button></div></div></div></main>;
+    if (authLoading) return <main className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white"><Loader2 className="h-6 w-6 animate-spin text-cyan-400" /></main>;
+    if (!authUser) return (
+      <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white" dir={direction}>
+        <div className="pointer-events-none absolute -top-40 -left-40 h-[600px] w-[600px] rounded-full bg-indigo-600/20 blur-[140px]" />
+        <div className="pointer-events-none absolute -bottom-40 -right-40 h-[600px] w-[600px] rounded-full bg-cyan-500/20 blur-[150px]" />
+        <div className="pointer-events-none absolute top-1/2 left-1/2 h-[450px] w-[450px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-teal-500/10 blur-[160px]" />
+        <video className="absolute inset-0 z-0 h-full w-full object-cover opacity-20 mix-blend-screen" autoPlay loop muted playsInline>
+          <source src={VIDEO_URL} type="video/mp4" />
+        </video>
+        <div className="relative z-10 mx-auto flex min-h-screen max-w-6xl items-center justify-center px-6 py-8">
+          <AccountPortal
+            language={language}
+            initialTab={initialAuthTab}
+            onBack={() => setScreen("landing")}
+            onLanguageChange={setLanguage}
+            onAuthenticated={(targetRole) => {
+              const chosen = (targetRole as Role) || accountRole;
+              setRole(chosen);
+              setScreen("workspace");
+              setActiveView(chosen === "guardian" || chosen === "student" ? "portal" : "overview");
+            }}
+          />
+        </div>
+      </main>
+    );
+    return (
+      <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white" dir={direction}>
+        <div className="pointer-events-none absolute -top-40 -left-40 h-[600px] w-[600px] rounded-full bg-indigo-600/20 blur-[140px]" />
+        <div className="pointer-events-none absolute -bottom-40 -right-40 h-[600px] w-[600px] rounded-full bg-cyan-500/20 blur-[150px]" />
+        <div className="relative z-10 mx-auto flex min-h-screen max-w-4xl flex-col px-6 py-6 sm:px-8">
+          <header className="flex items-center justify-between">
+            <button onClick={() => setScreen("landing")} className="flex items-center gap-2 rounded-full border border-indigo-400/30 bg-white/5 px-4 py-1.5 text-sm font-bold text-white/90 hover:bg-white/10 transition">
+              <ArrowLeft className="h-4 w-4" />{isArabic ? "العودة للمنصة" : "Back to platform"}
+            </button>
+            <button onClick={() => setLanguage(isArabic ? "en" : "ar")} className="rounded-full border border-indigo-400/30 bg-white/5 px-3 py-1.5 text-xs font-bold text-white/80">
+              {isArabic ? "EN" : "العربية"}
+            </button>
+          </header>
+          <div className="flex flex-1 items-center justify-center py-16">
+            <div className="w-full max-w-xl rounded-3xl border border-indigo-400/30 bg-slate-900/90 p-8 text-center shadow-2xl backdrop-blur-xl ring-1 ring-indigo-500/20">
+              <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-400 shadow-lg shadow-indigo-500/30">
+                <LogoMark className="h-10 w-10 text-white" />
+              </div>
+              <p className="mt-6 text-3xl sm:text-4xl font-black text-white">{isArabic ? "أهلاً بك مجدداً." : "Welcome back."}</p>
+              <p className="mt-3 text-sm text-cyan-200/80 font-bold">{authUser.name || authUser.email} · {roleInfo[accountRole].arabic}</p>
+              <button onClick={() => enterWorkspace(accountRole)} className="mt-8 inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-500 px-8 py-3.5 text-sm font-black text-white shadow-xl shadow-indigo-500/30 transition hover:from-indigo-500 hover:to-cyan-400">
+                {isArabic ? "فتح لوحة العمل" : "Open workspace"}<ArrowUpRight className="h-4 w-4" />
+              </button>
+              <button onClick={() => authLogout()} className="mt-5 block w-full text-xs font-bold text-slate-400 transition hover:text-white">
+                {isArabic ? "تسجيل الخروج" : "Sign out"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   const visibleNav = navItems.filter((item) => item.roles.includes(role));
@@ -722,6 +778,7 @@ export default function EduPulseApp() {
     book_downloader: "المكتبة الرقمية والمراجع الأكاديمية وأرشيف المعرفة.",
     scorecard_guidance: "التوجيه الجامعي واستكشاف التخصصات الأكاديمية.",
     professor: "مركز قرار الأستاذ والمنهاج الجزائري.",
+    teacher_documents: "استوديو استيراد وتحرير المذكرات والاختبارات (PDF و DOCX).",
     research_studio: "أستوديو البحث العلمي وتكاملات MCP.",
     template_studio: "استوديو المذكرات والشهادات البيداغوجية الرسمية.",
     personality_profiler: "الملف النفسي والنمط الإدراكي للتلميذ.",
@@ -752,6 +809,7 @@ export default function EduPulseApp() {
     if (activeView === "book_downloader") return <BookAndDocumentDownloader isArabic={isArabic} />;
     if (activeView === "scorecard_guidance") return <CollegeScorecardGuidance isArabic={isArabic} />;
     if (activeView === "professor") return <ProfessorWorkspace isArabic={isArabic} onNavigate={(view) => setActiveView(view)} />;
+    if (activeView === "teacher_documents") return <TeacherDocumentStudio isArabic={isArabic} />;
     if (activeView === "research_studio") return <ResearchStudioPanel isArabic={isArabic} />;
     if (activeView === "template_studio") return <CurriculumTemplateStudio isArabic={isArabic} />;
     if (activeView === "personality_profiler") return <PersonalityProfiler isArabic={isArabic} />;

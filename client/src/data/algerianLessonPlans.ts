@@ -620,6 +620,412 @@ export const ALGERIAN_CURRICULUM_LESSON_PLANS: AlgerianLessonPlan[] = [
     googleDocTemplateTitle: "مخطط مقالة فلسفية معتمدة — 3AS: الإحساس والإدراك وفق منهجية البكالوريا",
     googleSlidePresentationTitle: "شرائح فلسفية تفاعلية — مناظرة العقلانيين والتجريبيين في الإدراك",
     googleSheetRubricTitle: "شبكة تنقيط وتقويم المقالة الفلسفية في شهادة البكالوريا"
+  },
+  // ==========================================
+  // NATURAL SCIENCES - SECONDARY 3AS (BAC PREP)
+  // ==========================================
+  {
+    id: "lp-3as-sci-01",
+    cycle: "secondary",
+    cycleNameAr: "التعليم الثانوي",
+    gradeId: "3as",
+    gradeNameAr: "السنة الثالثة ثانوي (3AS بكالوريا)",
+    streamNameAr: "شعبة علوم تجريبية + رياضيات",
+    subjectId: "natural_sciences",
+    subjectNameAr: "علوم الطبيعة والحياة",
+    subjectNameEn: "Natural Sciences",
+    unitSequence: "الوحدة 02: التخصص الوظيفي للبروتينات في الدفاع عن الذات",
+    unitSequenceEn: "Unit 2: Functional Protein Specificity in Immunity",
+    rubricRubrique: "المناعة الخلطية والخلوية / الذات واللاذات",
+    lessonTitleAr: "آلية الانتقاء النسيلي للخلايا اللمفاوية LB وإنتاج الأجسام المضادة النوعية",
+    lessonTitleEn: "Clonal Selection of B Lymphocytes & Specific Antibody Synthesis",
+    durationMinutes: 60,
+    terminalCompetencyAr: "تفسير آليات الاستجابة المناعية النوعية الخلطية بالاعتماد على معطيات تجريبية ووثائق مجهرية وربط بنية الأجسام المضادة بتخصصها الوظيفي.",
+    targetedCompetencyEn: "Learners analyze experimental curves of primary vs. secondary immune responses and elucidate the role of antigen-presenting cells and helper T-cells in B-cell proliferation.",
+    didacticMaterials: ["المنهاج الرسمي والوثيقة المرافقة", "جهاز العرض الرقمي (Data Show)", "منحنيات تطور تركيز الغلوبولينات المناعية في المصل", "مجسم بنية الجسم المضاد IgG (سلاسل ثقيلة وخفيفة ومواقع التثبيت)"],
+    stages: [
+      {
+        step: 1,
+        stepNameAr: "وضعية الانطلاق واسترجاع المكتسبات",
+        stepNameEn: "Engagement & Retrieval",
+        duration: 8,
+        teacherRoleAr: "طرح تساؤل إشكالي: كيف يميز الجهاز المناعي بين آلاف المولدات الغريبة المختلفة وينتج استجابة موجهة لكل منها بدقة متناهية؟",
+        learnerRoleAr: "استرجاع مفهوم الخطوط الدفاعية ومفهوم محددات مولد الضد (Antigenic Determinants).",
+        pedagogicalAimsAr: "حصر التساؤل حول سر التخصص النوعي المزدوج للأجسام المضادة.",
+        formativeCheckpointAr: "القدرة على تعريف المستضد والتمييز بين المناعة اللانوعية والنوعية."
+      },
+      {
+        step: 2,
+        stepNameAr: "التحليل التجريبي والاستدلال العلمي",
+        stepNameEn: "Experimental Analysis",
+        duration: 18,
+        teacherRoleAr: "توزيع نتائج تجارب معقدة: حقن فأر بمستضد Z ثم تعريضه للإشعاع وقياس تشكل معقدات مناعية (Antigen-Antibody Complexes).",
+        learnerRoleAr: "تحليل المنحنيات خطوة بخطوة واستنتاج أن لكل نسيلة من LB مستقبلاً غشائياً نوعياً (BCR) يتطابق تكاملياً مع محدد المستضد.",
+        pedagogicalAimsAr: "بناء مسار الاستدلال العلمي المؤطر وفق شبكة تقويم البكالوريا الجديدة.",
+        formativeCheckpointAr: "الدقة في تفسير مراحل الاستجابة الأولية والثانوية من حيث السرعة والكمية."
+      },
+      {
+        step: 3,
+        stepNameAr: "التركيب الحركي والبيولوجي",
+        stepNameEn: "Biological Synthesis",
+        duration: 16,
+        teacherRoleAr: "توجيه التلاميذ لرسم مخطط تحصيلي يوضح: الانتقاء، التكاثر، التمايز إلى بلازموسيت وخلايا ذات ذاكرة (LBm).",
+        learnerRoleAr: "رسم المخطط البيداغوجي المعتمد مع تحديد دور الإنترلوكين 2 (IL-2) المفرز من الخلايا LT4.",
+        pedagogicalAimsAr: "إدماج المعارف الجزئية في نموذج تفسيري كلي متناسق.",
+        formativeCheckpointAr: "وضوح البيانات والأسهم الاتجاهية في المخطط التحصيلي."
+      },
+      {
+        step: 4,
+        stepNameAr: "التقويم التكويني والوضعية الإدماجية",
+        stepNameEn: "Formative BAC Assessment",
+        duration: 18,
+        teacherRoleAr: "تقديم تمرين بكالوريا تجريبي (تمرين النمط الثاني 5 نقاط) حول عجز مناعي ناجم عن طفرة في الجين المشفر لموقع ارتباط المستضد.",
+        learnerRoleAr: "صياغة نص علمي مهيكل (مقدمة، عرض، خاتمة) يربط الطفرة بتعطل تشكل المعقد المناعي وبلعمة المستضد.",
+        pedagogicalAimsAr: "التحكم في معايير صياغة النص العلمي الدقيق والمفردات الاصطلاحية.",
+        formativeCheckpointAr: "احترام منهجية الاستدلال العلمي والربط السببي المباشر."
+      }
+    ],
+    googleDocTemplateTitle: "جذاذة ديداكتيكية رسمية — علوم الطبيعة والحياة 3AS: الانتقاء النسيلي والمناعة الخلطية",
+    googleSlidePresentationTitle: "عرض تفاعلي عالي الدقة — حركية الاستجابة المناعية وبنية الجسم المضاد",
+    googleSheetRubricTitle: "شبكة تقييم معايير الاستدلال العلمي وحل المشكلات البيداغوجية"
+  },
+  // ==========================================
+  // ISLAMIC EDUCATION - SECONDARY 3AS (BAC PREP)
+  // ==========================================
+  {
+    id: "lp-3as-isl-01",
+    cycle: "secondary",
+    cycleNameAr: "التعليم الثانوي",
+    gradeId: "3as",
+    gradeNameAr: "السنة الثالثة ثانوي (3AS بكالوريا)",
+    streamNameAr: "جميع الشعب العلمية والأدبية والتقنية",
+    subjectId: "islamic_education",
+    subjectNameAr: "العلوم الإسلامية",
+    subjectNameEn: "Islamic Education",
+    unitSequence: "الوحدة 03: مقاصد الشريعة الإسلامية وحفظ الكليات الخمس",
+    unitSequenceEn: "Unit 3: Objectives of Islamic Sharia (Maqasid)",
+    rubricRubrique: "الفكر الإسلامي والتشريع الأخلاقي والقيمي",
+    lessonTitleAr: "مقاصد الشريعة الإسلامية: الضروريات، الحاجيات، والتحسينيات وطرق حفظ الكليات الخمس",
+    lessonTitleEn: "Objectives of Sharia: Necessities, Needs, Embellishments & Preserving Essentials",
+    durationMinutes: 60,
+    terminalCompetencyAr: "إدراك الغايات التشريعية للأحكام الشرعية والقدرة على تصنيف الأحكام الواقعية المعاصرة وفق سلم المقاصد وترتيب الكليات الخمس.",
+    targetedCompetencyEn: "Learners classify contemporary scenarios into the three tiers of Maqasid and articulate how Sharia protects the five universals from existence and non-existence angles.",
+    didacticMaterials: ["الكتاب المدرسي المعتمد للعلوم الإسلامية 3AS", "جدول مقارن للكليات الخمس (الدين، النفس، العقل، النسل، المال)", "أمثلة ونوازل فقهية معاصرة (التبرع بالأعضاء، الرقمنة المالية)"],
+    stages: [
+      {
+        step: 1,
+        stepNameAr: "مدخل إشكالي واستثارة فكرية",
+        stepNameEn: "Problematic Introduction",
+        duration: 8,
+        teacherRoleAr: "طرح التساؤل: هل شرعت الأحكام والواجبات والمحرمات عبثاً أم لتحقيق مصالح معتبرة للعباد في المعاش والمعاد؟",
+        learnerRoleAr: "استنتاج تعريف المقاصد لغة واصطلاحاً (الغايات والأهداف والحكم التي قصدها الشارع الحكيم).",
+        pedagogicalAimsAr: "غرس الفهم العميق لرحمة التشريع وتوازن مقاصده.",
+        formativeCheckpointAr: "التمييز بين المقصد العام والعلة الجزئية للحكم."
+      },
+      {
+        step: 2,
+        stepNameAr: "بناء المفاهيم: مراتب المقاصد وترتيب الكليات",
+        stepNameEn: "Conceptual Hierarchy",
+        duration: 22,
+        teacherRoleAr: "شرح المراتب الثلاث: الضروريات (فقدها يسبب اختلال نظام الحياة)، الحاجيات (رفع الحرج والمشقة)، والتحسينيات (محاسن العادات ومكارم الأخلاق).",
+        learnerRoleAr: "ملء الجدول المقارن بأمثلة دقيقة: حفظ النفس (تحريم القتل قصاصاً / الرخص عند المشقة / آداب الأكل والشرب).",
+        pedagogicalAimsAr: "التمكن من تحديد طرق الحفظ: من جانب الوجود (الإيجاد والتثبيت) ومن جانب العدم (الدرء والدفاع).",
+        formativeCheckpointAr: "الترتيب الدقيق للكليات عند التعارض: تقديم الدين ثم النفس ثم العقل ثم النسل ثم المال."
+      },
+      {
+        step: 3,
+        stepNameAr: "التحليل الاستدلالي وحل الإشكاليات الواقعية",
+        stepNameEn: "Practical Dilemma Analysis",
+        duration: 15,
+        teacherRoleAr: "تقديم حالات واقعية: مسألة التداوي بالمحرم عند الضرورة القصوى لإنقاذ حياة مريض، أين يقع في سلم المقاصد؟",
+        learnerRoleAr: "تطبيق قاعدة الضرورات تبيح المحظورات وترتيب حفظ النفس عند الهلاك الحتمي.",
+        pedagogicalAimsAr: "ربط الفكر المقاصدي بالمسؤولية الأخلاقية والاجتماعية في المجتمع الجزائري.",
+        formativeCheckpointAr: "الاستدلال السليم بالآيات الكريمة والأحاديث النبوية المقررة."
+      },
+      {
+        step: 4,
+        stepNameAr: "التقويم الختامي وتثبيت المؤشرات",
+        stepNameEn: "Consolidation & BAC Rubric",
+        duration: 15,
+        teacherRoleAr: "إعطاء سند من أسئلة البكالوريا: تصنيف 6 أحكام شرعية واستخراج الكلية ومستوى الحفظ.",
+        learnerRoleAr: "الحل الفردي والتصحيح الذاتي وفق دليل التصحيح النموذجي.",
+        pedagogicalAimsAr: "ضمان علامة كاملة في جزئية المقاصد في اختبار البكالوريا.",
+        formativeCheckpointAr: "تجنب الخلط الشائع بين الحاجيات والتحسينيات."
+      }
+    ],
+    googleDocTemplateTitle: "جذاذة تربوية رسمية — العلوم الإسلامية 3AS: مقاصد الشريعة الإسلامية وتطبيقاتها",
+    googleSlidePresentationTitle: "عرض بيداغوجي تفاعلي — خريطة ذهنية شاملة للكليات الخمس وسلم المقاصد",
+    googleSheetRubricTitle: "سلم تنقيط إجابات العلوم الإسلامية وفق معايير التفتيش الوزاري"
+  },
+  // ==========================================
+  // HISTORY & GEOGRAPHY - SECONDARY 3AS (BAC PREP)
+  // ==========================================
+  {
+    id: "lp-3as-hg-01",
+    cycle: "secondary",
+    cycleNameAr: "التعليم الثانوي",
+    gradeId: "3as",
+    gradeNameAr: "السنة الثالثة ثانوي (3AS بكالوريا)",
+    streamNameAr: "جميع الشعب (مع التركيز لشعبة آداب وفلسفة وتسيير واقتصاد)",
+    subjectId: "history_geo",
+    subjectNameAr: "التاريخ والجغرافيا",
+    subjectNameEn: "History & Geography",
+    unitSequence: "الوحدة 02: العمل المسلح ورد فعل الاستعمار (1954-1962)",
+    unitSequenceEn: "Unit 2: The Algerian Armed Revolution & Colonial Responses",
+    rubricRubrique: "استراتيجية الثورة داخلياً وخارجياً ومؤتمر الصومام 1956",
+    lessonTitleAr: "استراتيجية الثورة التحريرية الجزائرية على المستوى الداخلي والخارجي ومخططات الاستعمار الفاشلة",
+    lessonTitleEn: "Algerian War of Independence: Internal & External Strategies and Colonial Counter-Measures",
+    durationMinutes: 60,
+    terminalCompetencyAr: "التحكم في معالم الثورة التحريرية وقراءة الخرائط التاريخية واستخلاص البعد الدبلوماسي والعسكري لمؤتمر الصومام وهجمات الشمال القسنطيني.",
+    targetedCompetencyEn: "Learners evaluate the multidimensional strategies of the FLN/ALN, the impact of the Soummam Congress (1956), and colonial containment projects like Challe and Morice lines.",
+    didacticMaterials: ["خريطة الجزائر التاريخية وتقسيم الولايات العسكرية الست", "وثيقة ميثاق الصومام 20 أوت 1956", "أطلس التاريخ الوطني للجزائر", "وثائق صور لخط موريس وخط شال المكهربين"],
+    stages: [
+      {
+        step: 1,
+        stepNameAr: "الربط التاريخي والتمهيد الزمني",
+        stepNameEn: "Historical Anchoring",
+        duration: 8,
+        teacherRoleAr: "تحديد السياق التاريخي: كيف انتقلت الثورة من مرحلة الانطلاق والانتشار الصعب إلى مرحلة التنظيم والشمولية؟",
+        learnerRoleAr: "تذكر محطات: نداء أول نوفمبر 1954، هجمات الشمال القسنطيني 20 أوت 1955 بقيادة زيغود يوسف وفك الحصار عن الأوراس.",
+        pedagogicalAimsAr: "ترسيخ التسلسل الكرونولوجي الدقيق للأحداث المصيرية.",
+        formativeCheckpointAr: "تحديد نتائج هجمات الشمال القسنطيني داخلياً وخارجياً."
+      },
+      {
+        step: 2,
+        stepNameAr: "تحليل استراتيجية الثورة داخلياً وخارجياً",
+        stepNameEn: "Document & Strategy Analysis",
+        duration: 22,
+        teacherRoleAr: "تقسيم القسم إلى أفواج عمل: فوج 1 (التنظيم العسكري وتأسيس جيش التحرير)، فوج 2 (التنظيم السياسي ومؤسسات الثورة CNRA / CCE)، فوج 3 (العمل الدبلوماسي وتدويل القضية في الأمم المتحدة وباندونغ).",
+        learnerRoleAr: "استقراء نصوص ميثاق الصومام واستخراج قرارات: أولوية الداخل على الخارج، وأولوية السياسي على العسكري، وتقسيم التراب الوطني إلى 6 ولايات عسكرية.",
+        pedagogicalAimsAr: "التمكن من توظيف المصطلحات والشخصيات والمفاهيم الجوهرية للبكالوريا.",
+        formativeCheckpointAr: "الربط بين إضراب الثمانية أيام (1957) والاعتراف الدولي بحق الشعب الجزائري في تقرير المصير."
+      },
+      {
+        step: 3,
+        stepNameAr: "استراتيجية الاستعمار للقضاء على الثورة وإخفاقها",
+        stepNameEn: "Colonial Counter-Strategies Failure",
+        duration: 15,
+        teacherRoleAr: "عرض وتحليل المخططات الاستعمارية: عسكرياً (خطا شال وموريس، المحتشدات، المناطق المحرمة) وسياسياً/اقتصادياً (مشروع قسنطينة الإغرائي 1958، سلم الشجعان المزعوم).",
+        learnerRoleAr: "استنتاج أسباب فشل كل المخططات الاستعمارية بفضل الالتفاف الشعبي العارم ومظاهرات 11 ديسمبر 1960 ومظاهرات 17 أكتوبر 1961 بباريس.",
+        pedagogicalAimsAr: "إبراز عبقرية الثورة الجزائرية كنموذج رائد لحركات التحرر العالمية.",
+        formativeCheckpointAr: "القدرة على نقد مشاريع ديغول التضليلية بالأدلة التاريخية القطعية."
+      },
+      {
+        step: 4,
+        stepNameAr: "التدريب على مقال تاريخي وفق معايير البكالوريا",
+        stepNameEn: "BAC History Essay Training",
+        duration: 15,
+        teacherRoleAr: "طرح إشكالية المقال: 'بينما راهنت فرنسا الاستعمارية على عزل الثورة بالأسلاك المكهربة والمشاريع الإغرائية، ردت قيادة الثورة بتنظيم مؤسساتي واختراق دبلوماسي حاسم'. اكتب مقالاً من مقدمة وعرض وخاتمة.",
+        learnerRoleAr: "كتابة عناصر العرض بنقاط واضحة ومعللة ومؤرخة بدقة.",
+        pedagogicalAimsAr: "ضمان المنهجية الصارمة للمقال التاريخي وتجنب السرد العشوائي.",
+        formativeCheckpointAr: "تطابق المقدمة مع التساؤلين، وعدم الخروج عن الموضوع."
+      }
+    ],
+    googleDocTemplateTitle: "مذكرة بيداغوجية معتمدة — تاريخ 3AS: استراتيجية الثورة التحريرية وردود فعل الاستعمار",
+    googleSlidePresentationTitle: "أطلس رقمي وخرائط تاريخية — مسار الثورة الجزائرية ومؤتمر الصومام 1956",
+    googleSheetRubricTitle: "شبكة تصحيح المقال وتواريخ وشخصيات التاريخ والجغرافيا في البكالوريا"
+  },
+  // ==========================================
+  // FRENCH LANGUAGE - SECONDARY 3AS (BAC PREP)
+  // ==========================================
+  {
+    id: "lp-3as-fra-01",
+    cycle: "secondary",
+    cycleNameAr: "التعليم الثانوي",
+    gradeId: "3as",
+    gradeNameAr: "السنة الثالثة ثانوي (3AS بكالوريا)",
+    streamNameAr: "جميع الشعب (آداب ولغات وعلمي)",
+    subjectId: "french",
+    subjectNameAr: "اللغة الفرنسية",
+    subjectNameEn: "French",
+    unitSequence: "Projet 1: Le texte d'histoire / Le fait d'histoire",
+    unitSequenceEn: "Project 1: Historical Text & War of Liberation Testimonies",
+    rubricRubrique: "La visée communicative et la modalisation dans le témoignage historique",
+    lessonTitleAr: "النص التاريخي والشهادة: المؤشرات اللغوية للذاتية والهدف التواصلي (La visée informative et testimoniale)",
+    lessonTitleEn: "Historical Text: Subjectivity Markers, Modalisation & Communicative Aim",
+    durationMinutes: 60,
+    terminalCompetencyAr: "تحليل نص تاريخي يوثق مرحلة من كفاح التحرير الوطني الجزائري واستخراج مؤشرات الحضور الذاتي للشاهد، وتلخيص النص بتقنية Compte rendu critique.",
+    targetedCompetencyEn: "Learners identify modalities, lexical evaluation, and chronological connectors in a historical document, distinguishing between objective historiography and passionate personal testimony.",
+    didacticMaterials: ["Texte support extrait de témoignages sur la Guerre d'Algérie (Mahfoud Kaddache ou Henri Alleg)", "Grille d'analyse du compte rendu objectif / critique", "Tableau blanc interactif"],
+    stages: [
+      {
+        step: 1,
+        stepNameAr: "Éveil de l'intérêt et mise en situation",
+        stepNameEn: "Pre-reading & Context",
+        duration: 8,
+        teacherRoleAr: "Présentation du paratexte (Titre, auteur, source, date de publication). Questionnement sur le contexte de la Guerre d'Algérie.",
+        learnerRoleAr: "Formulation d'hypothèses de sens à partir des indices périphériques et typographiques.",
+        pedagogicalAimsAr: "Mobiliser les prérequis historiques pour anticiper le contenu lexical du document.",
+        formativeCheckpointAr: "Identification correcte du statut de l'auteur (historien ou témoin oculaire)."
+      },
+      {
+        step: 2,
+        stepNameAr: "Lecture silencieuse et repérage sélectif",
+        stepNameEn: "Guided Silent Reading",
+        duration: 18,
+        teacherRoleAr: "Consignes de repérage: relever les modalisateurs (lexique mélioratif/dépréciatif), les verbes de parole, et les repères spatio-temporels.",
+        learnerRoleAr: "Lecture active, surlignage des passages de discours direct et des adverbes d'opinion exprimant la prise de position de l'énonciateur.",
+        pedagogicalAimsAr: "Distinguer entre faits historiques avérés et commentaires subjectifs du narrateur.",
+        formativeCheckpointAr: "Capacité à classer les indices d'énonciation dans le tableau proposé."
+      },
+      {
+        step: 3,
+        stepNameAr: "Analyse textuelle et visée communicative",
+        stepNameEn: "Linguistic & Communicative Analysis",
+        duration: 18,
+        teacherRoleAr: "Animation du débat guidé sur la visée de l'auteur: informe-t-il simplement, ou rend-il hommage / dénonce-t-il les atrocités coloniales?",
+        learnerRoleAr: "Démontrer que la visée est à la fois testimoniale et dénonciatrice en citant les arguments linguistiques clés du texte.",
+        pedagogicalAimsAr: "Acquérir la rigueur d'argumentation exigée à l'épreuve de français du BAC.",
+        formativeCheckpointAr: "Justification précise de la visée sans paraphrase superficielle."
+      },
+      {
+        step: 4,
+        stepNameAr: "Production écrite: Initiation au compte rendu objectif",
+        stepNameEn: "Objective Summary Production",
+        duration: 16,
+        teacherRoleAr: "Rappel du canevas officiel du compte rendu objectif (accroche / présentation du document, puis résumé condensé des idées maîtresses à la 3ème personne).",
+        learnerRoleAr: "Rédaction autonome du premier paragraphe d'introduction en respectant les verbes introducteurs (l'auteur relate, témoigne, dénonce...).",
+        pedagogicalAimsAr: "Éliminer l'emploi du 'je' et maîtriser les règles de reformulation sans recopier les phrases intégrales du texte.",
+        formativeCheckpointAr: "Respect du tiers de la longueur du texte initial et clarté de la syntaxe."
+      }
+    ],
+    googleDocTemplateTitle: "Fiche pédagogique officielle — Français 3AS: Le texte d'histoire et la visée communicative",
+    googleSlidePresentationTitle: "Support diaporama — Techniques du compte rendu objectif et critique au BAC",
+    googleSheetRubricTitle: "Grille d'évaluation sommative de la compréhension de l'écrit et de la production écrite"
+  },
+  // ==========================================
+  // PHYSICAL SCIENCES - MIDDLE 4AM (BEM PREP)
+  // ==========================================
+  {
+    id: "lp-4am-phys-01",
+    cycle: "middle",
+    cycleNameAr: "التعليم المتوسط",
+    gradeId: "4am",
+    gradeNameAr: "السنة الرابعة متوسط (4AM شهادة التعليم المتوسط BEM)",
+    subjectId: "physics",
+    subjectNameAr: "العلوم الفيزيائية والتكنولوجيا",
+    subjectNameEn: "Physics & Chemistry",
+    unitSequence: "الميدان 01: المادة وتحولاتها",
+    unitSequenceEn: "Field 1: Matter & Its Transformations",
+    rubricRubrique: "المحاليل الشاردية والتحليل الكهربائي البسيط",
+    lessonTitleAr: "التحليل الكهربائي البسيط لمحلول كلور القصدير (SnCl2) وانحفاظ المادة والشحنة",
+    lessonTitleEn: "Simple Electrolysis of Tin Chloride Solution: Matter & Charge Conservation",
+    durationMinutes: 60,
+    terminalCompetencyAr: "تفسير هجرة الشوارد نحو المسريين (المصعد والمهبط) وكتابة المعادلات النصفية والإجمالية بالصيغتين الشاردية والإحصائية.",
+    targetedCompetencyEn: "Learners operate an experimental electrolysis cell, deduce chemical reactions at anode/cathode, and formulate balanced ionic and molecular equations.",
+    didacticMaterials: ["وعاء فولد ومسريان من الفحم الغرافيتي", "مولد تيار كهربائي مستمر (DC 6V-12V)", "مصباح وأسلاك توصيل وقاطعة", "محلول مائي لكلور القصدير (Sn2+ + 2Cl-)", "أوراق كاشف النيلة أو قلم رصاص للتجريب"],
+    stages: [
+      {
+        step: 1,
+        stepNameAr: "وضعية الانطلاق والمشاهدة العيانية",
+        stepNameEn: "Experimental Engagement",
+        duration: 10,
+        teacherRoleAr: "غلق الدارة الكهربائية ومطالبة التلاميذ بتسجيل الملاحظات المباشرة بجوار كل مسرى (المهبط والمصعد).",
+        learnerRoleAr: "ملاحظة توهج المصباح، تصاعد فقاعات غازية مخضرة عند المصعد (غاز الكلور Cl2)، وترسب شعيرات معدنية فضية عند المهبط (معدن القصدير Sn).",
+        pedagogicalAimsAr: "ربط الظاهرة الميكروسكوبية غير المرئية بالمؤشرات الماكروسكوبية المحسوسة.",
+        formativeCheckpointAr: "التمييز الدقيق بين المسرى الموصول بالقطب الموجب (المصعد) والمسرى الموصول بالقطب السالب (المهبط)."
+      },
+      {
+        step: 2,
+        stepNameAr: "التفسير المجهري لحركة الشوارد",
+        stepNameEn: "Microscopic Ionic Interpretation",
+        duration: 20,
+        teacherRoleAr: "توجيه التفكير العلمي: إلى أين تتجه الشوارد الموجبة Sn2+؟ وإلى أين تتجه الشوارد السالبة Cl-؟ وماذا يحدث على سطح كل مسرى؟",
+        learnerRoleAr: "استنتاج أن شوارد القصدير Sn2+ تنجذب نحو المهبط السالب لتكتسب إلكترونين وتتحول إلى ذرات قصدير، بينما شوارد الكلور Cl- تتجه نحو المصعد الموجب لتفقد إلكتروناتها وتتحول إلى جزيئات غاز الكلور.",
+        pedagogicalAimsAr: "بناء الفهم الفيزيائي لانحفاظ الشحنة الكهربائية وانتقال الإلكترونات في السلك والشوارد في المحلول.",
+        formativeCheckpointAr: "الاستيعاب الكامل لأن المسريين من الغرافيت لا يشاركان في التفاعل (تحليل كهربائي بسيط)."
+      },
+      {
+        step: 3,
+        stepNameAr: "النمذجة الرياضية والمعادلات الكيميائية",
+        stepNameEn: "Chemical Equation Modeling",
+        duration: 15,
+        teacherRoleAr: "كتابة المعادلة النصفية عند المهبط: Sn2+ + 2e- -> Sn(s)، والمعادلة النصفية عند المصعد: 2Cl- -> Cl2(g) + 2e-.",
+        learnerRoleAr: "جمع المعادلتين لاستخراج المعادلة الإجمالية بالصيغة الشاردية ثم بالصيغة الإحصائية: SnCl2(aq) -> Sn(s) + Cl2(g).",
+        pedagogicalAimsAr: "إتقان موازنة الشحنات والكتل وتحديد الحالة الفيزيائية للمتفاعلات والنواتج.",
+        formativeCheckpointAr: "تجنب نسيان رمز الحالة الفيزيائية (s, g, aq) في شهادة التعليم المتوسط."
+      },
+      {
+        step: 4,
+        stepNameAr: "التطبيق والتقويم التكويني لشهادة BEM",
+        stepNameEn: "BEM Exam Drill",
+        duration: 15,
+        teacherRoleAr: "عرض تمرين نمطي من شهادات BEM السابقة: استبدال كلور القصدير بكلور الزنك (ZnCl2) أو كلور النحاس (CuCl2).",
+        learnerRoleAr: "الحل المستقل وكتابة المعادلات التنبؤية والتأكد من تطابق الملاحظات التجريبية.",
+        pedagogicalAimsAr: "تعميم المبدأ على كافة الأملاح والكلوريدات الشاردية المقررة في منهاج الجيل الثاني.",
+        formativeCheckpointAr: "السرعة والدقة في توظيف كاشف غاز الكلور (زوال لون ماء جافيل أو النيلة)."
+      }
+    ],
+    googleDocTemplateTitle: "جذاذة مخبرية ودرس نموذجي — فيزياء 4AM: التحليل الكهربائي البسيط وفق منهاج الجيل الثاني",
+    googleSlidePresentationTitle: "محاكاة ثلاثية الأبعاد متحركة — هجرة الشوارد والتحليل الكهربائي البسيط",
+    googleSheetRubricTitle: "شبكة تقييم التجارب المخبرية وحل التمارين لشهادة التعليم المتوسط BEM"
+  },
+  // ==========================================
+  // MATHEMATICS - PRIMARY 5AP
+  // ==========================================
+  {
+    id: "lp-5ap-math-01",
+    cycle: "primary",
+    cycleNameAr: "التعليم الابتدائي",
+    gradeId: "5ap",
+    gradeNameAr: "السنة الخامسة ابتدائي (5AP مرحلة التعليم الابتدائي)",
+    subjectId: "mathematics",
+    subjectNameAr: "الرياضيات",
+    subjectNameEn: "Mathematics",
+    unitSequence: "الميدان: الأعداد والحساب وتنظيم المعطيات",
+    unitSequenceEn: "Numbers, Calculations & Data Organization",
+    rubricRubrique: "التناسبية والجداول وحساب النسبة المئوية",
+    lessonTitleAr: "التناسبية (1): التعرف على جدول تناسبية وحساب معامل التناسبية في حل وضعيات معيشية",
+    lessonTitleEn: "Proportionality: Identifying Proportional Tables & Unit Rate Multipliers",
+    durationMinutes: 45,
+    terminalCompetencyAr: "القدرة على تمييز وضعية تناسبية من وضعية لا تناسبية، واستخراج معامل التناسبية لملء جداول عددية وحل مشكلات الحياة اليومية.",
+    targetedCompetencyEn: "Primary pupils discern proportional relationships in daily shopping scenarios, calculate the constant multiplier, and complete missing tabular values accurately.",
+    didacticMaterials: ["ألواح التلاميذ الفردية", "بطاقات مشكلات من واقع التلميذ (شراء كراريس، أسعار الفواكه، كميات الطبخ)", "جدول كبير مرسوم على السبورة"],
+    stages: [
+      {
+        step: 1,
+        stepNameAr: "الحساب الذهني ووضعية الانطلاق",
+        stepNameEn: "Mental Math & Starter Scenario",
+        duration: 8,
+        teacherRoleAr: "حساب ذهني سريع (جداول الضرب في 4 و6 و8). ثم عرض المشكلة: 'ثمن 3 كراريس هو 120 دج، ما هو ثمن 6 كراريس؟ وثمن 9 كراريس؟'.",
+        learnerRoleAr: "الإجابة الفورية على الألواح وتفسير طريقة الوصول إلى النتيجة (المضاعفة أو القسمة).",
+        pedagogicalAimsAr: "تنشيط التفكير الحسابي وإثارة الرغبة في اكتشاف القاعدة العامة.",
+        formativeCheckpointAr: "سلامة الحساب الذهني وتجنب أخطاء جدول الضرب البسيطة."
+      },
+      {
+        step: 2,
+        stepNameAr: "البحث والاستكشاف الجماعي",
+        stepNameEn: "Collaborative Discovery",
+        duration: 15,
+        teacherRoleAr: "رسم الجدول وتنظيمه: السطر الأول (عدد الكراريس: 1، 3، 6، 9)، السطر الثاني (الثمن بالدينار الجزائري). التوجيه لاكتشاف ثمن الكراس الواحد (معامل التناسبية).",
+        learnerRoleAr: "إجراء عملية القسمة: 120 ÷ 3 = 40 دج. استنتاج أن الانتقال من السطر الأول للثاني يتم بالضرب في 40، والعكس بالقسمة على 40.",
+        pedagogicalAimsAr: "بناء المفهوم الرياضي لمعامل التناسبية كقيمة ثابتة لا تتغير.",
+        formativeCheckpointAr: "التحقق من أن حاصل قسمة كل عدد من السطر الثاني على مقابله يعطي نفس النتيجة 40."
+      },
+      {
+        step: 3,
+        stepNameAr: "الاستخلاص والتعميم (أتعلم وأتدرب)",
+        stepNameEn: "Concept Consolidation",
+        duration: 12,
+        teacherRoleAr: "صياغة خلاصة واضحة وبسيطة في دفتر الدروس وتحديد خصائص جدول التناسبية وخواص الخطية (الجمع والمضاعفة).",
+        learnerRoleAr: "كتابة الخلاصة الملونة والمثال النموذجي، واكتشاف طرق بديلة للملء (جمع عمودين للحصول على الثالث).",
+        pedagogicalAimsAr: "تثبيت المفاهيم بلغة رياضية مبسطة تتناسب مع سن تلميذ الابتدائي.",
+        formativeCheckpointAr: "القدرة على كشف الجداول غير التناسبية (مثل العمر والوزن)."
+      },
+      {
+        step: 4,
+        stepNameAr: "الاستثمار وحل المشكلات الفردية",
+        stepNameEn: "Independent Practice",
+        duration: 10,
+        teacherRoleAr: "تقديم نشاطين من كتاب الرياضيات: ملء جدول وصفة تحضير حلوى لـ 4 أفراد ثم لـ 8 و12 فرداً.",
+        learnerRoleAr: "الإنجاز الفردي في كراس المحاولات مع المتابعة الفورية والتصحيح على السبورة بالتعزيز اللفظي الإيجابي.",
+        pedagogicalAimsAr: "ترسيخ الثقة بالنفس والقدرة على تطبيق الرياضيات في الحياة الأسرية والمدرسية.",
+        formativeCheckpointAr: "السرعة في إيجاد الأعداد الناقصة دون أخطاء حسابية."
+      }
+    ],
+    googleDocTemplateTitle: "مذكرة بيداغوجية نموذجية — رياضيات 5AP: التناسبية وفق المقاربة بالكفاءات",
+    googleSlidePresentationTitle: "عرض بصري ممتع بالرسوم المتحركة — كيف نحل وضعية تناسبية بسهولة؟",
+    googleSheetRubricTitle: "شبكة تقييم المكتسبات الرياضية لشهادة تقييم المكتسبات في الابتدائي"
   }
 ];
 
@@ -636,8 +1042,9 @@ export const ALGERIAN_SUBJECTS_FILTER = [
   { id: "mathematics", nameAr: "الرياضيات", nameEn: "Mathematics" },
   { id: "physics", nameAr: "العلوم الفيزيائية والتكنولوجيا", nameEn: "Physics & Chemistry" },
   { id: "natural_sciences", nameAr: "علوم الطبيعة والحياة", nameEn: "Natural Sciences" },
+  { id: "islamic_education", nameAr: "العلوم الإسلامية", nameEn: "Islamic Education" },
+  { id: "history_geo", nameAr: "التاريخ والجغرافيا", nameEn: "History & Geography" },
   { id: "arabic", nameAr: "اللغة العربية وآدابها", nameEn: "Arabic" },
   { id: "philosophy", nameAr: "الفلسفة", nameEn: "Philosophy" },
   { id: "french", nameAr: "اللغة الفرنسية", nameEn: "French" },
-  { id: "history_geo", nameAr: "التاريخ والجغرافيا", nameEn: "History & Geography" },
 ];

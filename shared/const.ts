@@ -1,4 +1,4 @@
-export const COOKIE_NAME = "manus-session";
+export const COOKIE_NAME = "edupulse-session";
 export const EDUPULSE_SESSION_COOKIE = "__Host-edupulse_session";
 export const ONE_YEAR_MS = 1000 * 60 * 60 * 24 * 365;
 export const AXIOS_TIMEOUT_MS = 30_000;
@@ -7,8 +7,7 @@ export const NOT_ADMIN_ERR_MSG = 'You do not have required permission (10002)';
 
 // One-time nonce cookie that binds an OAuth login to the browser that started
 // it. The `__Host-` prefix forces the cookie host-only (Secure, Path=/, no
-// Domain), so a sibling *.manus.space site cannot plant a matching value in a
-// victim's browser.
+// Domain).
 export const OAUTH_STATE_COOKIE = "__Host-oauth_state";
 
 // `state` carries the callback redirect URI (used at token exchange) plus the

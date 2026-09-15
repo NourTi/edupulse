@@ -100,6 +100,44 @@ async function startServer() {
   const { registerGoogleRoutes } = await import("../auth/google");
   registerGoogleRoutes(app);
   console.log(process.env.GOOGLE_CLIENT_ID?.trim() && process.env.GOOGLE_CLIENT_SECRET?.trim() ? "[Auth] Google sign-in enabled." : "[Auth] Google sign-in route registered; provider variables are missing.");
+
+  app.get("/api/auth/providers", (_req, res) => {
+    res.json({
+      google: Boolean(process.env.GOOGLE_CLIENT_ID?.trim() && process.env.GOOGLE_CLIENT_SECRET?.trim()),
+      baseUrl: (process.env.APP_BASE_URL || "").trim(),
+    });
+  });
+
+  // Direct study assessment endpoints: Quiz & Flashcards
+  app.post("/api/study/quiz", async (req, res) => {
+    try {
+      const { text, count, language } = req.body || {};
+      if (!text || typeof text !== "string" || !text.trim()) {
+        return res.status(400).json({ error: "Text field is required." });
+      }
+      const { generateQuizFromStudyText } = await import("../ai/studyGenerator");
+      const result = await generateQuizFromStudyText(text, { count, language });
+      return res.status(200).json(result);
+    } catch (err) {
+      console.error("[StudyAPI] Quiz generation failed:", err);
+      return res.status(500).json({ error: "Failed to generate quiz questions." });
+    }
+  });
+
+  app.post("/api/study/flashcards", async (req, res) => {
+    try {
+      const { text, count, language } = req.body || {};
+      if (!text || typeof text !== "string" || !text.trim()) {
+        return res.status(400).json({ error: "Text field is required." });
+      }
+      const { generateFlashcardsFromStudyText } = await import("../ai/studyGenerator");
+      const result = await generateFlashcardsFromStudyText(text, { count, language });
+      return res.status(200).json(result);
+    } catch (err) {
+      console.error("[StudyAPI] Flashcard generation failed:", err);
+      return res.status(500).json({ error: "Failed to generate flashcards." });
+    }
+  });
   // tRPC API
   app.use(
     "/api/trpc",

@@ -153,14 +153,14 @@ export function CurriculumTemplateStudio({ isArabic = true }: CurriculumTemplate
     const mergedData = {
       institutionName: "ثانوية الأمير عبد القادر / متوسطة مفدي زكرياء",
       teacherName: "أستاذ المادة",
-      subject: plan.subjectAr,
-      grade: `${plan.cycleAr} — ${plan.streamAr}`,
-      unitTitle: `${plan.unitTitleAr} : ${plan.lessonTitleAr}`,
-      competency: `${plan.terminalCompetencyAr} | كفاءة الحصة: ${plan.lessonCompetencyAr}`,
+      subject: plan.subjectNameAr,
+      grade: `${plan.cycleNameAr} — ${plan.gradeNameAr}${plan.streamNameAr ? ` (${plan.streamNameAr})` : ""}`,
+      unitTitle: `${plan.unitSequence} : ${plan.lessonTitleAr}`,
+      competency: `${plan.terminalCompetencyAr} | الإنجليزية: ${plan.targetedCompetencyEn}`,
       didacticAids: plan.didacticMaterials.join("، "),
       duration: `${plan.durationMinutes} دقيقة`,
       quote: "التلميذ صانع لمعرفته وممارس لكفاءاته الحياتية. — المنهاج الوطني الجزائري",
-      stagesSummary: plan.stages.map((s) => `${s.stageNameAr}: ${s.teacherRoleAr.substring(0, 70)}...`).join(" | "),
+      stagesSummary: plan.stages.map((s) => `${s.stepNameAr}: ${s.teacherRoleAr.substring(0, 70)}...`).join(" | "),
     };
 
     setFormData(mergedData);
@@ -634,7 +634,7 @@ export function CurriculumTemplateStudio({ isArabic = true }: CurriculumTemplate
                   <option value="">-- {isArabic ? "اختر جذاذة من المنهاج الرسمي" : "Select official plan"} --</option>
                   {ALGERIAN_CURRICULUM_LESSON_PLANS.map((plan) => (
                     <option key={plan.id} value={plan.id}>
-                      {plan.cycleAr} · {plan.subjectAr} · {plan.lessonTitleAr}
+                      {plan.cycleNameAr} · {plan.subjectNameAr} · {plan.lessonTitleAr}
                     </option>
                   ))}
                 </select>

@@ -189,6 +189,8 @@ export function PersonalityProfiler({ isArabic = true }: PersonalityProfilerProp
             </div>
           ) : null}
         </div>
+      </div>
+
       {/* Interactive Spider Cognitive Radar & Teacher Decision Linkage */}
       <InteractiveSpiderEvaluation
         isArabic={isArabic}

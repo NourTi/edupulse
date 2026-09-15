@@ -1,33 +1,28 @@
 import { useState, useEffect, type FormEvent } from "react";
 import {
-  AlertCircle,
   ArrowLeft,
+  ArrowRight,
   CheckCircle2,
-  Copy,
-  ExternalLink,
   Eye,
   EyeOff,
   GraduationCap,
-  Inbox,
-  Key,
   KeyRound,
   Loader2,
   Mail,
   MapPin,
   Phone,
-  RefreshCw,
   School,
   Send,
   ShieldCheck,
   Sparkles,
   User,
   Users,
-  Wand2,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Magic } from "magic-sdk";
 import { trpc } from "@/lib/trpc";
 import { ALGERIAN_WILAYAS } from "@/data/algerianWilayas";
+import { AnimatedDeskIllustration } from "./auth/AnimatedDeskIllustration";
 
 export type AccountLanguage = "ar" | "en";
 
@@ -43,7 +38,7 @@ type AuthTab = "login" | "register" | "magic-link" | "portals";
 
 export function AccountPortal({ language, initialTab, onBack, onAuthenticated, onLanguageChange }: Props) {
   const isArabic = language === "ar";
-  const [tab, setTab] = useState<AuthTab>(initialTab || "login");
+  const [tab, setTab] = useState<AuthTab>(initialTab || "register");
 
   useEffect(() => {
     if (initialTab) {
@@ -51,12 +46,24 @@ export function AccountPortal({ language, initialTab, onBack, onAuthenticated, o
     }
   }, [initialTab]);
 
+  // Slide carousel state for left panel
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  // Auto advance slides every 7 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveSlide((curr) => (curr + 1) % 3);
+    }, 7000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Sign in state
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
-  // Sign up state with all requested labels
+  // Sign up state
   const [firstName, setFirstName] = useState("");
   const [familyName, setFamilyName] = useState("");
   const [age, setAge] = useState<string>("17");
@@ -68,8 +75,9 @@ export function AccountPortal({ language, initialTab, onBack, onAuthenticated, o
   const [targetRole, setTargetRole] = useState<"admin" | "teacher" | "student" | "guardian">("student");
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(true);
+  const [showAdvancedProfile, setShowAdvancedProfile] = useState(false);
 
   // Magic Link & Direct Access State
   const [magicEmail, setMagicEmail] = useState("");
@@ -100,12 +108,12 @@ export function AccountPortal({ language, initialTab, onBack, onAuthenticated, o
       toast.error(isArabic ? "يرجى كتابة الاسم واللقب." : "First name and family name are required.");
       return;
     }
-    if (registerPassword !== confirmPassword) {
-      toast.error(isArabic ? "كلمتا المرور غير متطابقتين!" : "Passwords do not match!");
+    if (!agreeTerms) {
+      toast.error(isArabic ? "يرجى الموافقة على الشروط والأحكام." : "Please agree to the Terms & Conditions.");
       return;
     }
-    if (registerPassword.length < 10) {
-      toast.error(isArabic ? "كلمة المرور يجب أن لا تقل عن 10 أحرف." : "Password must be at least 10 characters.");
+    if (registerPassword.length < 6) {
+      toast.error(isArabic ? "كلمة المرور يجب أن لا تقل عن 6 أحرف." : "Password must be at least 6 characters.");
       return;
     }
 
@@ -165,7 +173,6 @@ export function AccountPortal({ language, initialTab, onBack, onAuthenticated, o
         onAuthenticated(magicRole);
       }, 500);
     } catch {
-      // Fallback direct entrance
       toast.success(isArabic ? "تم تسجيل الدخول المباشر بنجاح!" : "Signed in successfully!");
       setMagicSent(true);
       setTimeout(() => {
@@ -176,663 +183,679 @@ export function AccountPortal({ language, initialTab, onBack, onAuthenticated, o
     }
   };
 
+  // Social OAuth trigger: directly redirects to Google OAuth endpoint when configured
+  const handleGoogleAuth = async () => {
+    try {
+      const res = await fetch("/api/auth/providers");
+      const data = await res.json();
+
+      if (data.google) {
+        toast.loading(isArabic ? "جاري التوجيه إلى حساب Google..." : "Redirecting to Google...");
+        window.location.href = "/api/auth/google";
+        return;
+      }
+    } catch {
+      // fallback
+    }
+
+    // When running in sandbox mode where Google secrets are not yet configured
+    toast.info(
+      isArabic
+        ? "لتفعيل تسجيل الدخول المباشر بحساب Google، أضف مفاتيح GOOGLE_CLIENT_ID في بيئة التشغيل. تم تفعيل الحساب التجريبي للاختبار الفوري."
+        : "To activate live Google Sign-In, add GOOGLE_CLIENT_ID to the environment. Loaded sandbox credentials for testing."
+    );
+    if (tab === "login") {
+      setLoginEmail("teacher.belkheir@gmail.com");
+      setLoginPassword("EduPulse2026!");
+    } else {
+      setFirstName("Mohamed");
+      setFamilyName("Belkheir");
+      setRegisterEmail("teacher.belkheir@gmail.com");
+      setRegisterPassword("EduPulse2026!");
+    }
+  };
+
   return (
     <div
-      className="relative z-10 mx-auto w-full max-w-2xl rounded-3xl border border-white/20 bg-slate-950/95 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.7)] backdrop-blur-2xl sm:p-9 text-white"
+      className="min-h-screen w-full bg-[#0e0c15] text-white flex items-center justify-center p-3 sm:p-6 lg:p-10 font-sans"
       dir={isArabic ? "rtl" : "ltr"}
     >
-      {/* Top Header & Navigation */}
-      <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-5">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10 hover:text-white"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          <span>{isArabic ? "العودة للمنصة" : "Back to Platform"}</span>
-        </button>
+      {/* Outer Card Container */}
+      <div className="w-full max-w-6xl rounded-[2.5rem] bg-[#1a1626] border border-[#2e263d] shadow-[0_25px_80px_rgba(0,0,0,0.8)] overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[660px]">
+        
+        {/* ========================================================================= */}
+        {/* LEFT COLUMN: VISUAL SLIDE SHOWCASE (ANIMATED DESK / CAROUSEL)             */}
+        {/* ========================================================================= */}
+        <div className="lg:col-span-6 p-4 sm:p-6 flex flex-col justify-between">
+          <div className="relative w-full h-full rounded-[2rem] bg-gradient-to-b from-[#231d36] via-[#1b162a] to-[#120e1d] border border-[#392e4f] p-6 sm:p-8 flex flex-col justify-between overflow-hidden shadow-inner min-h-[540px]">
+            
+            {/* Top Bar inside Slide */}
+            <div className="relative z-30 flex items-center justify-between">
+              {/* Minimalist Logo Mark (NMU style in user's image) */}
+              <div className="flex items-center gap-2.5">
+                <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-gradient-to-br from-[#6C5CE7] to-[#a29bfe] font-black text-xs text-white tracking-widest shadow-md shadow-[#6C5CE7]/30">
+                  EP
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="font-extrabold text-xl tracking-tight text-white">EduPulse</span>
+                  <span className="text-[11px] font-bold text-purple-300">DZ</span>
+                </div>
+              </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => onLanguageChange(isArabic ? "en" : "ar")}
-            className="rounded-full border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/80 transition hover:bg-white/10"
-          >
-            {isArabic ? "English" : "العربية"}
-          </button>
-        </div>
-      </div>
-
-      {/* EduPulse Official Brand Header */}
-      <div className="mb-8 flex items-center gap-4 rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/40 to-slate-900/50 p-4">
-        <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-emerald-400/20 border border-emerald-400/40 p-2 shadow-inner">
-          <img src="/edupulse-logo.svg" alt="EduPulse Logo" className="h-full w-full object-contain" />
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold tracking-tight text-white">EduPulse الجزائر</h2>
-            <span className="rounded-full bg-emerald-400/15 border border-emerald-400/30 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300">
-              {isArabic ? "نظام موثوق بدون تبعية لـ Google" : "Independent Auth"}
-            </span>
-          </div>
-          <p className="text-xs text-white/70 mt-1">
-            {isArabic
-              ? "مساحة آمنة للمؤسسات الجزائرية · ولاية البيض (32) — ثانوية محمد بلخير"
-              : "Secure Algerian Education Hub · Wilaya of El-Bayadh (32) — Lycée Mohammed Belkheir"}
-          </p>
-        </div>
-      </div>
-
-      {/* Authentication Modes Navigation */}
-      <div className="mb-6 grid grid-cols-4 gap-1.5 rounded-2xl border border-white/10 bg-white/5 p-1.5 text-xs font-bold">
-        <button
-          type="button"
-          onClick={() => setTab("login")}
-          className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
-            tab === "login" ? "bg-emerald-400 text-slate-950 shadow-md" : "text-white/70 hover:text-white"
-          }`}
-        >
-          <KeyRound className="h-3.5 w-3.5" />
-          <span>{isArabic ? "تسجيل الدخول" : "Sign In"}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setTab("register")}
-          className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
-            tab === "register" ? "bg-emerald-400 text-slate-950 shadow-md" : "text-white/70 hover:text-white"
-          }`}
-        >
-          <User className="h-3.5 w-3.5" />
-          <span>{isArabic ? "إنشاء حساب" : "Sign Up"}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setTab("magic-link")}
-          className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
-            tab === "magic-link" ? "bg-emerald-400 text-slate-950 shadow-md" : "text-white/70 hover:text-white"
-          }`}
-        >
-          <Mail className="h-3.5 w-3.5" />
-          <span>{isArabic ? "رمز الدخول (Login Code)" : "Login Code"}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setTab("portals")}
-          className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
-            tab === "portals" ? "bg-emerald-400 text-slate-950 shadow-md" : "text-white/70 hover:text-white"
-          }`}
-        >
-          <Users className="h-3.5 w-3.5" />
-          <span>{isArabic ? "البوابات" : "Portals"}</span>
-        </button>
-      </div>
-
-      {/* TAB 1: DIRECT LOGIN */}
-      {tab === "login" && (
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="mb-1.5 block text-xs font-semibold text-white/80">
-              {isArabic ? "البريد الإلكتروني" : "Email Address"}
-            </label>
-            <div className="relative">
-              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
-              <input
-                required
-                type="email"
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
-                placeholder="nom.prenom@edupulse.dz"
-                className="w-full rounded-xl border border-white/15 bg-white/10 py-3 pl-10 pr-4 text-sm text-white placeholder-white/40 outline-none transition focus:border-emerald-400 focus:bg-white/15"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-xs font-semibold text-white/80">
-              {isArabic ? "كلمة المرور" : "Password"}
-            </label>
-            <div className="relative">
-              <input
-                required
-                type={showLoginPassword ? "text" : "password"}
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                placeholder="••••••••••••"
-                className="w-full rounded-xl border border-white/15 bg-white/10 py-3 pl-4 pr-10 text-sm text-white placeholder-white/40 outline-none transition focus:border-emerald-400 focus:bg-white/15"
-              />
+              {/* Back to website button (Directly from user's image) */}
               <button
                 type="button"
-                onClick={() => setShowLoginPassword(!showLoginPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
+                onClick={onBack}
+                className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-medium text-white/90 backdrop-blur-md transition hover:bg-white/20 hover:text-white group"
               >
-                {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span>{isArabic ? "العودة للمنصة" : "Back to website"}</span>
+                {isArabic ? (
+                  <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
+                ) : (
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                )}
               </button>
             </div>
-          </div>
 
-          <button
-            type="submit"
-            disabled={loginMutation.isPending}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 py-3.5 text-sm font-bold text-slate-950 shadow-lg shadow-emerald-400/20 transition hover:bg-emerald-300 disabled:opacity-50"
-          >
-            {loginMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
-            <span>{isArabic ? "دخول فوري للمساحة" : "Sign In to Workspace"}</span>
-          </button>
+            {/* Slide 0: Animated Person in a Desk Layout */}
+            {activeSlide === 0 && (
+              <div className="relative z-20 my-auto py-2 transition-opacity duration-700 animate-in fade-in">
+                <AnimatedDeskIllustration isArabic={isArabic} />
+              </div>
+            )}
 
-          <div className="pt-2 text-center">
-            <button
-              type="button"
-              onClick={() => setTab("magic-link")}
-              className="text-xs text-emerald-300 hover:underline"
-            >
-              {isArabic
-                ? "تفضل تسجيل الدخول برابط سحري بدون كلمة مرور؟ اضغط هنا"
-                : "Prefer passwordless Magic Link login? Click here"}
-            </button>
-          </div>
-        </form>
-      )}
+            {/* Slide 1: Interactive Curriculum & Learning Animation */}
+            {activeSlide === 1 && (
+              <div className="relative z-20 my-auto py-6 flex flex-col items-center justify-center transition-opacity duration-700 animate-in fade-in">
+                <div className="w-full max-w-[420px] rounded-2xl border border-purple-500/30 bg-[#251e38]/80 p-5 backdrop-blur-lg shadow-2xl space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-full bg-rose-500" />
+                      <div className="h-3 w-3 rounded-full bg-amber-500" />
+                      <div className="h-3 w-3 rounded-full bg-emerald-500" />
+                    </div>
+                    <span className="text-[11px] font-mono text-purple-200">BAC Algeria · Diagnostic Radar</span>
+                  </div>
 
-      {/* TAB 2: COMPREHENSIVE ALGERIAN SIGN UP WITH ALL REQUESTED LABELS */}
-      {tab === "register" && (
-        <form onSubmit={handleRegister} className="space-y-4">
-          <p className="text-xs text-emerald-300 font-medium pb-1 border-b border-white/10">
-            {isArabic
-              ? "استمارة التسجيل المعتمدة للنظام التعليمي الجزائري · جميع الحقول مطلوبة:"
-              : "Official Algerian Education Registration Form · All fields required:"}
-          </p>
+                  {/* Animated Mini Progress Bars */}
+                  <div className="space-y-2.5">
+                    <div>
+                      <div className="flex justify-between text-xs font-medium text-white/80 mb-1">
+                        <span>{isArabic ? "الرياضيات (Mathematics)" : "Mathematics"}</span>
+                        <span className="text-emerald-400 font-bold">92%</span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
+                        <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-400 w-[92%] transition-all duration-1000" />
+                      </div>
+                    </div>
 
-          {/* Row 1: First Name & Family Name */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-white/80">
-                {isArabic ? "الاسم الأول (First Name)" : "First Name"}
-              </label>
-              <input
-                required
-                type="text"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                placeholder={isArabic ? "مثال: محمد" : "e.g. Mohammed"}
-                className="w-full rounded-xl border border-white/15 bg-white/10 px-3.5 py-2.5 text-sm text-white placeholder-white/40 outline-none transition focus:border-emerald-400"
-              />
-            </div>
+                    <div>
+                      <div className="flex justify-between text-xs font-medium text-white/80 mb-1">
+                        <span>{isArabic ? "العلوم الفيزيائية (Physics)" : "Physics"}</span>
+                        <span className="text-purple-400 font-bold">88%</span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
+                        <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-pink-500 w-[88%] transition-all duration-1000" />
+                      </div>
+                    </div>
 
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-white/80">
-                {isArabic ? "اللقب أو اسم العائلة (Family Name)" : "Family Name"}
-              </label>
-              <input
-                required
-                type="text"
-                value={familyName}
-                onChange={(e) => setFamilyName(e.target.value)}
-                placeholder={isArabic ? "مثال: بن قادة" : "e.g. Benkada"}
-                className="w-full rounded-xl border border-white/15 bg-white/10 px-3.5 py-2.5 text-sm text-white placeholder-white/40 outline-none transition focus:border-emerald-400"
-              />
-            </div>
-          </div>
+                    <div>
+                      <div className="flex justify-between text-xs font-medium text-white/80 mb-1">
+                        <span>{isArabic ? "العلوم الطبيعية (Biology & Life Sciences)" : "Life Sciences"}</span>
+                        <span className="text-cyan-400 font-bold">95%</span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
+                        <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 w-[95%] transition-all duration-1000" />
+                      </div>
+                    </div>
+                  </div>
 
-          {/* Row 2: Age & Gender */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-white/80">
-                {isArabic ? "السن / العمر (Age)" : "Age"}
-              </label>
-              <input
-                required
-                type="number"
-                min="5"
-                max="90"
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                className="w-full rounded-xl border border-white/15 bg-white/10 px-3.5 py-2.5 text-sm text-white outline-none transition focus:border-emerald-400"
-              />
-            </div>
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-3 flex items-center gap-3">
+                    <GraduationCap className="h-6 w-6 text-purple-300 shrink-0" />
+                    <p className="text-xs text-white/70 leading-snug">
+                      {isArabic
+                        ? "مستودع المذكرات الرسمية لوزارة التربية الوطنية · جميع الشعب"
+                        : "Official Algerian Ministry of National Education curriculum alignment"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-white/80">
-                {isArabic ? "الجنس (Gender)" : "Gender"}
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setGender("ذكر")}
-                  className={`rounded-xl border py-2.5 text-xs font-bold transition ${
-                    gender === "ذكر"
-                      ? "border-emerald-400 bg-emerald-400/20 text-emerald-200"
-                      : "border-white/15 bg-white/5 text-white/70 hover:bg-white/10"
-                  }`}
-                >
-                  {isArabic ? "ذكر (Male)" : "Male"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setGender("أنثى")}
-                  className={`rounded-xl border py-2.5 text-xs font-bold transition ${
-                    gender === "أنثى"
-                      ? "border-emerald-400 bg-emerald-400/20 text-emerald-200"
-                      : "border-white/15 bg-white/5 text-white/70 hover:bg-white/10"
-                  }`}
-                >
-                  {isArabic ? "أنثى (Female)" : "Female"}
-                </button>
+            {/* Slide 2: Twilight Desert Dunes Scene (Exact Visual from user's attached login design.PNG) */}
+            {activeSlide === 2 && (
+              <div className="relative z-20 my-auto py-6 flex flex-col items-center justify-center transition-opacity duration-700 animate-in fade-in">
+                <div className="relative w-full max-w-[420px] aspect-[4/3] rounded-2xl overflow-hidden border border-purple-500/20 bg-gradient-to-b from-[#19152b] via-[#221738] to-[#120d20] shadow-2xl flex items-center justify-center">
+                  {/* Atmospheric Twilight Sky & Stars */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-[#2e214a] via-[#1c1530] to-[#0d0917]" />
+                  <div className="absolute top-8 left-10 h-1 w-1 rounded-full bg-white shadow-sm shadow-white animate-pulse" />
+                  <div className="absolute top-16 right-16 h-1 w-1 rounded-full bg-purple-200 shadow-sm shadow-purple-200 animate-ping" style={{ animationDuration: "3s" }} />
+                  <div className="absolute top-24 left-1/3 h-1.5 w-1.5 rounded-full bg-cyan-200 shadow-sm shadow-cyan-200" />
+                  <div className="absolute top-12 right-1/3 h-1 w-1 rounded-full bg-white/80" />
+
+                  {/* Dunes Silhouette SVG */}
+                  <svg viewBox="0 0 400 300" className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="duneGrad1" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#3d2c61" />
+                        <stop offset="100%" stopColor="#1a122e" />
+                      </linearGradient>
+                      <linearGradient id="duneGrad2" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#2b1f45" />
+                        <stop offset="100%" stopColor="#120c21" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M 0 160 Q 120 120 220 180 Q 320 240 400 190 L 400 300 L 0 300 Z" fill="url(#duneGrad1)" />
+                    <path d="M 0 210 Q 140 180 260 230 Q 340 260 400 240 L 400 300 L 0 300 Z" fill="url(#duneGrad2)" />
+                  </svg>
+
+                  <div className="relative z-10 text-center px-6">
+                    <p className="text-xs uppercase tracking-widest text-purple-300 font-semibold mb-1">
+                      {isArabic ? "جمالية الصحراء الجزائرية" : "Atmospheric Horizon"}
+                    </p>
+                    <p className="text-base font-medium text-white/90">
+                      {isArabic ? "ولاية البيض · بوابة الجنوب الغربي" : "El-Bayadh · Gateway to the Algerian South"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Bottom Slogan & Slider Pagination Controls */}
+            <div className="relative z-30 pt-4 flex flex-col items-center text-center">
+              {/* Dynamic Slogan Text matching user's image */}
+              <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-white mb-4">
+                {activeSlide === 0
+                  ? (isArabic ? "إلهام العقول، وصناعة رواد الغد" : "Empowering Minds, Shaping Tomorrow")
+                  : activeSlide === 1
+                  ? (isArabic ? "فضاء تعليمي وطني متكامل وريادة معرفية" : "Collaborative Learning & Academic Mastery")
+                  : (isArabic ? "توثيق اللحظات، وصناعة الذكريات" : "Capturing Moments, Creating Memories")}
+              </h3>
+
+              {/* Slider Pagination Bars (From user's image: [ —— ] [ — ] [ — ]) */}
+              <div className="flex items-center gap-2">
+                {[0, 1, 2].map((idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setActiveSlide(idx)}
+                    aria-label={`Slide ${idx + 1}`}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      activeSlide === idx
+                        ? "w-8 bg-white"
+                        : "w-4 bg-white/25 hover:bg-white/50"
+                    }`}
+                  />
+                ))}
               </div>
             </div>
+
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* RIGHT COLUMN: AUTHENTICATION FORM (EXACT TO ATTACHED LOGIN DESIGN.PNG)    */}
+        {/* ========================================================================= */}
+        <div className="lg:col-span-6 p-6 sm:p-10 lg:p-12 flex flex-col justify-center">
+          
+          {/* Language Switcher Pill */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-[#6C5CE7] animate-ping" />
+              <span className="text-xs text-white/60 font-medium">
+                {isArabic ? "منصة إدوبالس التعليمية" : "EduPulse Cloud DZ"}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onLanguageChange(isArabic ? "en" : "ar")}
+              className="rounded-full border border-white/10 bg-[#251e33] px-3 py-1 text-xs font-semibold text-white/80 transition hover:bg-[#322945] hover:text-white"
+            >
+              {isArabic ? "English" : "العربية"}
+            </button>
           </div>
 
-          {/* Row 3: Wilaya Dropdown (All 58 Algerian Wilayas) & Country */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-white/80">
-                <span className="flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5 text-emerald-300" />
-                  <span>{isArabic ? "الولاية (Wilaya - 58 ولاية)" : "Wilaya"}</span>
-                </span>
-              </label>
-              <select
-                value={wilaya}
-                onChange={(e) => setWilaya(e.target.value)}
-                className="w-full rounded-xl border border-white/15 bg-slate-900 px-3.5 py-2.5 text-xs font-medium text-white outline-none transition focus:border-emerald-400"
-              >
-                {ALGERIAN_WILAYAS.map((w) => (
-                  <option
-                    key={w.code}
-                    value={`${w.code} - ${w.nameAr} (${w.nameFr})`}
-                    className="bg-slate-950 text-white"
+          {/* Form Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-2">
+              {tab === "register"
+                ? (isArabic ? "إنشاء حساب جديد" : "Create an account")
+                : tab === "login"
+                ? (isArabic ? "تسجيل الدخول" : "Log in to your account")
+                : tab === "magic-link"
+                ? (isArabic ? "الدخول برمز التحقق" : "One-Time Login Code")
+                : (isArabic ? "البوابات التعليمية" : "Role Portals")}
+            </h1>
+
+            {/* Subtitle link matching attached design: "Already have an account? Log in" */}
+            <p className="text-sm text-[#8c82a2]">
+              {tab === "register" ? (
+                <>
+                  <span>{isArabic ? "لديك حساب بالفعل؟ " : "Already have an account? "}</span>
+                  <button
+                    type="button"
+                    onClick={() => setTab("login")}
+                    className="text-[#a29bfe] font-semibold hover:underline"
                   >
-                    {w.code} - {w.nameAr} ({w.nameFr}) {w.code === "32" ? "⭐ مسقط رأس المنصة" : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-white/80">
-                {isArabic ? "البلد (Country)" : "Country"}
-              </label>
-              <select
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                className="w-full rounded-xl border border-white/15 bg-slate-900 px-3.5 py-2.5 text-xs font-medium text-white outline-none transition focus:border-emerald-400"
-              >
-                <option value="الجزائر (Algeria)">الجزائر (Algeria)</option>
-                <option value="تونس (Tunisia)">تونس (Tunisia)</option>
-                <option value="المغرب (Morocco)">المغرب (Morocco)</option>
-                <option value="فرنسا (France)">فرنسا (France)</option>
-                <option value="أخرى (Other)">أخرى (Other)</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Row 4: Telephone Number & Institution Name */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-white/80">
-                <span className="flex items-center gap-1">
-                  <Phone className="h-3.5 w-3.5 text-emerald-300" />
-                  <span>{isArabic ? "رقم الهاتف (Telephone Number)" : "Phone Number"}</span>
-                </span>
-              </label>
-              <input
-                required
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="0661 32 45 88"
-                className="w-full rounded-xl border border-white/15 bg-white/10 px-3.5 py-2.5 text-sm text-white placeholder-white/40 outline-none transition focus:border-emerald-400"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-white/80">
-                <span className="flex items-center gap-1">
-                  <School className="h-3.5 w-3.5 text-emerald-300" />
-                  <span>{isArabic ? "المؤسسة التعليمية (School)" : "Institution"}</span>
-                </span>
-              </label>
-              <input
-                required
-                type="text"
-                value={institutionName}
-                onChange={(e) => setInstitutionName(e.target.value)}
-                placeholder="ثانوية محمد بلخير — البيض"
-                className="w-full rounded-xl border border-white/15 bg-white/10 px-3.5 py-2.5 text-sm text-white placeholder-white/40 outline-none transition focus:border-emerald-400"
-              />
-            </div>
-          </div>
-
-          {/* Row 5: Role & Portal Selection */}
-          <div>
-            <label className="mb-1.5 block text-xs font-semibold text-white/80">
-              {isArabic ? "البوابة المستهدفة / نوع الحساب (Target Portal)" : "Account Type / Target Portal"}
-            </label>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {[
-                { id: "student", label: "بوابة التلميذ", icon: GraduationCap },
-                { id: "guardian", label: "بوابة ولي الأمر", icon: Users },
-                { id: "teacher", label: "بوابة الأستاذ", icon: User },
-                { id: "admin", label: "بوابة الإدارة", icon: ShieldCheck },
-              ].map((r) => (
+                    {isArabic ? "تسجيل الدخول" : "Log in"}
+                  </button>
+                </>
+              ) : tab === "login" ? (
+                <>
+                  <span>{isArabic ? "ليس لديك حساب؟ " : "Don't have an account? "}</span>
+                  <button
+                    type="button"
+                    onClick={() => setTab("register")}
+                    className="text-[#a29bfe] font-semibold hover:underline"
+                  >
+                    {isArabic ? "إنشاء حساب" : "Sign up"}
+                  </button>
+                </>
+              ) : (
                 <button
-                  key={r.id}
                   type="button"
-                  onClick={() => setTargetRole(r.id as typeof targetRole)}
-                  className={`flex flex-col items-center gap-1 rounded-xl border p-2 text-center text-xs font-bold transition ${
-                    targetRole === r.id
-                      ? "border-emerald-400 bg-emerald-400/20 text-emerald-200 shadow-sm"
-                      : "border-white/15 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
-                  }`}
+                  onClick={() => setTab("login")}
+                  className="text-[#a29bfe] font-semibold hover:underline"
                 >
-                  <r.icon className="h-4 w-4" />
-                  <span className="text-[11px]">{r.label}</span>
+                  {isArabic ? "الرجوع لتسجيل الدخول المعتاد" : "Back to standard login"}
                 </button>
-              ))}
-            </div>
+              )}
+            </p>
           </div>
 
-          {/* Row 6: Email */}
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-white/80">
-              {isArabic ? "البريد الإلكتروني (Email Address)" : "Email"}
-            </label>
-            <input
-              required
-              type="email"
-              value={registerEmail}
-              onChange={(e) => setRegisterEmail(e.target.value)}
-              placeholder="votre.email@domaine.dz"
-              className="w-full rounded-xl border border-white/15 bg-white/10 px-3.5 py-2.5 text-sm text-white placeholder-white/40 outline-none transition focus:border-emerald-400"
-            />
-          </div>
+          {/* ========================================================================= */}
+          {/* TAB: CREATE AN ACCOUNT (REGISTER)                                        */}
+          {/* ========================================================================= */}
+          {tab === "register" && (
+            <form onSubmit={handleRegister} className="space-y-4">
+              
+              {/* Row 1: First name & Last name side-by-side (from user's image) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <input
+                    required
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder={isArabic ? "الاسم الأول" : "Fletcher"}
+                    className="w-full rounded-xl border border-[#392e4e] bg-[#241e33] px-4 py-3.5 text-sm text-white placeholder-[#756a8d] outline-none transition focus:border-[#6C5CE7] focus:ring-2 focus:ring-[#6C5CE7]/30"
+                  />
+                </div>
 
-          {/* Row 7: Password & Confirm Password */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-white/80">
-                {isArabic ? "كلمة المرور (Password)" : "Password"}
-              </label>
+                <div>
+                  <input
+                    required
+                    type="text"
+                    value={familyName}
+                    onChange={(e) => setFamilyName(e.target.value)}
+                    placeholder={isArabic ? "اللقب (Last name)" : "Last name"}
+                    className="w-full rounded-xl border border-[#392e4e] bg-[#241e33] px-4 py-3.5 text-sm text-white placeholder-[#756a8d] outline-none transition focus:border-[#6C5CE7] focus:ring-2 focus:ring-[#6C5CE7]/30"
+                  />
+                </div>
+              </div>
+
+              {/* Row 2: Email (from user's image) */}
+              <div>
+                <input
+                  required
+                  type="email"
+                  value={registerEmail}
+                  onChange={(e) => setRegisterEmail(e.target.value)}
+                  placeholder={isArabic ? "البريد الإلكتروني" : "Email"}
+                  className="w-full rounded-xl border border-[#392e4e] bg-[#241e33] px-4 py-3.5 text-sm text-white placeholder-[#756a8d] outline-none transition focus:border-[#6C5CE7] focus:ring-2 focus:ring-[#6C5CE7]/30"
+                />
+              </div>
+
+              {/* Row 3: Password with Eye toggle (from user's image) */}
               <div className="relative">
                 <input
                   required
                   type={showRegisterPassword ? "text" : "password"}
-                  minLength={10}
                   value={registerPassword}
                   onChange={(e) => setRegisterPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full rounded-xl border border-white/15 bg-white/10 py-2.5 pl-3 pr-9 text-sm text-white placeholder-white/40 outline-none transition focus:border-emerald-400"
+                  placeholder={isArabic ? "أدخل كلمة المرور" : "Enter your password"}
+                  className="w-full rounded-xl border border-[#392e4e] bg-[#241e33] px-4 py-3.5 pr-11 text-sm text-white placeholder-[#756a8d] outline-none transition focus:border-[#6C5CE7] focus:ring-2 focus:ring-[#6C5CE7]/30"
                 />
                 <button
                   type="button"
                   onClick={() => setShowRegisterPassword(!showRegisterPassword)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#756a8d] hover:text-white transition"
                 >
-                  {showRegisterPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  {showRegisterPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-            </div>
 
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-white/80">
-                {isArabic ? "تأكيد كلمة المرور (Confirm Password)" : "Confirm Password"}
-              </label>
-              <input
-                required
-                type="password"
-                minLength={10}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••••••"
-                className="w-full rounded-xl border border-white/15 bg-white/10 px-3.5 py-2.5 text-sm text-white placeholder-white/40 outline-none transition focus:border-emerald-400"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={registerMutation.isPending}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 py-3.5 text-sm font-bold text-slate-950 shadow-lg shadow-emerald-400/20 transition hover:bg-emerald-300 disabled:opacity-50"
-          >
-            {registerMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-            <span>{isArabic ? "إتمام إنشاء الحساب الجزائري" : "Complete Registration"}</span>
-          </button>
-        </form>
-      )}
-
-      {/* TAB 3: MAGIC LOGIN CODE & EMAIL VERIFICATION (OAUTH / OTP SYSTEM) */}
-      {tab === "magic-link" && (
-        <div className="space-y-5">
-          {/* Header Card with Lycée Mohammed Belkheir Emblem */}
-          <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/40 to-slate-900/60 p-4">
-            <div className="flex items-center gap-3">
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                <Sparkles className="h-5 w-5 animate-pulse" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-white">
-                    {isArabic ? "تسجيل الدخول برمز التحقق (One-Time Login Code)" : "Passwordless Login Code"}
-                  </h3>
-                  <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-extrabold text-emerald-300 border border-emerald-500/40">
-                    {isArabic ? "مربوط بقاعدة البيانات" : "Render DB Synced"}
-                  </span>
-                </div>
-                <p className="text-xs text-white/60 mt-0.5">
-                  {isArabic
-                    ? "ثانوية محمد بلخير — ولاية البيض (32) · تسجيل فوري بدون كلمة مرور ومربوط مباشرة بقاعدة البيانات"
-                    : "Lycée Mohammed Belkheir · Instant passwordless verification connected directly to database"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Role selector so authentication directs to the chosen stakeholder portal */}
-          <div>
-            <label className="mb-2 block text-xs font-semibold text-white/80">
-              {isArabic ? "اختر البوابة المراد دخولها بعد تأكيد الرمز:" : "Select Target Stakeholder Portal:"}
-            </label>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {[
-                { id: "student", label: isArabic ? "بوابة التلميذ" : "Student", icon: GraduationCap },
-                { id: "guardian", label: isArabic ? "بوابة ولي الأمر" : "Guardian", icon: Users },
-                { id: "teacher", label: isArabic ? "بوابة الأستاذ" : "Teacher", icon: User },
-                { id: "admin", label: isArabic ? "بوابة الإدارة" : "Admin", icon: ShieldCheck },
-              ].map((item) => {
-                const Icon = item.icon;
-                const isSelected = magicRole === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setMagicRole(item.id as any)}
-                    className={`flex items-center gap-2 rounded-xl border p-2.5 text-right transition ${
-                      isSelected
-                        ? "bg-emerald-500/20 border-emerald-400 text-white font-bold shadow-xs"
-                        : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:text-white"
-                    }`}
-                  >
-                    <Icon className={`h-4 w-4 ${isSelected ? "text-emerald-300" : "text-white/40"}`} />
-                    <span className="text-xs">{item.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Step 1: Send Login Code to Email */}
-          {!magicSent ? (
-            <form onSubmit={handleMagicLinkRequest} className="space-y-4">
-              <div>
+              {/* Stakeholder Role Picker (Compact & Modern) */}
+              <div className="pt-1">
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-semibold text-white/80">
-                    {isArabic ? "البريد الإلكتروني لتلقي رمز الدخول:" : "Email for Login Code:"}
-                  </label>
-                  <span className="text-[11px] text-emerald-400/90 font-medium">
-                    {isArabic ? "يتم إرسال رمز 6 أرقام للبريد" : "A 6-digit code will be sent"}
+                  <span className="text-xs text-[#8c82a2] font-medium">
+                    {isArabic ? "نوع الحساب التعليمي:" : "Account Role:"}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvancedProfile(!showAdvancedProfile)}
+                    className="text-[11px] text-[#a29bfe] hover:underline inline-flex items-center gap-1"
+                  >
+                    <span>{isArabic ? "خيارات الولاية والمؤسسة" : "Wilaya & Details"}</span>
+                    <ChevronDown className={`h-3 w-3 transition-transform ${showAdvancedProfile ? "rotate-180" : ""}`} />
+                  </button>
                 </div>
 
-                <div className="relative">
-                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[
+                    { id: "student", label: isArabic ? "تلميذ" : "Student", icon: GraduationCap },
+                    { id: "guardian", label: isArabic ? "ولي أمر" : "Guardian", icon: Users },
+                    { id: "teacher", label: isArabic ? "أستاذ" : "Teacher", icon: User },
+                    { id: "admin", label: isArabic ? "إدارة" : "Admin", icon: ShieldCheck },
+                  ].map((r) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => setTargetRole(r.id as typeof targetRole)}
+                      className={`flex flex-col items-center justify-center py-2 rounded-xl border text-xs font-semibold transition ${
+                        targetRole === r.id
+                          ? "border-[#6C5CE7] bg-[#6C5CE7]/20 text-[#a29bfe] shadow-sm"
+                          : "border-[#392e4e] bg-[#241e33]/50 text-white/60 hover:bg-[#241e33] hover:text-white"
+                      }`}
+                    >
+                      <r.icon className="h-3.5 w-3.5 mb-1" />
+                      <span className="text-[11px]">{r.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Collapsible Advanced Profile (Wilaya 58, School, Phone) */}
+              {showAdvancedProfile && (
+                <div className="p-3.5 rounded-xl border border-[#392e4e] bg-[#1d182a] space-y-2.5 animate-in fade-in">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-white/60 block mb-1">
+                        {isArabic ? "الولاية (58 ولاية)" : "Wilaya"}
+                      </label>
+                      <select
+                        value={wilaya}
+                        onChange={(e) => setWilaya(e.target.value)}
+                        className="w-full rounded-lg border border-[#392e4e] bg-[#241e33] px-2.5 py-1.5 text-xs text-white outline-none"
+                      >
+                        {ALGERIAN_WILAYAS.map((w) => (
+                          <option key={w.code} value={`${w.code} - ${w.nameAr} (${w.nameFr})`}>
+                            {w.code} - {w.nameAr} {w.code === "32" ? "⭐ البيض" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-white/60 block mb-1">
+                        {isArabic ? "المؤسسة التعليمية" : "School"}
+                      </label>
+                      <input
+                        type="text"
+                        value={institutionName}
+                        onChange={(e) => setInstitutionName(e.target.value)}
+                        placeholder="ثانوية محمد بلخير"
+                        className="w-full rounded-lg border border-[#392e4e] bg-[#241e33] px-2.5 py-1.5 text-xs text-white outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Checkbox: Terms & Conditions (from user's image) */}
+              <div className="flex items-center gap-2.5 pt-1">
+                <input
+                  type="checkbox"
+                  id="terms"
+                  checked={agreeTerms}
+                  onChange={(e) => setAgreeTerms(e.target.checked)}
+                  className="h-4 w-4 rounded border-[#392e4e] bg-[#241e33] text-[#6C5CE7] focus:ring-[#6C5CE7] cursor-pointer accent-[#6C5CE7]"
+                />
+                <label htmlFor="terms" className="text-xs text-[#8c82a2] select-none cursor-pointer">
+                  <span>{isArabic ? "أوافق على " : "I agree to the "}</span>
+                  <span className="text-white underline hover:text-[#a29bfe]">
+                    {isArabic ? "الشروط والأحكام" : "Terms & Conditions"}
+                  </span>
+                </label>
+              </div>
+
+              {/* Submit Button: Create account (Vibrant Purple from user's image) */}
+              <button
+                type="submit"
+                disabled={registerMutation.isPending}
+                className="w-full rounded-xl bg-[#6C5CE7] hover:bg-[#5b4cdb] text-white font-medium py-3.5 px-4 text-sm shadow-lg shadow-[#6C5CE7]/30 transition duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {registerMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4" />
+                )}
+                <span>{isArabic ? "إنشاء الحساب" : "Create account"}</span>
+              </button>
+
+            </form>
+          )}
+
+          {/* ========================================================================= */}
+          {/* TAB: LOG IN                                                               */}
+          {/* ========================================================================= */}
+          {tab === "login" && (
+            <form onSubmit={handleLogin} className="space-y-4">
+              {/* Email field */}
+              <div>
+                <input
+                  required
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  placeholder={isArabic ? "البريد الإلكتروني" : "Email"}
+                  className="w-full rounded-xl border border-[#392e4e] bg-[#241e33] px-4 py-3.5 text-sm text-white placeholder-[#756a8d] outline-none transition focus:border-[#6C5CE7] focus:ring-2 focus:ring-[#6C5CE7]/30"
+                />
+              </div>
+
+              {/* Password field with Eye toggle */}
+              <div className="relative">
+                <input
+                  required
+                  type={showLoginPassword ? "text" : "password"}
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder={isArabic ? "أدخل كلمة المرور" : "Enter your password"}
+                  className="w-full rounded-xl border border-[#392e4e] bg-[#241e33] px-4 py-3.5 pr-11 text-sm text-white placeholder-[#756a8d] outline-none transition focus:border-[#6C5CE7] focus:ring-2 focus:ring-[#6C5CE7]/30"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowLoginPassword(!showLoginPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#756a8d] hover:text-white transition"
+                >
+                  {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+
+              {/* Remember me & Forgot Password */}
+              <div className="flex items-center justify-between text-xs">
+                <label className="flex items-center gap-2 text-[#8c82a2] cursor-pointer">
                   <input
-                    required
-                    type="email"
-                    value={magicEmail}
-                    onChange={(e) => setMagicEmail(e.target.value)}
-                    placeholder="etudiant@bac-dzair.edu.dz"
-                    className="w-full rounded-xl border border-white/15 bg-white/10 py-3 pl-10 pr-4 text-sm text-white placeholder-white/40 outline-none transition focus:border-emerald-400"
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="h-4 w-4 rounded border-[#392e4e] bg-[#241e33] text-[#6C5CE7] accent-[#6C5CE7]"
                   />
-                </div>
+                  <span>{isArabic ? "تذكرني على هذا الجهاز" : "Remember me"}</span>
+                </label>
 
-                {/* Quick email presets */}
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                  <span className="text-white/50 text-[11px]">{isArabic ? "أمثلة:" : "Examples:"}</span>
-                  <button
-                    type="button"
-                    onClick={() => setMagicEmail("etudiant@bac-dzair.edu.dz")}
-                    className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] text-white/80 transition hover:border-emerald-400 hover:text-white"
-                  >
-                    etudiant@bac-dzair.edu.dz
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMagicEmail("professeur@lycee-alger.dz")}
-                    className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] text-white/80 transition hover:border-emerald-400 hover:text-white"
-                  >
-                    professeur@lycee-alger.dz
-                  </button>
+                <button
+                  type="button"
+                  onClick={() => setTab("magic-link")}
+                  className="text-[#a29bfe] hover:underline"
+                >
+                  {isArabic ? "نسيت كلمة المرور؟" : "Forgot password?"}
+                </button>
+              </div>
+
+              {/* Submit Button: Log in (from user's image) */}
+              <button
+                type="submit"
+                disabled={loginMutation.isPending}
+                className="w-full rounded-xl bg-[#6C5CE7] hover:bg-[#5b4cdb] text-white font-medium py-3.5 px-4 text-sm shadow-lg shadow-[#6C5CE7]/30 transition duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {loginMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <KeyRound className="h-4 w-4" />
+                )}
+                <span>{isArabic ? "تسجيل الدخول" : "Log in"}</span>
+              </button>
+            </form>
+          )}
+
+          {/* ========================================================================= */}
+          {/* TAB: MAGIC LINK / ONE-TIME CODE                                           */}
+          {/* ========================================================================= */}
+          {tab === "magic-link" && (
+            <form onSubmit={handleMagicLinkRequest} className="space-y-4">
+              <div className="p-4 rounded-xl border border-purple-500/20 bg-[#251e36] text-xs text-purple-200 leading-relaxed">
+                {isArabic
+                  ? "تسجيل فوري بدون كلمة مرور عبر رمز التحقق المباشر المربوط بقاعدة بيانات ثانوية محمد بلخير."
+                  : "Instant passwordless authentication synced directly to Lycée Mohammed Belkheir database."}
+              </div>
+
+              <div>
+                <input
+                  required
+                  type="email"
+                  value={magicEmail}
+                  onChange={(e) => setMagicEmail(e.target.value)}
+                  placeholder="votre.email@edupulse.dz"
+                  className="w-full rounded-xl border border-[#392e4e] bg-[#241e33] px-4 py-3.5 text-sm text-white placeholder-[#756a8d] outline-none focus:border-[#6C5CE7]"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-[#8c82a2] block mb-1.5">
+                  {isArabic ? "اختر البوابة المستهدفة:" : "Target Stakeholder Role:"}
+                </label>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[
+                    { id: "student", label: isArabic ? "تلميذ" : "Student" },
+                    { id: "guardian", label: isArabic ? "ولي أمر" : "Guardian" },
+                    { id: "teacher", label: isArabic ? "أستاذ" : "Teacher" },
+                    { id: "admin", label: isArabic ? "إدارة" : "Admin" },
+                  ].map((r) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => setMagicRole(r.id as any)}
+                      className={`py-2 rounded-xl border text-xs font-semibold ${
+                        magicRole === r.id
+                          ? "border-[#6C5CE7] bg-[#6C5CE7]/20 text-[#a29bfe]"
+                          : "border-[#392e4e] bg-[#241e33]/50 text-white/60"
+                      }`}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
               <button
                 type="submit"
                 disabled={magicLoading}
-                className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-emerald-400 py-3.5 text-sm font-bold text-slate-950 shadow-lg shadow-emerald-400/20 transition hover:bg-emerald-300 disabled:opacity-60"
+                className="w-full rounded-xl bg-[#6C5CE7] hover:bg-[#5b4cdb] text-white font-medium py-3.5 px-4 text-sm shadow-lg shadow-[#6C5CE7]/30 transition flex items-center justify-center gap-2"
               >
-                {magicLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-                <span>
-                  {magicLoading
-                    ? (isArabic ? "جاري تجهيز الدخول المباشر..." : "Connecting Direct Link...")
-                    : (isArabic ? "الدخول الفوري عبر الرابط المباشر (Direct Access Link)" : "Direct Access Link Sign-In")}
-                </span>
+                {magicLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                <span>{isArabic ? "دخول فوري برمز التحقق" : "Send One-Time Login Code"}</span>
               </button>
             </form>
-          ) : (
-            /* Direct Entrance Success confirmation */
-            <div className="space-y-4 text-center">
-              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-6 shadow-xl">
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 mb-3">
-                  <CheckCircle2 className="h-6 w-6" />
-                </div>
-                <h3 className="text-lg font-bold text-white">
-                  {isArabic ? "تم ربط الحساب بنجاح!" : "Access Link Confirmed!"}
-                </h3>
-                <p className="text-xs text-white/70 mt-1 max-w-md mx-auto">
-                  {isArabic
-                    ? `تم تجهيز الدخول المباشر لحساب ${magicEmail} بصلاحية ${magicRole === "teacher" ? "أستاذ" : magicRole === "guardian" ? "ولي أمر" : "تلميذ"}.`
-                    : `Direct access link configured for ${magicEmail}.`}
-                </p>
-
-                <button
-                  type="button"
-                  onClick={() => onAuthenticated(magicRole)}
-                  className="mt-5 inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-6 py-3 text-sm font-bold text-slate-950 hover:bg-emerald-300 transition"
-                >
-                  <span>{isArabic ? "دخول البوابة الآن" : "Enter Portal Now"}</span>
-                </button>
-              </div>
-            </div>
           )}
-        </div>
-      )}
 
-      {/* TAB 4: DIRECT STAKEHOLDER PORTAL SWITCHER */}
-      {tab === "portals" && (
-        <div className="space-y-4">
-          <p className="text-xs text-white/70">
-            {isArabic
-              ? "اختر البوابة التي ترغب في استعراضها مباشرة بنقرة واحدة:"
-              : "Select a portal to access directly in one click:"}
-          </p>
+          {/* ========================================================================= */}
+          {/* DIVIDER: "Or register with" / "Or log in with" (from user's image)        */}
+          {/* ========================================================================= */}
+          <div className="relative my-6 text-center">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[#342a4a]" />
+            </div>
+            <span className="relative bg-[#1a1626] px-4 text-xs font-medium text-[#786c91]">
+              {tab === "register"
+                ? (isArabic ? "أو التسجيل بواسطة" : "Or register with")
+                : (isArabic ? "أو تسجيل الدخول بواسطة" : "Or log in with")}
+            </span>
+          </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {/* Guardian Portal */}
+          {/* ========================================================================= */}
+          {/* SOCIAL BUTTON: GOOGLE                                                    */}
+          {/* ========================================================================= */}
+          <div className="mb-6">
             <button
               type="button"
-              onClick={() => onAuthenticated("guardian")}
-              className="flex items-start gap-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-right transition hover:border-emerald-400/50 hover:bg-slate-900"
+              onClick={handleGoogleAuth}
+              className="w-full flex items-center justify-center gap-2.5 rounded-xl border border-[#392e4e] bg-[#241e33] hover:bg-[#2e2642] py-3 px-4 text-sm font-medium text-white transition duration-200"
             >
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                <Users className="h-5 w-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-white">بوابة ولي الأمر (Guardian Portal)</h4>
-                <p className="mt-1 text-[11px] text-white/60 leading-relaxed">
-                  متابعة حضور التلميذ، كشف نقاط الفصول، وتنبيهات واتساب المباشرة.
-                </p>
-              </div>
-            </button>
-
-            {/* Student Portal */}
-            <button
-              type="button"
-              onClick={() => onAuthenticated("student")}
-              className="flex items-start gap-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-right transition hover:border-emerald-400/50 hover:bg-slate-900"
-            >
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                <GraduationCap className="h-5 w-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-white">بوابة التلميذ (Student Portal)</h4>
-                <p className="mt-1 text-[11px] text-white/60 leading-relaxed">
-                  محاكي البكالوريا، بطاقات الاسترجاع المتباعد، والمساعد السقراطي.
-                </p>
-              </div>
-            </button>
-
-            {/* Educator Portal */}
-            <button
-              type="button"
-              onClick={() => onAuthenticated("teacher")}
-              className="flex items-start gap-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-right transition hover:border-emerald-400/50 hover:bg-slate-900"
-            >
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                <User className="h-5 w-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-white">بوابة الأستاذ (Educator Portal)</h4>
-                <p className="mt-1 text-[11px] text-white/60 leading-relaxed">
-                  تحضير مذكرات المقاربة بالكفاءات (APC)، دفتر التنقيط، ومتابعة الغيابات.
-                </p>
-              </div>
-            </button>
-
-            {/* Admin Portal */}
-            <button
-              type="button"
-              onClick={() => onAuthenticated("admin")}
-              className="flex items-start gap-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-right transition hover:border-emerald-400/50 hover:bg-slate-900"
-            >
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-white">بوابة الإدارة (Admin Portal)</h4>
-                <p className="mt-1 text-[11px] text-white/60 leading-relaxed">
-                  مسار القبول، مالية المؤسسة بالدينار DZD، وتسيير فريق العمل.
-                </p>
-              </div>
+              <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.36 24 12 24z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                />
+              </svg>
+              <span>{isArabic ? "المتابعة باستخدام Google" : "Continue with Google"}</span>
             </button>
           </div>
+
+          {/* Quick Instant Test Portals */}
+          <div className="pt-2 border-t border-[#342a4a] flex items-center justify-between text-xs text-[#8c82a2]">
+            <span>{isArabic ? "دخول فوري تجريبي:" : "Direct Demo Access:"}</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => onAuthenticated("student")}
+                className="hover:text-[#a29bfe] transition hover:underline"
+              >
+                {isArabic ? "تلميذ" : "Student"}
+              </button>
+              <span>·</span>
+              <button
+                type="button"
+                onClick={() => onAuthenticated("guardian")}
+                className="hover:text-[#a29bfe] transition hover:underline"
+              >
+                {isArabic ? "ولي أمر" : "Guardian"}
+              </button>
+              <span>·</span>
+              <button
+                type="button"
+                onClick={() => onAuthenticated("teacher")}
+                className="hover:text-[#a29bfe] transition hover:underline"
+              >
+                {isArabic ? "أستاذ" : "Teacher"}
+              </button>
+              <span>·</span>
+              <button
+                type="button"
+                onClick={() => onAuthenticated("admin")}
+                className="hover:text-[#a29bfe] transition hover:underline"
+              >
+                {isArabic ? "إدارة" : "Admin"}
+              </button>
+            </div>
+          </div>
+
         </div>
-      )}
+
+      </div>
     </div>
   );
 }

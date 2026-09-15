@@ -96,6 +96,7 @@ import {
   fetchApifyDatasetItems,
   triggerCambridgeScraperRun,
 } from "./integrations/cambridgeDictionary";
+import { generateQuizFromStudyText, generateFlashcardsFromStudyText } from "./ai/studyGenerator";
 
 const schoolRoles = ["owner", "admin", "registrar", "finance_admin", "teacher", "counsellor", "student", "guardian"] as const;
 type SchoolRole = (typeof schoolRoles)[number];
@@ -997,6 +998,30 @@ export const appRouter = router({
       const items = await fetchApifyDatasetItems();
       return { success: true, count: items.length, items };
     }),
+  }),
+  study: router({
+    generateQuiz: publicProcedure
+      .input(
+        z.object({
+          text: z.string().trim().min(1, "Study text is required."),
+          count: z.number().int().min(5).max(10).optional().default(6),
+          language: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return generateQuizFromStudyText(input.text, { count: input.count, language: input.language });
+      }),
+    generateFlashcards: publicProcedure
+      .input(
+        z.object({
+          text: z.string().trim().min(1, "Study text is required."),
+          count: z.number().int().min(10).max(15).optional().default(12),
+          language: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return generateFlashcardsFromStudyText(input.text, { count: input.count, language: input.language });
+      }),
   }),
 });
 

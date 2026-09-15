@@ -32,12 +32,12 @@ export async function storagePut(relKey: string, data: Buffer | Uint8Array | str
   const blob = typeof data === "string" ? new Blob([data], { type: contentType }) : new Blob([data as any], { type: contentType });
   const uploadResp = await fetch(s3Url, { method: "PUT", headers: { "Content-Type": contentType }, body: blob });
   if (!uploadResp.ok) throw new Error(`Storage upload failed (${uploadResp.status}).`);
-  return { key, url: `/manus-storage/${key}` };
+  return { key, url: `/storage/${key}` };
 }
 
 export async function storageGet(relKey: string): Promise<{ key: string; url: string }> {
   const key = normalizeKey(relKey);
-  return { key, url: hasPortableStorage() ? await storageGetSignedUrl(key) : `/manus-storage/${key}` };
+  return { key, url: hasPortableStorage() ? await storageGetSignedUrl(key) : `/storage/${key}` };
 }
 
 export async function storageGetSignedUrl(relKey: string): Promise<string> {

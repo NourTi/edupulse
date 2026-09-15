@@ -52,7 +52,7 @@ type Props = {
 };
 
 // ----------------------------------------------------
-// 1. MOCK DATA FOR ADMISSIONS PIPELINE KANBAN (Zoho style)
+// 1. MOCK DATA FOR ADMISSIONS PIPELINE KANBAN (EduPulse Platform)
 // ----------------------------------------------------
 type PipelineStudent = {
   id: string;
@@ -142,7 +142,7 @@ const INITIAL_PIPELINE: PipelineStudent[] = [
 ];
 
 // ----------------------------------------------------
-// 2. ALGERIAN CURRICULUM STREAMS (Zoho style matrix)
+// 2. ALGERIAN CURRICULUM STREAMS (Matrix View)
 // Verified against official Ministry of National Education coefficients
 // ----------------------------------------------------
 type StreamCourse = {
@@ -278,7 +278,7 @@ const STREAM_DETAILS: Record<
   },
 };
 
-export function ZohoEducationLanding({ isArabic, onEnterWorkspace, onNavigateToView }: Props) {
+export function EduPulseLandingShowcase({ isArabic, onEnterWorkspace, onNavigateToView }: Props) {
   // Kanban interactive state
   const [pipeline, setPipeline] = useState<PipelineStudent[]>(INITIAL_PIPELINE);
   const [searchFilter, setSearchFilter] = useState("");
@@ -322,7 +322,7 @@ export function ZohoEducationLanding({ isArabic, onEnterWorkspace, onNavigateToV
   return (
     <div className="bg-slate-50 text-slate-900 font-body selection:bg-blue-100 selection:text-blue-900">
       {/* ---------------------------------------------------- */}
-      {/* SECTION 1: ZOHO ADMISSIONS & LEAD LIFECYCLE (KANBAN) */}
+      {/* SECTION 1: ADMISSIONS & LEAD LIFECYCLE (KANBAN) */}
       {/* ---------------------------------------------------- */}
       <section id="pipeline" className="border-t border-slate-200 bg-white px-6 py-20 sm:px-8 sm:py-28">
         <div className="mx-auto max-w-7xl">
@@ -332,7 +332,7 @@ export function ZohoEducationLanding({ isArabic, onEnterWorkspace, onNavigateToV
                 <LayoutDashboard className="h-3.5 w-3.5" />
                 <span>{isArabic ? "مسار القبول والتوجيه المدرسي المؤتمت" : "Admissions & Enrollment CRM"}</span>
                 <span className="text-slate-300">·</span>
-                <span>Zoho Education Pipeline</span>
+                <span>EduPulse Academic Pipeline</span>
               </div>
               <h2 className="text-3xl font-extrabold tracking-tight text-slate-950 sm:text-5xl font-display leading-[1.15]">
                 {isArabic ? (
@@ -1532,7 +1532,7 @@ export function ZohoEducationLanding({ isArabic, onEnterWorkspace, onNavigateToV
       </section>
 
       {/* ---------------------------------------------------- */}
-      {/* SECTION 7: ZIA-STYLE EDUCATIONAL INTELLIGENCE & RESEARCH */}
+      {/* SECTION 7: COGNITIVE INTELLIGENCE & RESEARCH STUDIO */}
       {/* ---------------------------------------------------- */}
       <section id="assistant" className="border-t border-slate-200 bg-white px-6 py-20 sm:px-8 sm:py-28">
         <div className="mx-auto max-w-7xl">
@@ -1542,7 +1542,7 @@ export function ZohoEducationLanding({ isArabic, onEnterWorkspace, onNavigateToV
                 <Sparkles className="h-3.5 w-3.5" />
                 <span>{isArabic ? "ذكاء أكاديمي مؤسس على الأبحاث" : "Evidence-Grounded Intelligence"}</span>
                 <span className="text-slate-300">·</span>
-                <span>Zia & Cognitive Science</span>
+                <span>EduPulse Cognitive Intelligence</span>
               </div>
               <h2 className="text-3xl font-extrabold tracking-tight text-slate-950 sm:text-5xl font-display leading-[1.15]">
                 {isArabic ? (
@@ -1601,7 +1601,7 @@ export function ZohoEducationLanding({ isArabic, onEnterWorkspace, onNavigateToV
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
               <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
                 <span className="text-xs font-extrabold text-slate-800">
-                  نظام التنبيه البيداغوجي المبكر (Zia Early Warning)
+                  نظام التنبيه البيداغوجي المبكر (EduPulse Early Warning)
                 </span>
                 <span className="rounded bg-amber-100 text-amber-800 px-2 py-0.5 text-[10px] font-bold">
                   تحديث مباشر
@@ -1715,7 +1715,7 @@ export function ZohoEducationLanding({ isArabic, onEnterWorkspace, onNavigateToV
       </section>
 
       {/* ---------------------------------------------------- */}
-      {/* SECTION 9: ZOHO-STYLE CALL TO ACTION BANNER */}
+      {/* SECTION 9: INSTITUTIONAL CALL TO ACTION BANNER */}
       {/* ---------------------------------------------------- */}
       <section className="border-t border-slate-200 bg-gradient-to-br from-blue-700 via-indigo-700 to-slate-900 px-6 py-20 text-white sm:px-8 sm:py-24">
         <div className="mx-auto max-w-4xl text-center">
@@ -1762,7 +1762,7 @@ export function ZohoEducationLanding({ isArabic, onEnterWorkspace, onNavigateToV
       </section>
 
       {/* ---------------------------------------------------- */}
-      {/* SECTION 10: ZOHO-STYLE CORPORATE FOOTER */}
+      {/* SECTION 10: INSTITUTIONAL CORPORATE FOOTER */}
       {/* ---------------------------------------------------- */}
       <footer className="border-t border-slate-200 bg-slate-900 px-6 py-16 text-slate-400 text-xs sm:px-8">
         <div className="mx-auto max-w-7xl">
@@ -1844,5 +1844,5 @@ export function ZohoEducationLanding({ isArabic, onEnterWorkspace, onNavigateToV
   );
 }
 
-export default ZohoEducationLanding;
+export default EduPulseLandingShowcase;
 

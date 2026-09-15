@@ -1,6 +1,6 @@
 import { ArrowUpRight, BookOpenCheck, BriefcaseBusiness, GraduationCap, Languages, ShieldCheck, Sparkles, UsersRound } from "lucide-react";
 
-export const PROFILE_PDF_URL = "/manus-storage/main_8a3b9e44.pdf";
+export const PROFILE_PDF_URL = "/edupulse-platform-profile.pdf";
 
 type AboutSectionProps = { isArabic: boolean };
 

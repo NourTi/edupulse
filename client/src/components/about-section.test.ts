@@ -3,7 +3,7 @@ import { aboutAudiences, PROFILE_PDF_URL } from "./AboutSection";
 
 describe("About section", () => {
   it("links to the platform profile PDF", () => {
-    expect(PROFILE_PDF_URL).toBe("/manus-storage/main_8a3b9e44.pdf");
+    expect(PROFILE_PDF_URL).toBe("/edupulse-platform-profile.pdf");
     expect(PROFILE_PDF_URL.endsWith(".pdf")).toBe(true);
   });
 

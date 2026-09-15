@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AddStudentModal } from "./AddStudentModal";
-import { Download, Filter, MoreHorizontal, Plus, Search, UsersRound } from "lucide-react";
+import { Download, Filter, MoreHorizontal, Plus, Search, UsersRound, Compass, X } from "lucide-react";
+import { StudentRadarProfile } from "./StudentRadarProfile";
 
 type StudentRecord = { id: string; name: string; nameAr: string; grade: string; guardian: string; phone: string; level: string; attendance: number; subjects: string[]; status: string; avatarUrl?: string };
 
@@ -15,6 +16,7 @@ const statusLabel = (status: string, isArabic: boolean) => isArabic ? (status ==
 
 export function StudentInformationPanel({ students, isArabic, onStudentCreated }: Props) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedStudentRadar, setSelectedStudentRadar] = useState<StudentRecord | null>(null);
   const [activeTab, setActiveTab] = useState<"students" | "teachers" | "staff" | "contacts" | "prospects">("students");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -116,13 +118,14 @@ export function StudentInformationPanel({ students, isArabic, onStudentCreated }
                     <th className="px-4 py-4">{isArabic ? "المستوى" : "Level"}</th>
                     <th className="px-4 py-4">{isArabic ? "الحضور" : "Attendance"}</th>
                     <th className="px-4 py-4">{isArabic ? "الصف" : "Class"}</th>
+                    <th className="px-4 py-4">{isArabic ? "مخطط الرادار" : "Radar KPI"}</th>
                     <th className="px-5 py-4">{isArabic ? "الحالة" : "Status"}</th>
                     <th className="px-4 py-4" aria-label="Actions" />
                   </tr>
                 </thead>
                 <tbody>
                   {filteredStudents.map(student => (
-                    <tr key={student.id} className="border-t border-slate-100 transition hover:bg-indigo-50/30">
+                    <tr key={student.id} className="border-t border-slate-100 transition hover:bg-indigo-50/30 cursor-pointer" onClick={(e) => { if ((e.target as HTMLElement).closest('button')) return; setSelectedStudentRadar(student); }}>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           {student.avatarUrl ? (
@@ -131,7 +134,7 @@ export function StudentInformationPanel({ students, isArabic, onStudentCreated }
                             <span className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-cyan-400 font-black text-white">{student.nameAr.slice(0, 1)}</span>
                           )}
                           <div>
-                            <p className="font-black text-slate-800">{isArabic ? student.nameAr : student.name}</p>
+                            <p className="font-black text-slate-800 hover:text-indigo-600 transition">{isArabic ? student.nameAr : student.name}</p>
                             <p className="mt-1 text-[10px] text-slate-400">{student.id.toUpperCase()}</p>
                           </div>
                         </div>
@@ -142,6 +145,16 @@ export function StudentInformationPanel({ students, isArabic, onStudentCreated }
                       <td className="px-4 py-4"><span className="rounded-full bg-violet-50 px-2.5 py-1 font-black text-violet-700">{student.level}</span></td>
                       <td className="px-4 py-4 font-black text-slate-700">{student.attendance}%</td>
                       <td className="px-4 py-4 text-slate-600">{student.grade}</td>
+                      <td className="px-4 py-4">
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setSelectedStudentRadar(student); }}
+                          className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-700 transition hover:bg-indigo-600 hover:text-white"
+                        >
+                          <Compass className="h-3.5 w-3.5" />
+                          <span>{isArabic ? "رادار الأداء" : "Radar"}</span>
+                        </button>
+                      </td>
                       <td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 font-black ${student.status === "Review" ? "bg-rose-50 text-rose-600" : student.status === "New" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>{statusLabel(student.status, isArabic)}</span></td>
                       <td className="px-4 py-4"><button className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label={isArabic ? "خيارات الطالب" : "Student options"}><MoreHorizontal className="h-4 w-4" /></button></td>
                     </tr>
@@ -172,6 +185,42 @@ export function StudentInformationPanel({ students, isArabic, onStudentCreated }
         isArabic={isArabic}
         onStudentCreated={onStudentCreated}
       />
+
+      {/* Interactive Radar Profile Dialog */}
+      {selectedStudentRadar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+          <div className="relative max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-2xl bg-indigo-50 text-indigo-600">
+                  <Compass className="h-5 w-5" />
+                </span>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900">
+                    {isArabic ? "ملف التلميذ والمخطط العنكبوتي التفاعلي" : "Student Interactive Radar Profile"}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    {isArabic ? "مؤشرات الأداء الإدراكي، الحضور، والمشاركة الصفية" : "Cognitive KPIs, attendance and class engagement"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedStudentRadar(null)}
+                className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <StudentRadarProfile
+              student={selectedStudentRadar}
+              canEditKpi={true}
+              language={isArabic ? "ar" : "en"}
+            />
+          </div>
+        </div>
+      )}
       
     </div>
   );
