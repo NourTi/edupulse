@@ -138,6 +138,15 @@ async function startServer() {
       return res.status(500).json({ error: "Failed to generate flashcards." });
     }
   });
+
+  // Mount RBAC, StudentProfile, Evaluation, Venice AI, and Workspace API groups
+  const { apiGroupsRouter } = await import("../routes/apiGroups");
+  app.use("/api", apiGroupsRouter);
+
+  // Mount Teacher Content Generators, Content Library, and Curriculum Memory
+  const { teacherGeneratorsRouter } = await import("../routes/teacherGeneratorsRouter");
+  app.use("/api/teacher-generators", teacherGeneratorsRouter);
+
   // tRPC API
   app.use(
     "/api/trpc",
@@ -161,7 +170,7 @@ async function startServer() {
 
   // In this environment, nginx listens on 8080 and proxies traffic to 3000.
   // We must bind to port 3000 (never attempt to bind to 8080 which causes EADDRINUSE).
-  const port = process.env.PORT && process.env.PORT !== "8080" ? parseInt(process.env.PORT, 10) : 3000;
+  const port = 3000;
   server.listen(port, "0.0.0.0", () => {
     console.log(`Server running on http://0.0.0.0:${port}/`);
   });

@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { ConnectedPapersGraphView } from "./ConnectedPapersGraphView";
+import { InteractiveRadarKnowledgeExplorer } from "./academic/InteractiveRadarKnowledgeExplorer";
 import { AcademicSearchExplorerPanel } from "./AcademicSearchExplorerPanel";
 import { DirectDocumentDownloaderPanel } from "./DirectDocumentDownloaderPanel";
 import { ModernThesisRoadmap } from "./academic/ModernThesisRoadmap";
@@ -51,6 +52,8 @@ import {
   type GoogleSheetsAcademicTemplate,
 } from "@/data/academicResearchData";
 import { createGoogleSpreadsheet, createGooglePresentation, createGoogleDoc } from "@/lib/googleWorkspace";
+import { GoogleWorkspaceEmbedViewer } from "./academic/GoogleWorkspaceEmbedViewer";
+import { saveGoogleWorkspaceRecord, type GoogleWorkspaceFileRecord } from "@/lib/googleWorkspaceStorage";
 
 interface SummarizedPaper {
   id: string;
@@ -157,6 +160,7 @@ export function ResearchStudioPanel({ isArabic }: { isArabic: boolean }) {
   // Google Sheets Builder State
   const [selectedSheetTemplate, setSelectedSheetTemplate] = useState<GoogleSheetsAcademicTemplate>(READY_GOOGLE_SHEETS_TEMPLATES[0]);
   const [isCreatingSheet, setIsCreatingSheet] = useState<boolean>(false);
+  const [activeEmbeddedFile, setActiveEmbeddedFile] = useState<GoogleWorkspaceFileRecord | null>(null);
 
   // Time Management / Pomodoro Timer State
   const [timerMinutes, setTimerMinutes] = useState<number>(25);
@@ -248,8 +252,23 @@ export function ResearchStudioPanel({ isArabic }: { isArabic: boolean }) {
       const presentationTitle = customSlideTitle.trim() || `${template.titleEn} — EduPulse Research Studio`;
       const res = await createGooglePresentation(presentationTitle);
       if (res && res.presentationId) {
-        toast.success(isArabic ? "تم إنشاء عرض الشرائح على Google Slides بنجاح!" : "Google Slides presentation created!");
-        window.open(`https://docs.google.com/presentation/d/${res.presentationId}/edit`, "_blank");
+        const embedUrl = `https://docs.google.com/presentation/d/${res.presentationId}/embed`;
+        const record: GoogleWorkspaceFileRecord = {
+          id: res.presentationId,
+          fileId: res.presentationId,
+          type: "slides",
+          title: presentationTitle,
+          embedUrl,
+          directUrl: `https://docs.google.com/presentation/d/${res.presentationId}/edit`,
+          linkedRecordType: "workspaceItem",
+          linkedRecordId: template.id,
+          linkedRecordName: template.titleEn,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        await saveGoogleWorkspaceRecord(record);
+        setActiveEmbeddedFile(record);
+        toast.success(isArabic ? "تم إنشاء عرض الشرائح وعرضه داخل أستوديو البحث!" : "Google Slides created and opened in studio!");
       } else {
         toast.info(isArabic ? "تم تجهيز هيكل الشرائح الأكاديمية للتحميل أو التصدير." : "Presentation deck template ready.");
       }
@@ -270,8 +289,23 @@ export function ResearchStudioPanel({ isArabic }: { isArabic: boolean }) {
         { title: "Research Data", rows: [template.columns, template.sampleRow] }
       ]);
       if (res && res.spreadsheetId) {
-        toast.success(isArabic ? "تم إنشاء جدول البيانات على Google Sheets بنجاح!" : "Google Sheets matrix created!");
-        window.open(`https://docs.google.com/spreadsheets/d/${res.spreadsheetId}/edit`, "_blank");
+        const embedUrl = `https://docs.google.com/spreadsheets/d/${res.spreadsheetId}/edit?usp=sharing&embedded=true`;
+        const record: GoogleWorkspaceFileRecord = {
+          id: res.spreadsheetId,
+          fileId: res.spreadsheetId,
+          type: "sheets",
+          title: sheetTitle,
+          embedUrl,
+          directUrl: `https://docs.google.com/spreadsheets/d/${res.spreadsheetId}/edit`,
+          linkedRecordType: "workspaceItem",
+          linkedRecordId: template.id,
+          linkedRecordName: template.titleEn,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        await saveGoogleWorkspaceRecord(record);
+        setActiveEmbeddedFile(record);
+        toast.success(isArabic ? "تم إنشاء جدول البيانات وعرضه داخل أستوديو البحث!" : "Google Sheets matrix created and opened in studio!");
       } else {
         toast.info(isArabic ? "تم تجهيز جدول البيانات الجاهز للتحليل الإحصائي." : "Research data matrix ready.");
       }
@@ -398,11 +432,30 @@ export function ResearchStudioPanel({ isArabic }: { isArabic: boolean }) {
         </div>
       </div>
 
+      {/* In-Studio Embedded Google Workspace Viewer (Sheets, Slides, Forms, Docs) */}
+      {activeEmbeddedFile && (
+        <div className="mb-6">
+          <GoogleWorkspaceEmbedViewer
+            file={activeEmbeddedFile}
+            onClose={() => setActiveEmbeddedFile(null)}
+            isInline={true}
+          />
+        </div>
+      )}
+
       {/* ========================================================================= */}
-      {/* TAB: CONNECTED PAPERS VISUAL GRAPH */}
+      {/* TAB: CONNECTED PAPERS VISUAL GRAPH & ECHARTS RADAR KNOWLEDGE HUB */}
       {/* ========================================================================= */}
       {activeTab === "graph" && (
-        <ConnectedPapersGraphView isArabic={isArabic} />
+        <div className="space-y-8">
+          <InteractiveRadarKnowledgeExplorer isArabic={isArabic} />
+          <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">
+              {isArabic ? "مخطط القوة الشبكية التفاعلي (Force Graph Engine)" : "Interactive Force Graph Engine"}
+            </h3>
+            <ConnectedPapersGraphView isArabic={isArabic} />
+          </div>
+        </div>
       )}
 
       {/* ========================================================================= */}

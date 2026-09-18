@@ -35,9 +35,19 @@ import {
   deleteGoogleTask,
   createGooglePresentation,
   addSlidesToPresentation,
+  createGoogleForm,
+  buildGoogleWorkspaceEmbedUrl,
   type GoogleCalendarEventItem,
   type GoogleTaskItem,
+  type GoogleFormResult,
 } from "@/lib/googleWorkspace";
+import {
+  listGoogleWorkspaceRecords,
+  saveGoogleWorkspaceRecord,
+  removeGoogleWorkspaceRecord,
+  type GoogleWorkspaceFileRecord,
+} from "@/lib/googleWorkspaceStorage";
+import { GoogleWorkspaceEmbedViewer } from "./academic/GoogleWorkspaceEmbedViewer";
 import { type User } from "firebase/auth";
 
 interface Props {
@@ -50,7 +60,18 @@ export function GoogleWorkspaceHub({ isArabic, students = [], payments = [] }: P
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"sheets" | "calendar" | "docs" | "tasks" | "slides" | "keep">("sheets");
+  const [activeTab, setActiveTab] = useState<"sheets" | "slides" | "forms" | "calendar" | "docs" | "tasks" | "keep">("sheets");
+
+  // Active embedded workspace file to display directly inside platform
+  const [activeEmbeddedFile, setActiveEmbeddedFile] = useState<GoogleWorkspaceFileRecord | null>(null);
+  const [savedWorkspaceFiles, setSavedWorkspaceFiles] = useState<GoogleWorkspaceFileRecord[]>([]);
+
+  // Forms state
+  const [exportedForms, setExportedForms] = useState<
+    { title: string; url: string; date: string; fileId?: string; embedUrl?: string }[]
+  >([]);
+  const [customFormTitle, setCustomFormTitle] = useState("");
+  const [customFormDesc, setCustomFormDesc] = useState("");
 
   // Confirmation Modal state for destructive actions
   const [confirmModal, setConfirmModal] = useState<{
@@ -144,6 +165,29 @@ export function GoogleWorkspaceHub({ isArabic, students = [], payments = [] }: P
     }
   }, [token]);
 
+  // Sync and load saved Google Workspace files from Firestore / storage
+  useEffect(() => {
+    const loadFiles = async () => {
+      try {
+        const records = await listGoogleWorkspaceRecords();
+        setSavedWorkspaceFiles(records);
+      } catch (e) {
+        console.warn("Could not list workspace records:", e);
+      }
+    };
+    loadFiles();
+
+    const handleSync = () => {
+      loadFiles();
+    };
+    window.addEventListener("edupulse:google_file_saved", handleSync);
+    window.addEventListener("edupulse:google_file_deleted", handleSync);
+    return () => {
+      window.removeEventListener("edupulse:google_file_saved", handleSync);
+      window.removeEventListener("edupulse:google_file_deleted", handleSync);
+    };
+  }, []);
+
   const handleSignIn = async () => {
     setLoading(true);
     try {
@@ -216,15 +260,35 @@ export function GoogleWorkspaceHub({ isArabic, students = [], payments = [] }: P
 
       const res = await createGoogleSpreadsheet(
         isArabic ? "سجل طلاب EduPulse - الجزائر 2026" : "EduPulse Student Roster - Algeria 2026",
-        [{ title: isArabic ? "قائمة الطلاب" : "Students", rows: [headers, ...rows] }]
+        [{ title: isArabic ? "قائمة الطلاب" : "Students", rows: [headers, ...rows] }],
+        {
+          linkedRecord: { type: "student", id: "all-students-2026", name: isArabic ? "سجل طلاب الجزائر 2026" : "Student Roster 2026" },
+          userEmail: user?.email || undefined,
+        }
       );
+
+      const record: GoogleWorkspaceFileRecord = {
+        id: `gwf-${res.spreadsheetId}`,
+        fileId: res.spreadsheetId,
+        type: "sheets",
+        title: res.title,
+        embedUrl: res.embedUrl,
+        directUrl: res.spreadsheetUrl,
+        linkedRecordType: "student",
+        linkedRecordId: "all-students-2026",
+        linkedRecordName: isArabic ? "سجل طلاب الجزائر 2026" : "Student Roster 2026",
+        userEmail: user?.email || "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
       setExportedSheets((prev) => [
         { title: res.title, url: res.spreadsheetUrl, date: new Date().toLocaleTimeString() },
         ...prev,
       ]);
+      setActiveEmbeddedFile(record);
       toast.success(
-        isArabic ? "تم إنشاء جدول البيانات في Google Sheets بنجاح!" : "Google Sheet created successfully!"
+        isArabic ? "تم إنشاء جدول البيانات في Google Sheets وعرضه في مساحة العمل بنجاح!" : "Google Sheet created and opened in workspace!"
       );
     } catch (err: any) {
       toast.error(err.message || "Failed to export to Google Sheets");
@@ -262,14 +326,34 @@ export function GoogleWorkspaceHub({ isArabic, students = [], payments = [] }: P
 
       const res = await createGoogleSpreadsheet(
         isArabic ? "مصفوفة معاملات البكالوريا الجزائرية الرسمية" : "Algerian Official BAC Coefficients Matrix",
-        [{ title: isArabic ? "المعاملات الرسمية" : "Coefficients", rows: [headers, ...rows] }]
+        [{ title: isArabic ? "المعاملات الرسمية" : "Coefficients", rows: [headers, ...rows] }],
+        {
+          linkedRecord: { type: "workspaceItem", id: "bac-coefficients-matrix", name: isArabic ? "مصفوفة معاملات البكالوريا" : "BAC Coefficients Matrix" },
+          userEmail: user?.email || undefined,
+        }
       );
+
+      const record: GoogleWorkspaceFileRecord = {
+        id: `gwf-${res.spreadsheetId}`,
+        fileId: res.spreadsheetId,
+        type: "sheets",
+        title: res.title,
+        embedUrl: res.embedUrl,
+        directUrl: res.spreadsheetUrl,
+        linkedRecordType: "workspaceItem",
+        linkedRecordId: "bac-coefficients-matrix",
+        linkedRecordName: isArabic ? "مصفوفة معاملات البكالوريا" : "BAC Coefficients Matrix",
+        userEmail: user?.email || "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
       setExportedSheets((prev) => [
         { title: res.title, url: res.spreadsheetUrl, date: new Date().toLocaleTimeString() },
         ...prev,
       ]);
-      toast.success(isArabic ? "تم تصدير مصفوفة البكالوريا إلى Google Sheets!" : "Exported BAC matrix to Sheets!");
+      setActiveEmbeddedFile(record);
+      toast.success(isArabic ? "تم تصدير مصفوفة البكالوريا وعرضها في مساحة العمل!" : "Exported BAC matrix to Sheets and opened in workspace!");
     } catch (err: any) {
       toast.error(err.message || "Export failed");
     } finally {
@@ -470,7 +554,10 @@ export function GoogleWorkspaceHub({ isArabic, students = [], payments = [] }: P
       const title = isArabic
         ? "عرض إرشادات البكالوريا 2026 - EduPulse"
         : "BAC 2026 Preparation Guide - EduPulse";
-      const presentation = await createGooglePresentation(title);
+      const presentation = await createGooglePresentation(title, {
+        linkedRecord: { type: "workspaceItem", id: "bac-masterclass-deck", name: title },
+        userEmail: user?.email || undefined,
+      });
 
       const slides = [
         {
@@ -493,13 +580,190 @@ export function GoogleWorkspaceHub({ isArabic, students = [], payments = [] }: P
 
       await addSlidesToPresentation(presentation.presentationId, slides);
 
+      const record: GoogleWorkspaceFileRecord = {
+        id: `gwf-${presentation.presentationId}`,
+        fileId: presentation.presentationId,
+        type: "slides",
+        title: presentation.title,
+        embedUrl: presentation.embedUrl,
+        directUrl: presentation.presentationUrl,
+        linkedRecordType: "workspaceItem",
+        linkedRecordId: "bac-masterclass-deck",
+        linkedRecordName: title,
+        userEmail: user?.email || "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
       setExportedSlides((prev) => [
         { title: presentation.title, url: presentation.presentationUrl, date: new Date().toLocaleTimeString() },
         ...prev,
       ]);
-      toast.success(isArabic ? "تم إنشاء العرض في Google Slides بنجاح!" : "Google Slides presentation created!");
+      setActiveEmbeddedFile(record);
+      toast.success(isArabic ? "تم إنشاء العرض في Google Slides وعرضه في مساحة العمل بنجاح!" : "Google Slides presentation created and opened in workspace!");
     } catch (err: any) {
       toast.error(err.message || "Failed to create presentation");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Google Forms actions
+  const exportBacOrientationForm = async () => {
+    if (!token) {
+      toast.error(isArabic ? "يرجى تسجيل الدخول بحساب جوجل أولاً." : "Please connect Google account first.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const title = isArabic
+        ? "استبيان توجيه البكالوريا وتقييم الميول الأكاديمية - EduPulse"
+        : "BAC Orientation & Academic Aptitude Survey - EduPulse";
+      const desc = isArabic
+        ? "استمارة توجيه التلاميذ نحو الشعبة والفرع الجامعي المناسب وفق المعايير الوزارية الجزائرية."
+        : "Student orientation survey for Algerian secondary streams and university specialties.";
+      const items = [
+        {
+          title: isArabic ? "الشعبة الحالية أو المرغوبة في البكالوريا:" : "Target BAC Stream:",
+          type: "CHOICE" as const,
+          choiceOptions: [
+            "علوم تجريبية (Sciences)",
+            "رياضيات (Mathématiques)",
+            "تقني رياضي (Technique Mathématiques)",
+            "تسيير واقتصاد (Gestion et Économie)",
+            "آداب وفلسفة (Lettres et Philosophie)",
+            "لغات أجنبية (Langues Étrangères)",
+          ],
+        },
+        {
+          title: isArabic ? "ما هي المادة ذات أعلى معامل في شعبتك تشعر فيها بأعلى ثقة؟" : "Highest coefficient subject with greatest confidence?",
+          type: "CHOICE" as const,
+          choiceOptions: [
+            "علوم الطبيعة والحياة",
+            "الرياضيات",
+            "الفيزياء والكيمياء",
+            "الفلسفة",
+            "التكنولوجيا (الهندسة)",
+            "الاقتصاد والمناجمنت",
+          ],
+        },
+        {
+          title: isArabic ? "ما هو التخصص الجامعي أو المدرسة العليا المستهدفة؟" : "Target university specialization / Grande École?",
+          type: "TEXT" as const,
+        },
+      ];
+
+      const res = await createGoogleForm(title, desc, items, {
+        linkedRecord: { type: "workspaceItem", id: "bac-orientation-survey", name: title },
+        userEmail: user?.email || undefined,
+      });
+
+      const record: GoogleWorkspaceFileRecord = {
+        id: `gwf-${res.formId}`,
+        fileId: res.formId,
+        type: "forms",
+        title: res.title,
+        embedUrl: res.embedUrl,
+        directUrl: res.editUrl || res.publishedUrl,
+        linkedRecordType: "workspaceItem",
+        linkedRecordId: "bac-orientation-survey",
+        linkedRecordName: title,
+        userEmail: user?.email || "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      setExportedForms((prev) => [
+        {
+          title: res.title,
+          url: res.editUrl || res.publishedUrl,
+          date: new Date().toLocaleTimeString(),
+          fileId: res.formId,
+          embedUrl: res.embedUrl,
+        },
+        ...prev,
+      ]);
+      setActiveEmbeddedFile(record);
+      toast.success(
+        isArabic ? "تم إنشاء نموذج Google Forms وفتحه في مساحة العمل بنجاح!" : "Google Form created and opened in workspace!"
+      );
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create Google Form");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exportDiagnosticQuizForm = async () => {
+    if (!token) {
+      toast.error(isArabic ? "يرجى تسجيل الدخول بحساب جوجل أولاً." : "Please connect Google account first.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const title = isArabic
+        ? "اختبار تشخيصي وتقويم تكويني - EduPulse 2026"
+        : "Diagnostic Formative Assessment - EduPulse 2026";
+      const desc = isArabic
+        ? "تقييم الكفاءات القبلية واسترجاع المفاهيم الأساسية وفق دليل منهاج وزارة التربية الوطنية."
+        : "Diagnostic checkpoint assessing prerequisite competencies for secondary curriculum.";
+      const items = [
+        {
+          title: isArabic ? "السؤال 1: ما هو المبدأ الأساسي في الاسترجاع المتباعد (Spaced Retrieval)؟" : "Question 1: Core principle of spaced retrieval?",
+          type: "CHOICE" as const,
+          choiceOptions: [
+            "تكرار المراجعة على فترات زمنية متباعدة ومتزايدة لترسيخ الذاكرة طويلة المدى",
+            "المراجعة المكثفة ليلة الامتحان فقط",
+            "القراءة الصامتة لملخصات الدرس دون اختبار الذات",
+          ],
+        },
+        {
+          title: isArabic ? "السؤال 2: ما هو معامل مادة علوم الطبيعة والحياة في شعبة العلوم التجريبية (بكالوريا)؟" : "Question 2: Biology coefficient in experimental sciences stream?",
+          type: "CHOICE" as const,
+          choiceOptions: ["6", "5", "7", "3"],
+        },
+        {
+          title: isArabic ? "السؤال 3: اذكر أهم خطوة منهجية في صياغة الفرضية العلمية:" : "Question 3: Methodological step in scientific hypothesis formulation:",
+          type: "TEXT" as const,
+        },
+      ];
+
+      const res = await createGoogleForm(title, desc, items, {
+        linkedRecord: { type: "workspaceItem", id: "diagnostic-quiz-2026", name: title },
+        userEmail: user?.email || undefined,
+      });
+
+      const record: GoogleWorkspaceFileRecord = {
+        id: `gwf-${res.formId}`,
+        fileId: res.formId,
+        type: "forms",
+        title: res.title,
+        embedUrl: res.embedUrl,
+        directUrl: res.editUrl || res.publishedUrl,
+        linkedRecordType: "workspaceItem",
+        linkedRecordId: "diagnostic-quiz-2026",
+        linkedRecordName: title,
+        userEmail: user?.email || "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      setExportedForms((prev) => [
+        {
+          title: res.title,
+          url: res.editUrl || res.publishedUrl,
+          date: new Date().toLocaleTimeString(),
+          fileId: res.formId,
+          embedUrl: res.embedUrl,
+        },
+        ...prev,
+      ]);
+      setActiveEmbeddedFile(record);
+      toast.success(
+        isArabic ? "تم إنشاء اختبار Google Forms وفتحه في مساحة العمل بنجاح!" : "Diagnostic Form created and opened in workspace!"
+      );
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create Google Form");
     } finally {
       setLoading(false);
     }
@@ -606,10 +870,11 @@ export function GoogleWorkspaceHub({ isArabic, students = [], payments = [] }: P
         <div className="mt-6 flex flex-wrap gap-2 border-t border-white/10 pt-4">
           {[
             { id: "sheets", icon: FileSpreadsheet, ar: "Google Sheets", en: "Google Sheets" },
+            { id: "slides", icon: Presentation, ar: "Google Slides", en: "Google Slides" },
+            { id: "forms", icon: CheckSquare, ar: "Google Forms واستبيانات", en: "Google Forms" },
             { id: "calendar", icon: Calendar, ar: "Google Calendar", en: "Google Calendar" },
             { id: "docs", icon: FileText, ar: "Google Docs", en: "Google Docs" },
             { id: "tasks", icon: CheckSquare, ar: "Google Tasks", en: "Google Tasks" },
-            { id: "slides", icon: Presentation, ar: "Google Slides", en: "Google Slides" },
             { id: "keep", icon: StickyNote, ar: "Google Keep ومذكرات", en: "Keep & Memos" },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -631,6 +896,17 @@ export function GoogleWorkspaceHub({ isArabic, students = [], payments = [] }: P
           })}
         </div>
       </header>
+
+      {/* Embedded Workspace File Viewer */}
+      {activeEmbeddedFile && (
+        <div className="mb-6">
+          <GoogleWorkspaceEmbedViewer
+            file={activeEmbeddedFile}
+            onClose={() => setActiveEmbeddedFile(null)}
+            isInline={true}
+          />
+        </div>
+      )}
 
       {/* TAB 1: GOOGLE SHEETS */}
       {activeTab === "sheets" && (
@@ -705,15 +981,43 @@ export function GoogleWorkspaceHub({ isArabic, students = [], payments = [] }: P
                         <p className="text-xs font-bold text-white">{sh.title}</p>
                         <p className="text-[10px] text-white/40">{sh.date}</p>
                       </div>
-                      <a
-                        href={sh.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200 transition hover:bg-emerald-500/20"
-                      >
-                        <span>{isArabic ? "فتح في Sheets" : "Open in Sheets"}</span>
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            const found = savedWorkspaceFiles.find((f) => f.directUrl === sh.url || f.title === sh.title);
+                            if (found) {
+                              setActiveEmbeddedFile(found);
+                            } else {
+                              const match = sh.url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                              const fileId = match ? match[1] : "";
+                              setActiveEmbeddedFile({
+                                id: `gwf-${fileId || Date.now()}`,
+                                fileId: fileId || "unknown",
+                                type: "sheets",
+                                title: sh.title,
+                                embedUrl: buildGoogleWorkspaceEmbedUrl("sheets", fileId),
+                                directUrl: sh.url,
+                                createdAt: new Date().toISOString(),
+                                updatedAt: new Date().toISOString(),
+                              });
+                            }
+                            toast.info(isArabic ? "جاري عرض جدول البيانات في مساحة العمل..." : "Loading sheet inside workspace...");
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/50 bg-emerald-500/20 px-3 py-1.5 text-xs text-emerald-200 transition hover:bg-emerald-500/30 font-bold"
+                        >
+                          <Sparkles className="h-3 w-3 text-emerald-300" />
+                          <span>{isArabic ? "فتح في مساحة العمل" : "Open in Workspace"}</span>
+                        </button>
+                        <a
+                          href={sh.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-white/70 transition hover:bg-white/10 hover:text-white"
+                        >
+                          <span>{isArabic ? "فتح في Google" : "Google Drive"}</span>
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1305,15 +1609,43 @@ export function GoogleWorkspaceHub({ isArabic, students = [], payments = [] }: P
                         <p className="text-xs font-bold text-white">{sl.title}</p>
                         <p className="text-[10px] text-white/40">{sl.date}</p>
                       </div>
-                      <a
-                        href={sl.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-200 transition hover:bg-amber-500/20"
-                      >
-                        <span>{isArabic ? "فتح في Slides" : "Open in Slides"}</span>
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            const found = savedWorkspaceFiles.find((f) => f.directUrl === sl.url || f.title === sl.title);
+                            if (found) {
+                              setActiveEmbeddedFile(found);
+                            } else {
+                              const match = sl.url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                              const fileId = match ? match[1] : "";
+                              setActiveEmbeddedFile({
+                                id: `gwf-${fileId || Date.now()}`,
+                                fileId: fileId || "unknown",
+                                type: "slides",
+                                title: sl.title,
+                                embedUrl: buildGoogleWorkspaceEmbedUrl("slides", fileId),
+                                directUrl: sl.url,
+                                createdAt: new Date().toISOString(),
+                                updatedAt: new Date().toISOString(),
+                              });
+                            }
+                            toast.info(isArabic ? "جاري عرض الشرائح في مساحة العمل..." : "Loading slides inside workspace...");
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/50 bg-amber-500/20 px-3 py-1.5 text-xs text-amber-200 transition hover:bg-amber-500/30 font-bold"
+                        >
+                          <Sparkles className="h-3 w-3 text-amber-300" />
+                          <span>{isArabic ? "فتح في مساحة العمل" : "Open in Workspace"}</span>
+                        </button>
+                        <a
+                          href={sl.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-white/70 transition hover:bg-white/10 hover:text-white"
+                        >
+                          <span>{isArabic ? "فتح في Google" : "Google Drive"}</span>
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1337,13 +1669,31 @@ export function GoogleWorkspaceHub({ isArabic, students = [], payments = [] }: P
                   }
                   setLoading(true);
                   try {
-                    const pres = await createGooglePresentation(customSlideTitle.trim());
+                    const pres = await createGooglePresentation(customSlideTitle.trim(), {
+                      linkedRecord: { type: "workspaceItem", id: `custom-slide-${Date.now()}`, name: customSlideTitle.trim() },
+                      userEmail: user?.email || undefined,
+                    });
+                    const record: GoogleWorkspaceFileRecord = {
+                      id: `gwf-${pres.presentationId}`,
+                      fileId: pres.presentationId,
+                      type: "slides",
+                      title: pres.title,
+                      embedUrl: pres.embedUrl,
+                      directUrl: pres.presentationUrl,
+                      linkedRecordType: "workspaceItem",
+                      linkedRecordId: `custom-slide-${Date.now()}`,
+                      linkedRecordName: pres.title,
+                      userEmail: user?.email || "",
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                    };
                     setExportedSlides((prev) => [
                       { title: pres.title, url: pres.presentationUrl, date: new Date().toLocaleTimeString() },
                       ...prev,
                     ]);
                     setCustomSlideTitle("");
-                    toast.success(isArabic ? "تم إنشاء العرض في Google Slides!" : "Deck created!");
+                    setActiveEmbeddedFile(record);
+                    toast.success(isArabic ? "تم إنشاء العرض في Google Slides وعرضه في مساحة العمل!" : "Deck created and embedded!");
                   } catch (err: any) {
                     toast.error(err.message || "Failed to create presentation");
                   } finally {
@@ -1369,6 +1719,218 @@ export function GoogleWorkspaceHub({ isArabic, students = [], payments = [] }: P
                   className="liquid-glass w-full rounded-xl py-2.5 text-xs font-bold"
                 >
                   {isArabic ? "إنشاء في Google Slides" : "Create in Google Slides"}
+                </button>
+              </form>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* TAB: GOOGLE FORMS */}
+      {activeTab === "forms" && (
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="surface-panel rounded-2xl p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold font-display">
+                    {isArabic ? "استبيانات ونماذج Google Forms" : "Google Forms Assessments & Surveys"}
+                  </h2>
+                  <p className="mt-1 text-xs text-white/60">
+                    {isArabic
+                      ? "إنشاء اختبارات تشخيصية واستبيانات توجيه أكاديمية في Google Forms وعرضها فورياً داخل مساحة العمل."
+                      : "Create diagnostic assessments and student orientation surveys in Google Forms with instant embedded preview."}
+                  </p>
+                </div>
+                <CheckSquare className="h-6 w-6 text-purple-400" />
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <button
+                  onClick={exportBacOrientationForm}
+                  disabled={loading || !token}
+                  className="flex flex-col items-start rounded-xl border border-white/10 bg-white/5 p-4 text-right transition hover:bg-white/10 hover:border-purple-400/40 group"
+                >
+                  <span className="flex items-center gap-2 text-xs font-bold text-white group-hover:text-purple-300">
+                    <Download className="h-3.5 w-3.5" />
+                    {isArabic ? "توليد استبيان توجيه البكالوريا 2026" : "Generate BAC Orientation Survey"}
+                  </span>
+                  <p className="mt-1 text-[11px] text-white/60">
+                    {isArabic
+                      ? "نموذج وزاري لتحديد الميول والرغبات والشعب والتخصصات الجامعية المستهدفة."
+                      : "Official orientation survey assessing stream fit and university ambitions."}
+                  </p>
+                </button>
+
+                <button
+                  onClick={exportDiagnosticQuizForm}
+                  disabled={loading || !token}
+                  className="flex flex-col items-start rounded-xl border border-white/10 bg-white/5 p-4 text-right transition hover:bg-white/10 hover:border-purple-400/40 group"
+                >
+                  <span className="flex items-center gap-2 text-xs font-bold text-white group-hover:text-purple-300">
+                    <Download className="h-3.5 w-3.5" />
+                    {isArabic ? "توليد اختبار تشخيصي وتقويم تكويني" : "Generate Diagnostic Assessment"}
+                  </span>
+                  <p className="mt-1 text-[11px] text-white/60">
+                    {isArabic
+                      ? "تقييم الكفاءات القبلية واسترجاع المفاهيم الأساسية لمنهاج التعليم الثانوي."
+                      : "Formative checkpoint evaluating prerequisite competencies and recall."}
+                  </p>
+                </button>
+              </div>
+            </div>
+
+            {/* Exported Forms History */}
+            <div className="surface-panel rounded-2xl p-6">
+              <h3 className="text-sm font-bold text-white">
+                {isArabic ? "النماذج المنشأة مؤخراً" : "Recent Google Forms"}
+              </h3>
+              {exportedForms.length === 0 ? (
+                <div className="mt-4 rounded-xl border border-dashed border-white/15 p-6 text-center text-xs text-white/50">
+                  {isArabic ? "لم يتم إنشاء أي استبيان أو نموذج بعد." : "No Google Forms generated yet."}
+                </div>
+              ) : (
+                <div className="mt-3 divide-y divide-white/10">
+                  {exportedForms.map((fm, idx) => (
+                    <div key={idx} className="flex items-center justify-between py-3">
+                      <div>
+                        <p className="text-xs font-bold text-white">{fm.title}</p>
+                        <p className="text-[10px] text-white/40">{fm.date}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            const found = savedWorkspaceFiles.find((f) => f.directUrl === fm.url || f.title === fm.title || f.fileId === fm.fileId);
+                            if (found) {
+                              setActiveEmbeddedFile(found);
+                            } else {
+                              const match = fm.url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                              const fileId = fm.fileId || (match ? match[1] : "");
+                              setActiveEmbeddedFile({
+                                id: `gwf-${fileId || Date.now()}`,
+                                fileId: fileId || "unknown",
+                                type: "forms",
+                                title: fm.title,
+                                embedUrl: fm.embedUrl || buildGoogleWorkspaceEmbedUrl("forms", fileId),
+                                directUrl: fm.url,
+                                createdAt: new Date().toISOString(),
+                                updatedAt: new Date().toISOString(),
+                              });
+                            }
+                            toast.info(isArabic ? "جاري عرض نموذج Google Forms في مساحة العمل..." : "Loading form inside workspace...");
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-purple-400/50 bg-purple-500/20 px-3 py-1.5 text-xs text-purple-200 transition hover:bg-purple-500/30 font-bold"
+                        >
+                          <Sparkles className="h-3 w-3 text-purple-300" />
+                          <span>{isArabic ? "فتح في مساحة العمل" : "Open in Workspace"}</span>
+                        </button>
+                        <a
+                          href={fm.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-white/70 transition hover:bg-white/10 hover:text-white"
+                        >
+                          <span>{isArabic ? "فتح في Google" : "Google Forms"}</span>
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <aside className="space-y-6">
+            <div className="surface-panel rounded-2xl p-6">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Plus className="h-4 w-4 text-purple-400" />
+                <span>{isArabic ? "إنشاء استمارة / استبيان مخصص" : "Create Custom Google Form"}</span>
+              </h3>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!token) return;
+                  if (!customFormTitle.trim()) {
+                    toast.error(isArabic ? "عنوان الاستمارة مطلوب" : "Form title required");
+                    return;
+                  }
+                  setLoading(true);
+                  try {
+                    const res = await createGoogleForm(
+                      customFormTitle.trim(),
+                      customFormDesc.trim() || undefined,
+                      undefined,
+                      {
+                        linkedRecord: { type: "workspaceItem", id: `custom-form-${Date.now()}`, name: customFormTitle.trim() },
+                        userEmail: user?.email || undefined,
+                      }
+                    );
+                    const record: GoogleWorkspaceFileRecord = {
+                      id: `gwf-${res.formId}`,
+                      fileId: res.formId,
+                      type: "forms",
+                      title: res.title,
+                      embedUrl: res.embedUrl,
+                      directUrl: res.editUrl || res.publishedUrl,
+                      linkedRecordType: "workspaceItem",
+                      linkedRecordId: `custom-form-${Date.now()}`,
+                      linkedRecordName: res.title,
+                      userEmail: user?.email || "",
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                    };
+                    setExportedForms((prev) => [
+                      {
+                        title: res.title,
+                        url: res.editUrl || res.publishedUrl,
+                        date: new Date().toLocaleTimeString(),
+                        fileId: res.formId,
+                        embedUrl: res.embedUrl,
+                      },
+                      ...prev,
+                    ]);
+                    setCustomFormTitle("");
+                    setCustomFormDesc("");
+                    setActiveEmbeddedFile(record);
+                    toast.success(isArabic ? "تم إنشاء النموذج وعرضه في مساحة العمل!" : "Google Form created and embedded!");
+                  } catch (err: any) {
+                    toast.error(err.message || "Failed to create Google Form");
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="mt-4 space-y-3"
+              >
+                <div>
+                  <label className="block text-[11px] text-white/60 mb-1">
+                    {isArabic ? "عنوان الاستمارة *" : "Form Title *"}
+                  </label>
+                  <input
+                    value={customFormTitle}
+                    onChange={(e) => setCustomFormTitle(e.target.value)}
+                    placeholder={isArabic ? "استبيان رضا الأولياء عن التعليم الرقمي" : "e.g. Guardian Feedback Survey"}
+                    className="w-full control-light px-3 py-2 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-white/60 mb-1">
+                    {isArabic ? "وصف الاستمارة أو التوجيهات" : "Description"}
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={customFormDesc}
+                    onChange={(e) => setCustomFormDesc(e.target.value)}
+                    placeholder={isArabic ? "يرجى الإجابة بدقة على الأسئلة التالية لتطوير الخدمة..." : "Form instructions..."}
+                    className="w-full control-light px-3 py-2 text-xs"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading || !token}
+                  className="liquid-glass w-full rounded-xl py-2.5 text-xs font-bold"
+                >
+                  {isArabic ? "إنشاء في Google Forms" : "Create in Google Forms"}
                 </button>
               </form>
             </div>

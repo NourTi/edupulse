@@ -18,7 +18,9 @@ export const users = mysqlTable("users", {
   name: text("name"),
   email: varchar("email", { length: 320 }).unique(),
   loginMethod: varchar("loginMethod", { length: 64 }).default("password"),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  role: mysqlEnum("role", ["admin", "teacher", "guardian", "student", "user"]).default("student").notNull(),
+  linkedStudentId: varchar("linked_student_id", { length: 64 }),
+  profileCompleted: boolean("profileCompleted").default(false).notNull(),
   passwordHash: text("passwordHash"),
   status: mysqlEnum("status", ["active", "invited", "suspended"]).default("active").notNull(),
   mustChangePassword: boolean("mustChangePassword").default(false).notNull(),
@@ -319,6 +321,7 @@ export const supportEvaluations = mysqlTable("supportEvaluations", {
   id: varchar("id", { length: 64 }).primaryKey(),
   institutionId: varchar("institutionId", { length: 64 }).notNull(),
   learnerId: varchar("learnerId", { length: 64 }).notNull(),
+  lessonPlanId: varchar("lesson_plan_id", { length: 64 }),
   stage: varchar("stage", { length: 80 }).notNull(),
   supportLevel: mysqlEnum("supportLevel", ["progressing", "needs_support", "urgent_review"]).notNull(),
   evidenceJson: text("evidenceJson").notNull(),
@@ -681,3 +684,51 @@ export const focusSessions = mysqlTable("focusSessions", {
   endedAt: timestamp("endedAt"),
 }, table => ({ learnerIdx: index("focus_sessions_learner_idx").on(table.learnerId) }));
 export type FocusSession = typeof focusSessions.$inferSelect;
+
+/** Centralized StudentProfile schema consolidating all learner records, academic observations, billing, evaluations, and AI recommendations. */
+export const studentProfiles = mysqlTable("studentProfiles", {
+  id: varchar("id", { length: 64 }).primaryKey(), // student_id
+  institutionId: varchar("institutionId", { length: 64 }).notNull().default("inst_algeria_main"),
+  name: varchar("name", { length: 160 }).notNull(),
+  nameAr: varchar("nameAr", { length: 160 }),
+  dob: varchar("dob", { length: 30 }),
+  guardianId: varchar("guardian_id", { length: 64 }),
+  classLevel: varchar("class_level", { length: 80 }).notNull(), // class/grade level
+  status: mysqlEnum("status", ["active", "paid", "postponed", "withdrawn"]).default("active").notNull(),
+  billingStatus: mysqlEnum("billing_status", ["paid", "unpaid", "postponed"]).default("unpaid").notNull(),
+  billingHistoryJson: text("billing_history_json"),
+  gradesJson: text("grades_json"), // grades array [{ id, subject, score, maxScore, date, term, note }]
+  attendanceJson: text("attendance_json"), // attendance array [{ date, status: 'present'|'late'|'excused'|'absent', note }]
+  teacherRemarksJson: text("teacher_remarks_json"), // remarks array [{ id, teacherId, teacherName, date, text }]
+  aiRecommendationsJson: text("ai_recommendations_json"), // [{ date, summary, suggestedActions: string[] }]
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  guardianIdx: index("student_profiles_guardian_idx").on(table.guardianId),
+  institutionIdx: index("student_profiles_institution_idx").on(table.institutionId),
+}));
+
+export type StudentProfile = typeof studentProfiles.$inferSelect;
+export type InsertStudentProfile = typeof studentProfiles.$inferInsert;
+
+/** Lesson Plan linked Evaluation record */
+export const lessonPlanEvaluations = mysqlTable("lessonPlanEvaluations", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  institutionId: varchar("institutionId", { length: 64 }).notNull().default("inst_algeria_main"),
+  studentId: varchar("student_id", { length: 64 }).notNull(),
+  lessonPlanId: varchar("lesson_plan_id", { length: 64 }).notNull(),
+  teacherId: varchar("teacher_id", { length: 64 }).notNull(),
+  date: timestamp("date").defaultNow().notNull(),
+  scoresJson: text("scores_json").notNull(), // scores: { [criteriaKey]: number }
+  remarks: text("remarks"),
+  rubricSnapshotJson: text("rubric_snapshot_json"), // Snapshot of the lesson plan rubric used for this evaluation
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  studentIdx: index("lesson_eval_student_idx").on(table.studentId),
+  lessonPlanIdx: index("lesson_eval_plan_idx").on(table.lessonPlanId),
+  teacherIdx: index("lesson_eval_teacher_idx").on(table.teacherId),
+}));
+
+export type LessonPlanEvaluation = typeof lessonPlanEvaluations.$inferSelect;
+export type InsertLessonPlanEvaluation = typeof lessonPlanEvaluations.$inferInsert;

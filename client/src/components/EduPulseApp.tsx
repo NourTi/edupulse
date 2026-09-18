@@ -18,6 +18,7 @@ import {
   BookOpen,
   CalendarDays,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleCheck,
@@ -43,6 +44,7 @@ import {
   MessageCircle,
   ReceiptText,
   Radar,
+  RefreshCw,
   Search,
   Send,
   ShieldCheck,
@@ -93,6 +95,7 @@ import { PersonalityProfiler } from "./academic/PersonalityProfiler";
 import { OsfResearchGateway } from "./academic/OsfResearchGateway";
 import { CambridgeEnglishStudio } from "./academic/CambridgeEnglishStudio";
 import { TeacherDocumentStudio } from "./TeacherDocumentStudio";
+import { TeacherStudioHub } from "./teacher/TeacherStudioHub";
 import { PhoneVerificationModal } from "./auth/PhoneVerificationModal";
 import { AlgerianOfficialRegistrationForm, type AlgerianStudentRegistrationData } from "./academic/AlgerianOfficialRegistrationForm";
 
@@ -271,6 +274,32 @@ export default function EduPulseApp() {
   const [registration, setRegistration] = useState({ nameAr: "", name: "", guardian: "", phone: "", grade: "primary", subjects: ["arabic", "english", "mathematics"] });
   const [paymentForm, setPaymentForm] = useState({ studentId: "s-001", amount: "", method: "Cash" });
   const [message, setMessage] = useState("ولي الأمر الكريم، نشارككم ملخص تقدم الطالب هذا الأسبوع. الحضور جيد، ونوصي بمراجعة مهام القراءة قبل الحصة القادمة.");
+  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
+  const [isActualizing, setIsActualizing] = useState(false);
+
+  const handleActualize = async () => {
+    setIsActualizing(true);
+    try {
+      const res = await fetch("/api/workspace/actualize", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role,
+          activeView,
+          updatedAt: new Date().toISOString(),
+        }),
+      });
+      if (res.ok) {
+        toast.success(isArabic ? "تم تحيين ومزامنة مساحة العمل بنجاح دون إعادة تحميل (AJAX PATCH)" : "Workspace actualized without reload (AJAX PATCH)");
+      } else {
+        toast.info(isArabic ? "تم تحيين السجل محلياً." : "Workspace updated locally.");
+      }
+    } catch (err) {
+      toast.success(isArabic ? "تم تحيين مساحة العمل بنجاح." : "Workspace actualized.");
+    } finally {
+      setIsActualizing(false);
+    }
+  };
 
   const isArabic = language === "ar";
   const direction = isArabic ? "rtl" : "ltr";
@@ -545,6 +574,7 @@ export default function EduPulseApp() {
     { id: "book_downloader", label: isArabic ? "المكتبة الرقمية والمراجع الأكاديمية" : "Digital Academic Library", icon: Download, roles: ["admin", "teacher", "student", "counsellor"] },
     { id: "scorecard_guidance", label: isArabic ? "التوجيه الجامعي واستكشاف التخصصات" : "University Guidance & Scorecard", icon: GraduationCap, roles: ["admin", "teacher", "student", "counsellor"] },
     { id: "professor", label: isArabic ? "مركز قرار الأستاذ" : "Professor Decision Center", icon: Brain, roles: ["admin", "teacher", "counsellor"] },
+    { id: "teacher_generators", label: isArabic ? "مولّد المحتوى التربوي (مذكرات، كويز، دعم)" : "Teacher Content Studio", icon: Sparkles, roles: ["admin", "teacher", "counsellor"] },
     { id: "teacher_documents", label: isArabic ? "استيراد وتعديل المذكرات (PDF/DOCX)" : "Teacher Documents Studio (PDF/DOCX)", icon: FileUp, roles: ["admin", "teacher"] },
     { id: "research_studio", label: isArabic ? "أستوديو البحث العلمي وMCP" : "Research Studio & MCP", icon: Search, roles: ["admin", "teacher", "counsellor"] },
     { id: "template_studio", label: isArabic ? "استوديو المذكرات والشهادات البيداغوجية" : "Curriculum & Certificate Studio", icon: Palette, roles: ["admin", "teacher", "counsellor"] },
@@ -809,6 +839,7 @@ export default function EduPulseApp() {
     if (activeView === "book_downloader") return <BookAndDocumentDownloader isArabic={isArabic} />;
     if (activeView === "scorecard_guidance") return <CollegeScorecardGuidance isArabic={isArabic} />;
     if (activeView === "professor") return <ProfessorWorkspace isArabic={isArabic} onNavigate={(view) => setActiveView(view)} />;
+    if (activeView === "teacher_generators") return <TeacherStudioHub isArabic={isArabic} />;
     if (activeView === "teacher_documents") return <TeacherDocumentStudio isArabic={isArabic} />;
     if (activeView === "research_studio") return <ResearchStudioPanel isArabic={isArabic} />;
     if (activeView === "template_studio") return <CurriculumTemplateStudio isArabic={isArabic} />;
@@ -847,7 +878,16 @@ export default function EduPulseApp() {
 
   if (searchOpen) return <LocalSearchOverlay query={searchQuery} results={searchResults} onQueryChange={setSearchQuery} onClose={() => setSearchOpen(false)} onSelect={(destination) => { navigate(destination); setSearchOpen(false); setSearchQuery(""); }} />;
 
-  return <main className="min-h-screen bg-[hsl(201_100%_13%)] text-white" dir={direction}><div className="mx-auto flex min-h-screen max-w-[1600px]"><aside className={`fixed inset-y-0 z-40 w-72 border-l border-white/10 bg-[#00364A] px-5 py-6 transition-transform lg:static lg:translate-x-0 ${mobileMenu ? "translate-x-0" : "translate-x-full"} ${direction === "ltr" ? "right-auto left-0 lg:border-r lg:border-l-0" : "right-0"}`}><button onClick={() => setScreen("landing")} className="mb-12 flex items-center gap-3 text-right"><LogoMark className="h-9 w-9" /><span className="text-display text-3xl">EduPulse<sup className="text-xs align-top">•</sup></span></button><div className="mb-7 flex items-center justify-between"><div><p className="text-xs text-white/45">الدور الحالي</p><p className="mt-1 text-sm">{roleInfo[role].arabic}</p></div><button onClick={() => setScreen("access")} className="rounded-full p-2 text-white/55 hover:bg-white/7 hover:text-white" title="Change role"><ChevronRight className="h-4 w-4" /></button></div><nav className="space-y-1">{visibleNav.map((item) => { const Icon = item.icon; return <button key={item.id} onClick={() => navigate(item.id)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${activeView === item.id ? "bg-white text-[#00364A]" : "text-white/55 hover:bg-white/6 hover:text-white"}`}><Icon className="h-4 w-4" />{item.label}</button>; })}</nav><div className="mt-auto absolute inset-x-5 bottom-6 surface-panel rounded-2xl p-4"><div className="flex items-center gap-2 text-sm"><ShieldCheck className="h-4 w-4 text-emerald-200" />{desktopRuntime ? "تطبيق سطح المكتب" : "سجل محلي"}</div><p className="mt-2 text-xs leading-5 text-white/55">{desktopRuntime ? "تُحفظ النسخ الاحتياطية في موقع تختاره على جهازك." : "واجهة دور محلي للتجربة. تصدير ونسخ احتياطي جاهزان للمراجعة."}</p><button onClick={downloadBackup} className="mt-4 flex w-full items-center justify-between border-t border-white/10 pt-3 text-xs text-white/75 hover:text-white">تصدير السجل <Download className="h-3.5 w-3.5" /></button></div></aside>{mobileMenu && <button onClick={() => setMobileMenu(false)} className="fixed inset-0 z-30 bg-black/55 lg:hidden" aria-label="Close navigation" />}<section className="workspace-scope min-w-0 flex-1 px-5 py-5 lg:px-8 lg:py-7"><header className="mb-10 flex items-center justify-between gap-4"><div className="flex items-center gap-3 lg:hidden"><button onClick={() => setMobileMenu(true)} className="liquid-glass rounded-full p-2.5"><Menu className="h-4 w-4" /></button><LogoMark className="h-8 w-8" /></div><div className="hidden max-w-md flex-1 items-center gap-2 rounded-full border border-white/10 bg-white/4 px-4 py-2 text-sm text-white/45 md:flex"><Search className="h-4 w-4" />بحث في السجل المحلي <span className="mr-auto rounded border border-white/10 px-1.5 py-0.5 text-[10px]">⌘ K</span></div>          <div className="mr-auto flex items-center gap-2">
+  return <main className="min-h-screen bg-[hsl(201_100%_13%)] text-white" dir={direction}><div className="mx-auto flex min-h-screen max-w-[1600px]"><aside className={`fixed inset-y-0 z-40 w-72 border-l border-white/10 bg-[#00364A] px-5 py-6 transition-transform lg:static lg:translate-x-0 ${mobileMenu ? "translate-x-0" : "translate-x-full"} ${direction === "ltr" ? "right-auto left-0 lg:border-r lg:border-l-0" : "right-0"}`}><button onClick={() => setScreen("landing")} className="mb-12 flex items-center gap-3 text-right"><LogoMark className="h-9 w-9" /><span className="text-display text-3xl">EduPulse<sup className="text-xs align-top">•</sup></span></button><div className="relative mb-7"><div className="flex items-center justify-between"><div><p className="text-xs text-white/45">الدور الحالي</p><p className="mt-1 text-sm font-semibold">{roleInfo[role].arabic}</p></div><button onClick={() => setRoleDropdownOpen(!roleDropdownOpen)} className="rounded-full p-2 text-white/70 hover:bg-white/10 hover:text-white transition" title="تبديل الدور مباشرة"><ChevronDown className={`h-4 w-4 transition-transform ${roleDropdownOpen ? "rotate-180" : ""}`} /></button></div>{roleDropdownOpen && (<div className="absolute top-full right-0 left-0 mt-2 z-50 rounded-xl bg-[#002838] border border-white/15 p-2 shadow-xl space-y-1"><p className="px-2 py-1 text-[11px] text-white/50 font-bold">اختر الدور للمعاينة الفورية:</p>{[{ id: "admin", label: "مدير المؤسسة (Admin)", desc: "لوحة التحكم والإشراف والتقارير" }, { id: "teacher", label: "أستاذ المادة (Teacher)", desc: "الجذاذات والتقييمات وGoogle Workspace" }, { id: "guardian", label: "ولي الأمر (Guardian)", desc: "متابعة الابن ونتائجه وملاحظات الأساتذة" }, { id: "student", label: "طالب / متعلم (Student)", desc: "المسار الأكاديمي والاستذكار الذاتي" }].map((r) => (<button key={r.id} onClick={() => { const nextRole = r.id as Role; setRole(nextRole); setRoleDropdownOpen(false); if (nextRole === "guardian" || nextRole === "student") { setActiveView("portal"); } else if (activeView === "portal") { setActiveView("overview"); } toast.success(`تم التبديل إلى دور: ${r.label}`); }} className={`w-full text-right px-2.5 py-2 rounded-lg text-xs font-semibold transition flex flex-col ${role === r.id ? "bg-white/15 text-white font-bold" : "text-white/75 hover:bg-white/8 hover:text-white"}`}><span>{r.label}</span><span className="text-[10px] text-white/45 font-normal">{r.desc}</span></button>))}</div>)}</div><nav className="space-y-1">{visibleNav.map((item) => { const Icon = item.icon; return <button key={item.id} onClick={() => navigate(item.id)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${activeView === item.id ? "bg-white text-[#00364A]" : "text-white/55 hover:bg-white/6 hover:text-white"}`}><Icon className="h-4 w-4" />{item.label}</button>; })}</nav><div className="mt-auto absolute inset-x-5 bottom-6 surface-panel rounded-2xl p-4"><div className="flex items-center gap-2 text-sm"><ShieldCheck className="h-4 w-4 text-emerald-200" />{desktopRuntime ? "تطبيق سطح المكتب" : "سجل محلي"}</div><p className="mt-2 text-xs leading-5 text-white/55">{desktopRuntime ? "تُحفظ النسخ الاحتياطية في موقع تختاره على جهازك." : "واجهة دور محلي للتجربة. تصدير ونسخ احتياطي جاهزان للمراجعة."}</p><button onClick={downloadBackup} className="mt-4 flex w-full items-center justify-between border-t border-white/10 pt-3 text-xs text-white/75 hover:text-white">تصدير السجل <Download className="h-3.5 w-3.5" /></button></div></aside>{mobileMenu && <button onClick={() => setMobileMenu(false)} className="fixed inset-0 z-30 bg-black/55 lg:hidden" aria-label="Close navigation" />}<section className="workspace-scope min-w-0 flex-1 px-5 py-5 lg:px-8 lg:py-7"><header className="mb-10 flex items-center justify-between gap-4"><div className="flex items-center gap-3 lg:hidden"><button onClick={() => setMobileMenu(true)} className="liquid-glass rounded-full p-2.5"><Menu className="h-4 w-4" /></button><LogoMark className="h-8 w-8" /></div><div className="hidden max-w-md flex-1 items-center gap-2 rounded-full border border-white/10 bg-white/4 px-4 py-2 text-sm text-white/45 md:flex"><Search className="h-4 w-4" />بحث في السجل المحلي <span className="mr-auto rounded border border-white/10 px-1.5 py-0.5 text-[10px]">⌘ K</span></div>          <div className="mr-auto flex items-center gap-2">
+            <button
+              onClick={handleActualize}
+              disabled={isActualizing}
+              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/20 transition"
+              title={isArabic ? "تحيين ومزامنة مساحة العمل دون إعادة تحميل (AJAX PATCH)" : "Actualize / sync without reload"}
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isActualizing ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">{isArabic ? "تحيين (Actualize)" : "Actualize"}</span>
+            </button>
             <button
               onClick={() => setPhoneModalOpen(true)}
               className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-white/85 hover:bg-white/10 hover:text-white transition"

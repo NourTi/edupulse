@@ -51,7 +51,15 @@ import {
   createGooglePresentation,
   createGoogleCalendarEvent,
   createGoogleTask,
+  createGoogleForm,
+  buildGoogleWorkspaceEmbedUrl,
 } from "@/lib/googleWorkspace";
+import {
+  listGoogleWorkspaceRecords,
+  saveGoogleWorkspaceRecord,
+  type GoogleWorkspaceFileRecord,
+} from "@/lib/googleWorkspaceStorage";
+import { GoogleWorkspaceEmbedViewer } from "./academic/GoogleWorkspaceEmbedViewer";
 import { toast } from "sonner";
 import { InteractiveSpiderEvaluation } from "./academic/InteractiveSpiderEvaluation";
 
@@ -181,6 +189,10 @@ ${stagesText}`;
   const [isExportingDoc, setIsExportingDoc] = useState(false);
   const [isExportingSlides, setIsExportingSlides] = useState(false);
   const [isExportingSheet, setIsExportingSheet] = useState(false);
+  const [isExportingForm, setIsExportingForm] = useState(false);
+
+  // Active Embedded Google Workspace File for responsive in-workspace preview
+  const [activeEmbeddedFile, setActiveEmbeddedFile] = useState<GoogleWorkspaceFileRecord | null>(null);
 
   // Notes state
   const [notes, setNotes] = useState<TeacherNote[]>(INITIAL_NOTES);
@@ -218,13 +230,27 @@ ${stagesText}`;
         plan.stages.map((st) => `المرحلة ${st.step} (${st.duration} د): ${st.stepNameAr} [${st.stepNameEn}]\nدور الأستاذ: ${st.teacherRoleAr}\nنشاط التلميذ: ${st.learnerRoleAr}\nالهدف: ${st.pedagogicalAimsAr}\nمؤشر التقويم: ${st.formativeCheckpointAr}\n`).join("\n");
       const res = await createGoogleDoc(title, docSummary);
       if (res && res.documentId) {
-        toast.success(isArabic ? "تم إنشاء الجذاذة الرسمية على Google Docs بنجاح!" : "Official lesson plan created in Docs!");
-        window.open(`https://docs.google.com/document/d/${res.documentId}/edit`, "_blank");
+        const fileRecord: GoogleWorkspaceFileRecord = {
+          id: `gwf-${res.documentId}`,
+          fileId: res.documentId,
+          type: "docs",
+          title: title,
+          embedUrl: `https://docs.google.com/document/d/${res.documentId}/preview`,
+          directUrl: `https://docs.google.com/document/d/${res.documentId}/edit`,
+          linkedRecordType: "lessonPlan",
+          linkedRecordId: plan.id,
+          linkedRecordName: plan.lessonTitleAr,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        await saveGoogleWorkspaceRecord(fileRecord);
+        setActiveEmbeddedFile(fileRecord);
+        toast.success(isArabic ? "تم إنشاء الجذاذة وعرضها في مساحة العمل بنجاح!" : "Lesson plan created and opened in workspace!");
       } else {
         toast.info(isArabic ? "تم تجهيز الجذاذة التربوية الرسمية." : "Lesson plan ready.");
       }
-    } catch (e) {
-      toast.success(isArabic ? "تم تجهيز الجذاذة التربوية بكافة عناصر المنهاج الجزائري." : "Lesson plan formatted.");
+    } catch (e: any) {
+      toast.error(e.message || (isArabic ? "تعذر إنشاء المستند" : "Failed to create Doc"));
     } finally {
       setIsExportingDoc(false);
     }
@@ -234,15 +260,30 @@ ${stagesText}`;
     setIsExportingSlides(true);
     try {
       const title = `${plan.googleSlidePresentationTitle} — عرض تقديمي للحصة`;
-      const res = await createGooglePresentation(title);
+      const res = await createGooglePresentation(title, {
+        linkedRecord: { type: "lessonPlan", id: plan.id, name: plan.lessonTitleAr },
+      });
       if (res && res.presentationId) {
-        toast.success(isArabic ? "تم إنشاء شرائح الحصة على Google Slides!" : "Slides created successfully!");
-        window.open(`https://docs.google.com/presentation/d/${res.presentationId}/edit`, "_blank");
+        const fileRecord: GoogleWorkspaceFileRecord = {
+          id: `gwf-${res.presentationId}`,
+          fileId: res.presentationId,
+          type: "slides",
+          title: res.title,
+          embedUrl: res.embedUrl,
+          directUrl: res.presentationUrl,
+          linkedRecordType: "lessonPlan",
+          linkedRecordId: plan.id,
+          linkedRecordName: plan.lessonTitleAr,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        setActiveEmbeddedFile(fileRecord);
+        toast.success(isArabic ? "تم إنشاء شرائح الحصة وعرضها في مساحة العمل!" : "Slides created and opened in workspace!");
       } else {
         toast.info(isArabic ? "تم تجهيز شرائح الدرس التفاعلية." : "Slide deck ready.");
       }
-    } catch (e) {
-      toast.success(isArabic ? "تم إعداد هيكل شرائح الحصة للعرض على جهاز الإسقاط." : "Slides ready.");
+    } catch (e: any) {
+      toast.error(e.message || (isArabic ? "تعذر إنشاء العرض التقديمي" : "Failed to create presentation"));
     } finally {
       setIsExportingSlides(false);
     }
@@ -254,19 +295,75 @@ ${stagesText}`;
       const title = `${plan.googleSheetRubricTitle} — متابعة القسم`;
       const headers = ["الرقم", "اسم التلميذ(ة)", "المرحلة 1: الإحماء", "المرحلة 2: الاكتشاف", "المرحلة 3: التحليل", "المرحلة 4: التدريب", "المرحلة 5: الإدماج", "المرحلة 6: التقييم", "التقييم العام /20", "ملاحظة المعلم"];
       const sample = ["01", "أحمد بن عيسى", "متمكن (3/3)", "متمكن (3/3)", "متوسط (2/3)", "متمكن (4/4)", "متمكن (4/4)", "متمكن (3/3)", "19/20", "استيعاب ممتاز ومشاركة نشطة"];
-      const res = await createGoogleSpreadsheet(title, [
-        { title: "شبكة التقويم", rows: [headers, sample] }
-      ]);
+      const res = await createGoogleSpreadsheet(
+        title,
+        [{ title: "شبكة التقويم", rows: [headers, sample] }],
+        {
+          linkedRecord: { type: "lessonPlan", id: plan.id, name: plan.lessonTitleAr },
+        }
+      );
       if (res && res.spreadsheetId) {
-        toast.success(isArabic ? "تم إنشاء جدول تقويم الكفاءات على Google Sheets!" : "Evaluation sheet created!");
-        window.open(`https://docs.google.com/spreadsheets/d/${res.spreadsheetId}/edit`, "_blank");
+        const fileRecord: GoogleWorkspaceFileRecord = {
+          id: `gwf-${res.spreadsheetId}`,
+          fileId: res.spreadsheetId,
+          type: "sheets",
+          title: res.title,
+          embedUrl: res.embedUrl,
+          directUrl: res.spreadsheetUrl,
+          linkedRecordType: "lessonPlan",
+          linkedRecordId: plan.id,
+          linkedRecordName: plan.lessonTitleAr,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        setActiveEmbeddedFile(fileRecord);
+        toast.success(isArabic ? "تم إنشاء جدول تقويم الكفاءات وعرضه في مساحة العمل!" : "Evaluation sheet created and opened in workspace!");
       } else {
         toast.info(isArabic ? "تم إنشاء جدول المتابعة بصيغة متوافقة." : "Sheet ready.");
       }
-    } catch (e) {
-      toast.success(isArabic ? "تم تصدير شبكة تقويم الكفاءات الرسمية." : "Rubric exported.");
+    } catch (e: any) {
+      toast.error(e.message || (isArabic ? "تعذر إنشاء جدول البيانات" : "Failed to create spreadsheet"));
     } finally {
       setIsExportingSheet(false);
+    }
+  };
+
+  const handleExportLessonToForm = async (plan: AlgerianLessonPlan) => {
+    setIsExportingForm(true);
+    try {
+      const title = `استبيان تقويم كفاءات درس: ${plan.lessonTitleAr}`;
+      const desc = `استمارة تقويم تكويني للتحقق من بلوغ الكفاءة الختامية: ${plan.terminalCompetencyAr} - منهاج وزارة التربية الوطنية.`;
+      const items = plan.stages.map((st, i) => ({
+        title: `المرحلة ${st.step} (${st.stepNameAr}): ${st.formativeCheckpointAr}`,
+        type: (i % 2 === 0 ? "CHOICE" : "TEXT") as "CHOICE" | "TEXT",
+        choiceOptions: i % 2 === 0 ? ["متمكن تماماً", "في طريق الاكتساب", "يحتاج إلى مراجعة ودعم"] : undefined,
+      }));
+
+      const res = await createGoogleForm(title, desc, items, {
+        linkedRecord: { type: "lessonPlan", id: plan.id, name: plan.lessonTitleAr },
+      });
+
+      if (res && res.formId) {
+        const fileRecord: GoogleWorkspaceFileRecord = {
+          id: `gwf-${res.formId}`,
+          fileId: res.formId,
+          type: "forms",
+          title: res.title,
+          embedUrl: res.embedUrl,
+          directUrl: res.editUrl || res.publishedUrl,
+          linkedRecordType: "lessonPlan",
+          linkedRecordId: plan.id,
+          linkedRecordName: plan.lessonTitleAr,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        setActiveEmbeddedFile(fileRecord);
+        toast.success(isArabic ? "تم إنشاء استبيان Google Forms وعرضه في مساحة العمل!" : "Google Form created and opened in workspace!");
+      }
+    } catch (e: any) {
+      toast.error(e.message || (isArabic ? "تعذر إنشاء نموذج Google Forms" : "Failed to create Google Form"));
+    } finally {
+      setIsExportingForm(false);
     }
   };
 
@@ -626,6 +723,17 @@ ${stagesText}`;
         </div>
       </div>
 
+      {/* Embedded Google Workspace File Viewer (Sheets, Slides, Forms, Docs) */}
+      {activeEmbeddedFile && (
+        <div className="mb-6">
+          <GoogleWorkspaceEmbedViewer
+            file={activeEmbeddedFile}
+            onClose={() => setActiveEmbeddedFile(null)}
+            isInline={true}
+          />
+        </div>
+      )}
+
       {/* ========================================================================= */}
       {/* TAB: PEDAGOGICAL QUIZ & FLASHCARDS STUDIO                                 */}
       {/* ========================================================================= */}
@@ -938,6 +1046,15 @@ ${stagesText}`;
                       </button>
 
                       <button
+                        onClick={() => handleExportLessonToForm(chosenLessonPlan)}
+                        disabled={isExportingForm}
+                        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition shadow-2xs disabled:opacity-50"
+                      >
+                        <CheckSquare className="w-3.5 h-3.5" />
+                        {isExportingForm ? (isArabic ? "جاري الإنشاء..." : "Creating...") : (isArabic ? "استبيان تقويم (Forms)" : "Assessment Form")}
+                      </button>
+
+                      <button
                         onClick={() => handleScheduleInCalendar(chosenLessonPlan)}
                         className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition border border-slate-700"
                       >
@@ -953,6 +1070,17 @@ ${stagesText}`;
                         {isArabic ? "مهمة تصحيح (Tasks)" : "Correction Task"}
                       </button>
                     </div>
+
+                    {/* In-Workspace Embedded Google Workspace Viewer */}
+                    {activeEmbeddedFile && (
+                      <div className="pt-2">
+                        <GoogleWorkspaceEmbedViewer
+                          file={activeEmbeddedFile}
+                          onClose={() => setActiveEmbeddedFile(null)}
+                          isInline={true}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* One-Click Quiz & Flashcard Assessment Generator Banner */}
@@ -1044,12 +1172,30 @@ ${stagesText}`;
                         ],
                       },
                     ]);
-                    if (res?.spreadsheetId) window.open(`https://docs.google.com/spreadsheets/d/${res.spreadsheetId}/edit`, "_blank");
+                    if (res?.spreadsheetId) {
+                      const embedUrl = `https://docs.google.com/spreadsheets/d/${res.spreadsheetId}/edit?usp=sharing&embedded=true`;
+                      const record: GoogleWorkspaceFileRecord = {
+                        id: res.spreadsheetId,
+                        fileId: res.spreadsheetId,
+                        type: "sheets",
+                        title: "كشف نقاط الفوج — السداسي الأول",
+                        embedUrl,
+                        directUrl: `https://docs.google.com/spreadsheets/d/${res.spreadsheetId}/edit`,
+                        linkedRecordType: "workspaceItem",
+                        linkedRecordId: "sheet_quick_export",
+                        linkedRecordName: "دفتر نقاط الفوج",
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                      };
+                      await saveGoogleWorkspaceRecord(record);
+                      setActiveEmbeddedFile(record);
+                      toast.success(isArabic ? "تم إنشاء جدول البيانات وفتحه داخل مساحة العمل!" : "Sheet opened in workspace!");
+                    }
                   }}
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 pt-2"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  {isArabic ? "فتح دفتر نقاط جديد على Sheets" : "Open new sheet"}
+                  {isArabic ? "فتح دفتر نقاط جديد على Sheets (معاينة حية)" : "Open new sheet in workspace"}
                 </button>
               </div>
 
@@ -1068,12 +1214,30 @@ ${stagesText}`;
                   onClick={async () => {
                     const sampleText = "الجمهورية الجزائرية الديمقراطية الشعبية\nوزارة التربية الوطنية\nاختبار الفصل الأول في مادة اللغة الإنجليزية (3AS)\n\nالجزء الأول: دراسة السند (Reading Comprehension)\n...";
                     const res = await createGoogleDoc("موضوع اختبار الثلاثي الأول — اللغة الإنجليزية 3AS", sampleText);
-                    if (res?.documentId) window.open(`https://docs.google.com/document/d/${res.documentId}/edit`, "_blank");
+                    if (res?.documentId) {
+                      const embedUrl = `https://docs.google.com/document/d/${res.documentId}/edit?embedded=true`;
+                      const record: GoogleWorkspaceFileRecord = {
+                        id: res.documentId,
+                        fileId: res.documentId,
+                        type: "docs",
+                        title: "موضوع اختبار الثلاثي الأول — اللغة الإنجليزية 3AS",
+                        embedUrl,
+                        directUrl: `https://docs.google.com/document/d/${res.documentId}/edit`,
+                        linkedRecordType: "workspaceItem",
+                        linkedRecordId: "doc_quick_export",
+                        linkedRecordName: "موضوع اختبار",
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                      };
+                      await saveGoogleWorkspaceRecord(record);
+                      setActiveEmbeddedFile(record);
+                      toast.success(isArabic ? "تم إنشاء المستند وعرضه داخل مساحة العمل!" : "Doc opened in workspace!");
+                    }
                   }}
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 hover:text-blue-800 pt-2"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  {isArabic ? "إنشاء موضوع اختبار على Docs" : "Create exam doc"}
+                  {isArabic ? "إنشاء موضوع اختبار على Docs (معاينة حية)" : "Create exam doc in workspace"}
                 </button>
               </div>
 
@@ -1091,12 +1255,71 @@ ${stagesText}`;
                 <button
                   onClick={async () => {
                     const res = await createGooglePresentation("عرض تقديمي: أزمنة التمني والندم Wish Structures");
-                    if (res?.presentationId) window.open(`https://docs.google.com/presentation/d/${res.presentationId}/edit`, "_blank");
+                    if (res?.presentationId) {
+                      const embedUrl = `https://docs.google.com/presentation/d/${res.presentationId}/embed`;
+                      const record: GoogleWorkspaceFileRecord = {
+                        id: res.presentationId,
+                        fileId: res.presentationId,
+                        type: "slides",
+                        title: "عرض تقديمي: أزمنة التمني والندم Wish Structures",
+                        embedUrl,
+                        directUrl: `https://docs.google.com/presentation/d/${res.presentationId}/edit`,
+                        linkedRecordType: "workspaceItem",
+                        linkedRecordId: "slides_quick_export",
+                        linkedRecordName: "عرض تقديمي",
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                      };
+                      await saveGoogleWorkspaceRecord(record);
+                      setActiveEmbeddedFile(record);
+                      toast.success(isArabic ? "تم إنشاء العرض التقديمي وعرضه داخل مساحة العمل!" : "Slides opened in workspace!");
+                    }
                   }}
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 hover:text-amber-800 pt-2"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  {isArabic ? "إنشاء عرض شرائح جديد على Slides" : "Open new presentation"}
+                  {isArabic ? "إنشاء عرض شرائح جديد على Slides (معاينة حية)" : "Open new presentation in workspace"}
+                </button>
+              </div>
+
+              {/* Google Forms Card */}
+              <div className="p-5 rounded-2xl border border-slate-200 bg-white shadow-xs space-y-3">
+                <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center font-bold">
+                  <CheckSquare className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-sm text-slate-900">{isArabic ? "استبيانات وتقييمات تفاعلية (Forms)" : "Interactive Quizzes & Forms"}</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  {isArabic
+                    ? "نماذج تقييم تشخيصي واستطلاعات تفاعلية تجمع إجابات التلاميذ مباشرة في جداول بيانات منظمة."
+                    : "Diagnostic evaluation forms and quizzes collecting student responses into structured sheets."}
+                </p>
+                <button
+                  onClick={async () => {
+                    const res = await createGoogleForm("استبيان التقييم التشخيصي البنائي", "استبيان تقييم تحصيلي واستطلاع رأي للتلاميذ");
+                    if (res?.formId) {
+                      const embedUrl = `https://docs.google.com/forms/d/${res.formId}/viewform?embedded=true`;
+                      const record: GoogleWorkspaceFileRecord = {
+                        id: res.formId,
+                        fileId: res.formId,
+                        type: "forms",
+                        title: "استبيان التقييم التشخيصي البنائي",
+                        embedUrl,
+                        directUrl: `https://docs.google.com/forms/d/${res.formId}/edit`,
+                        linkedRecordType: "workspaceItem",
+                        linkedRecordId: "form_quick_export",
+                        linkedRecordName: "استبيان بيداغوجي",
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                      };
+                      await saveGoogleWorkspaceRecord(record);
+                      setActiveEmbeddedFile(record);
+                      toast.success(isArabic ? "تم إنشاء النموذج وعرضه داخل مساحة العمل!" : "Form opened in workspace!");
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-700 hover:text-purple-800 pt-2"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  {isArabic ? "إنشاء نموذج جديد على Forms (معاينة حية)" : "Open new form in workspace"}
                 </button>
               </div>
 

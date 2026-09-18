@@ -1,0 +1,75 @@
+{
+  "entities": {
+    "workspaceGoogleFile": {
+      "title": "Workspace Google File",
+      "description": "Google Workspace file (Sheets, Slides, Forms, Docs) created and embedded in EduPulse.",
+      "type": "object",
+      "properties": {
+        "fileId": { "type": "string", "description": "Google file identifier (spreadsheetId, presentationId, formId, documentId)" },
+        "type": { "type": "string", "enum": ["sheets", "slides", "forms", "docs"], "description": "Type of Google Workspace file" },
+        "title": { "type": "string", "description": "File title" },
+        "embedUrl": { "type": "string", "description": "Official embed URL for inline iframe viewing" },
+        "directUrl": { "type": "string", "description": "Direct Google Drive / Docs editing URL" },
+        "linkedRecordType": { "type": "string", "enum": ["student", "lessonPlan", "workspaceItem"], "description": "Entity type that triggered file creation" },
+        "linkedRecordId": { "type": "string", "description": "Record identifier linked to this file" },
+        "linkedRecordName": { "type": "string", "description": "Human readable name of the linked entity" },
+        "userEmail": { "type": "string", "description": "Email of user who created the file" },
+        "createdAt": { "type": "string", "description": "Creation timestamp in ISO format" },
+        "updatedAt": { "type": "string", "description": "Last update timestamp in ISO format" }
+      },
+      "required": ["fileId", "type", "title", "embedUrl", "linkedRecordType", "linkedRecordId"]
+    },
+    "studentProfile": {
+      "title": "Student Profile",
+      "description": "Centralized student record containing basic info, vitals, academic records, billing, evaluations, and AI recommendations.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "nameAr": { "type": "string" },
+        "dob": { "type": "string" },
+        "guardianId": { "type": "string" },
+        "classLevel": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "paid", "postponed", "withdrawn"] },
+        "billingStatus": { "type": "string", "enum": ["paid", "unpaid", "postponed"] },
+        "billingHistory": { "type": "array" },
+        "grades": { "type": "array" },
+        "attendance": { "type": "array" },
+        "teacherRemarks": { "type": "array" },
+        "aiRecommendations": { "type": "array" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "classLevel", "status"]
+    },
+    "lessonPlanEvaluation": {
+      "title": "Lesson Plan Evaluation",
+      "description": "Student evaluation strictly linked to a lesson plan and its assessment rubric.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "lessonPlanId": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "date": { "type": "string" },
+        "scores": { "type": "object" },
+        "remarks": { "type": "string" },
+        "rubricSnapshot": { "type": "object" }
+      },
+      "required": ["id", "studentId", "lessonPlanId", "teacherId", "scores"]
+    }
+  },
+  "firestore": {
+    "/workspaceGoogleFiles/{fileId}": {
+      "schema": "workspaceGoogleFile",
+      "description": "Collection of saved Google Workspace files embedded in the workspace."
+    },
+    "/studentProfiles/{studentId}": {
+      "schema": "studentProfile",
+      "description": "Centralized student profiles collection."
+    },
+    "/lessonPlanEvaluations/{evaluationId}": {
+      "schema": "lessonPlanEvaluation",
+      "description": "Evaluations linked to lesson plans."
+    }
+  }
+}

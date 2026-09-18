@@ -16,7 +16,7 @@ export function veniceHealth() {
   try { baseHost = new URL(base).host; } catch { /* ignore */ }
   return {
     configured: veniceConfigured(),
-    model: ENV.veniceModel || process.env.VENICE_MODEL || "qwen-3-8-flash",
+    model: ENV.veniceModel || process.env.VENICE_MODEL || "llama-3.3-70b",
     baseHost,
     hasKey: Boolean(ENV.veniceInferenceApiKey || process.env.VENICE_INFERENCE_API_KEY || process.env.VENICE_API_KEY),
   } as const;
@@ -25,8 +25,8 @@ export function veniceHealth() {
 export async function invokeVenice(input: { messages: VeniceMessage[]; model?: string; maxTokens?: number; jsonSchema?: Record<string, unknown> }): Promise<VeniceCompletion> {
   const apiKey = ENV.veniceInferenceApiKey || process.env.VENICE_INFERENCE_API_KEY || process.env.VENICE_API_KEY;
   if (!apiKey) throw new Error("Venice is not configured. Set VENICE_INFERENCE_API_KEY on the server.");
-  // Use a model supported in Venice's current catalog if none or outdated provided
-  const preferredModel = input.model || ENV.veniceModel || process.env.VENICE_MODEL || "qwen-3-8-flash";
+  // Default to Venice's primary supported model llama-3.3-70b
+  const preferredModel = input.model || ENV.veniceModel || process.env.VENICE_MODEL || "llama-3.3-70b";
   const payload: Record<string, unknown> = {
     model: preferredModel,
     messages: input.messages,
@@ -36,17 +36,30 @@ export async function invokeVenice(input: { messages: VeniceMessage[]; model?: s
   if (input.jsonSchema) {
     payload.response_format = { type: "json_schema", json_schema: { name: "edupulse_support_evaluation", strict: true, schema: input.jsonSchema } };
   }
-  const response = await fetch(`${baseUrl()}/chat/completions`, {
+
+  const endpoint = `${baseUrl()}/chat/completions`;
+  console.log(`[Venice AI] Outgoing request to ${endpoint} with model=${preferredModel}`);
+
+  const response = await fetch(endpoint, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
     body: JSON.stringify(payload),
     signal: AbortSignal.timeout(14_000),
   });
+
+  const rawText = await response.text();
+  console.log(`[Venice AI] Raw HTTP Status: ${response.status} ${response.statusText}`);
+  console.log(`[Venice AI] Raw HTTP Body: ${rawText.slice(0, 600)}`);
+
   if (!response.ok) {
-    const detail = (await response.text()).slice(0, 500);
-    throw new Error(`Venice request failed with status ${response.status}: ${detail}`);
+    throw new Error(`Venice API error [${response.status} ${response.statusText}]: ${rawText.slice(0, 400)}`);
   }
-  return (await response.json()) as VeniceCompletion;
+
+  try {
+    return JSON.parse(rawText) as VeniceCompletion;
+  } catch (err) {
+    throw new Error(`Failed to parse Venice JSON response: ${rawText.slice(0, 200)}`);
+  }
 }
 
 export type StudentDiagnosticContext = {
@@ -185,5 +198,106 @@ Targeted mini-cycles focusing on conceptual foundations will restore mastery in 
 - Maintain transparent and encouraging communication with parents/mentors.`;
 
   return { answer: fallback, provider: "pedagogical_engine" };
+}
+
+/**
+ * Assembles a comprehensive, structured JSON context for a student from their StudentProfile,
+ * linked lesson plan evaluations, attendance records, grades, and teacher remarks.
+ */
+export async function assembleStructuredStudentContext(studentId: string) {
+  const { getStudentProfile, listLessonPlanEvaluations } = await import("../db");
+  const profile = await getStudentProfile(studentId);
+
+  let grades: any[] = [];
+  let attendance: any[] = [];
+  let teacherRemarks: any[] = [];
+  let existingAiRecs: any[] = [];
+
+  if (profile) {
+    try { grades = profile.gradesJson ? JSON.parse(profile.gradesJson) : []; } catch {}
+    try { attendance = profile.attendanceJson ? JSON.parse(profile.attendanceJson) : []; } catch {}
+    try { teacherRemarks = profile.teacherRemarksJson ? JSON.parse(profile.teacherRemarksJson) : []; } catch {}
+    try { existingAiRecs = profile.aiRecommendationsJson ? JSON.parse(profile.aiRecommendationsJson) : []; } catch {}
+  }
+
+  // Fetch evaluations tied to lesson plans
+  const lessonEvaluations = await listLessonPlanEvaluations(studentId);
+
+  return {
+    studentId,
+    studentName: profile?.name || "Student",
+    studentNameAr: profile?.nameAr || profile?.name || "طالب",
+    classLevel: profile?.classLevel || "1AM",
+    status: profile?.status || "active",
+    billingStatus: profile?.billingStatus || "unpaid",
+    recentGrades: grades.slice(-10),
+    recentEvaluations: lessonEvaluations.slice(-8).map(ev => {
+      let scores = {};
+      let rubricSnapshot = {};
+      try { scores = ev.scoresJson ? JSON.parse(ev.scoresJson) : {}; } catch {}
+      try { rubricSnapshot = ev.rubricSnapshotJson ? JSON.parse(ev.rubricSnapshotJson) : {}; } catch {}
+      return {
+        evaluationId: ev.id,
+        lessonPlanId: ev.lessonPlanId,
+        teacherId: ev.teacherId,
+        date: ev.date,
+        scores,
+        remarks: ev.remarks,
+        rubricSnapshot,
+      };
+    }),
+    attendancePattern: attendance.slice(-20),
+    teacherRemarks: teacherRemarks.slice(-10),
+    previousRecommendations: existingAiRecs.slice(0, 3),
+  };
+}
+
+/**
+ * Runs the Venice AI analysis using the assembled student context and writes the generated
+ * recommendations back into the student's StudentProfile.
+ */
+export async function generateAndPersistAiRecommendations(studentId: string, customPrompt?: string) {
+  const { appendAiRecommendationToStudentProfile } = await import("../db");
+  const studentContext = await assembleStructuredStudentContext(studentId);
+
+  const prompt = customPrompt || `يرجى تحليل المسار الأكاديمي والتقييمات المرتبطة بجذاذات الدروس ونسب المواظبة للطالب (${studentContext.studentNameAr}). قدم توصيات بيداغوجية دقيقة وخطوات عملية قابلة للتنفيذ المباشر.`;
+
+  const diagnosticResult = await invokeSoulfulDiagnosticAgent({
+    prompt,
+    context: {
+      learnerName: studentContext.studentName,
+      learnerNameAr: studentContext.studentNameAr,
+      stage: studentContext.classLevel,
+      subjectScores: studentContext.recentGrades.map((g: any) => ({ subject: g.subject || "عام", average: Number(g.score) || 14 })),
+      behaviorSignals: {
+        attendance: {
+          present: studentContext.attendancePattern.filter((a: any) => a.status === "present").length,
+          absent: studentContext.attendancePattern.filter((a: any) => a.status === "absent").length,
+          late: studentContext.attendancePattern.filter((a: any) => a.status === "late").length,
+        },
+        observations: studentContext.teacherRemarks.map((r: any) => r.text || ""),
+      },
+    },
+    language: "ar",
+  });
+
+  const recommendation = {
+    date: new Date().toISOString(),
+    summary: diagnosticResult.answer.slice(0, 500) + (diagnosticResult.answer.length > 500 ? "..." : ""),
+    suggestedActions: [
+      "مراجعة المفاهيم المتعلقة بأهداف جذاذة الدرس الأخيرة في جلسة دعم مصغرة.",
+      "تعزيز المشاركة الإيجابية والتفاعل الشفوي أثناء الأنشطة الجماعية.",
+      "متابعة دورية لتطور درجات التقييم البنائي مع ولي الأمر.",
+    ],
+  };
+
+  await appendAiRecommendationToStudentProfile(studentId, recommendation);
+
+  return {
+    recommendation,
+    fullAnswer: diagnosticResult.answer,
+    provider: diagnosticResult.provider,
+    studentContext,
+  };
 }
 

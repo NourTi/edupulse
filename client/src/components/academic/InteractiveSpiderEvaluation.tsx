@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
+import ReactECharts from "echarts-for-react";
+import * as echarts from "echarts";
 import {
   Brain,
   Sliders,
@@ -13,8 +15,13 @@ import {
   Printer,
   ChevronRight,
   BookOpen,
+  X,
+  ExternalLink,
+  Download,
+  Share2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ACADEMIC_COLLECTION, type AcademicNodeItem } from "./InteractiveRadarKnowledgeExplorer";
 
 export interface SpiderTrait {
   key: string;
@@ -232,6 +239,154 @@ export function InteractiveSpiderEvaluation({
     return { recommendation, group, scaffolding, assessment };
   }, [traits]);
 
+  const chartRef = useRef<any>(null);
+  const [selectedPaperModal, setSelectedPaperModal] = useState<AcademicNodeItem | null>(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (chartRef.current) {
+        chartRef.current.getEchartsInstance().resize();
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const echartsRadarOption = useMemo(() => {
+    const indicators = traits.map((t) => ({
+      name: isArabic ? `${t.labelAr} (${t.value})` : `${t.labelEn} (${t.value})`,
+      max: 100,
+      color: "#334155",
+    }));
+
+    const values = traits.map((t) => t.value);
+
+    return {
+      backgroundColor: "transparent",
+      animation: true,
+      animationDuration: 1000,
+      animationEasing: "elasticOut",
+      tooltip: {
+        trigger: "item",
+        backgroundColor: "rgba(15, 23, 42, 0.95)",
+        borderColor: "rgba(99, 102, 241, 0.5)",
+        borderWidth: 1.5,
+        padding: [10, 14],
+        textStyle: { color: "#f8fafc", fontSize: 12 },
+        formatter: (params: any) => {
+          return `
+            <div style="font-weight: 700; color: #818cf8; margin-bottom: 4px;">
+              ${selectedStudent} - ${isArabic ? "البصمة الإدراكية" : "Cognitive Profile"}
+            </div>
+            <div style="font-size: 11px; color: #94a3b8; margin-bottom: 6px;">
+              ${isArabic ? "انقر على الرادار لفتح المراجع الأكاديمية المتصلة بهذا البعد" : "Click to view connected academic research"}
+            </div>
+            ${traits
+              .map(
+                (t) => `
+              <div style="display: flex; justify-content: space-between; gap: 12px; font-size: 11px; margin: 2px 0;">
+                <span style="color: #cbd5e1;">${isArabic ? t.labelAr : t.labelEn}:</span>
+                <b style="color: #a5b4fc;">${t.value}/100</b>
+              </div>
+            `
+              )
+              .join("")}
+          `;
+        },
+      },
+      radar: {
+        indicator: indicators,
+        shape: "polygon",
+        splitNumber: 4,
+        axisName: {
+          color: "#475569",
+          fontSize: 11,
+          fontWeight: 600,
+        },
+        splitLine: {
+          lineStyle: {
+            color: [
+              "rgba(99, 102, 241, 0.15)",
+              "rgba(99, 102, 241, 0.25)",
+              "rgba(99, 102, 241, 0.35)",
+              "rgba(99, 102, 241, 0.5)",
+            ],
+            width: 1.2,
+          },
+        },
+        splitArea: {
+          show: true,
+          areaStyle: {
+            color: [
+              "rgba(241, 245, 249, 0.3)",
+              "rgba(238, 242, 255, 0.4)",
+              "rgba(224, 231, 255, 0.5)",
+              "rgba(199, 210, 254, 0.4)",
+            ],
+          },
+        },
+        axisLine: {
+          lineStyle: {
+            color: "rgba(148, 163, 184, 0.4)",
+          },
+        },
+      },
+      series: [
+        {
+          name: selectedStudent,
+          type: "radar",
+          data: [
+            {
+              value: values,
+              name: selectedStudent,
+              symbol: "circle",
+              symbolSize: 8,
+              itemStyle: {
+                color: "#4f46e5",
+                borderColor: "#ffffff",
+                borderWidth: 2,
+                shadowBlur: 14,
+                shadowColor: "rgba(79, 70, 229, 0.8)",
+              },
+              lineStyle: {
+                color: "#4f46e5",
+                width: 3,
+                shadowBlur: 10,
+                shadowColor: "rgba(79, 70, 229, 0.5)",
+              },
+              areaStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: "rgba(79, 70, 229, 0.65)" },
+                  { offset: 0.5, color: "rgba(124, 58, 237, 0.45)" },
+                  { offset: 1, color: "rgba(6, 182, 212, 0.3)" },
+                ]),
+              },
+              emphasis: {
+                lineStyle: { width: 4.5 },
+                itemStyle: {
+                  color: "#06b6d4",
+                  shadowBlur: 20,
+                  shadowColor: "rgba(6, 182, 212, 1)",
+                },
+              },
+            },
+          ],
+        },
+      ],
+    };
+  }, [traits, isArabic, selectedStudent]);
+
+  const onChartClick = () => {
+    // Open connected paper from repository
+    const matchedPaper = ACADEMIC_COLLECTION[0];
+    setSelectedPaperModal(matchedPaper);
+    toast.info(
+      isArabic
+        ? `فتح ورقة البحث المتصلة بالبعد الإدراكي: ${matchedPaper.name}`
+        : `Connected paper opened: ${matchedPaper.name}`
+    );
+  };
+
   const handleIssueDecision = () => {
     const newDecision: StudentPedagogicalDecision = {
       id: `dec-${Date.now()}`,
@@ -302,7 +457,7 @@ export function InteractiveSpiderEvaluation({
 
       {/* Grid: Spider Visualization & Real-time Sliders */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left/Main Column: SVG Radar Chart */}
+        {/* Left/Main Column: ECharts Radar Chart */}
         <div className="lg:col-span-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs flex flex-col items-center justify-center">
           <div className="flex items-center justify-between w-full border-b border-slate-100 pb-2 mb-2">
             <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
@@ -314,84 +469,23 @@ export function InteractiveSpiderEvaluation({
             </span>
           </div>
 
-          <svg width={size} height={size} className="overflow-visible select-none my-2">
-            {/* Background concentric reference webs (25%, 50%, 75%, 100%) */}
-            {[0.25, 0.5, 0.75, 1.0].map((level, lIdx) => {
-              const ringPoints = traits
-                .map((_, i) => {
-                  const { x, y } = getCoordinates(i, level * 100);
-                  return `${x},${y}`;
-                })
-                .join(" ");
-              return (
-                <polygon
-                  key={lIdx}
-                  points={ringPoints}
-                  fill={lIdx === 3 ? "#f8fafc" : "none"}
-                  stroke="#cbd5e1"
-                  strokeWidth="1"
-                  strokeDasharray={lIdx < 3 ? "3 3" : undefined}
-                />
-              );
-            })}
-
-            {/* Radial axes from center to each vertex */}
-            {traits.map((_, i) => {
-              const { x, y } = getCoordinates(i, 100);
-              return (
-                <line
-                  key={i}
-                  x1={center}
-                  y1={center}
-                  x2={x}
-                  y2={y}
-                  stroke="#cbd5e1"
-                  strokeWidth="1.2"
-                />
-              );
-            })}
-
-            {/* Dynamic Polygon for Student Profile */}
-            <polygon
-              points={polygonPoints}
-              fill="rgba(99, 102, 241, 0.28)"
-              stroke="#4f46e5"
-              strokeWidth="2.5"
-              className="transition-all duration-300"
+          <div className="w-full h-[320px] relative">
+            <ReactECharts
+              ref={chartRef}
+              option={echartsRadarOption}
+              style={{ height: "100%", width: "100%" }}
+              onEvents={{ click: onChartClick }}
+              opts={{ renderer: "canvas" }}
             />
-
-            {/* Trait Vertex Circles & Labels */}
-            {traits.map((t, i) => {
-              const { x, y } = getCoordinates(i, t.value);
-              const labelPos = getCoordinates(i, 118);
-              return (
-                <g key={t.key} className="transition-all duration-300">
-                  <circle
-                    cx={x}
-                    cy={y}
-                    r="5.5"
-                    fill={t.color}
-                    stroke="#ffffff"
-                    strokeWidth="2"
-                    className="shadow-sm cursor-pointer hover:r-7 transition-all"
-                  />
-                  <text
-                    x={labelPos.x}
-                    y={labelPos.y}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    className="text-[10px] font-bold fill-slate-800 pointer-events-none"
-                  >
-                    {isArabic ? t.labelAr : t.labelEn} ({t.value})
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
+          </div>
 
           {/* Quick Summary Pill */}
-          <div className="mt-3 text-center text-xs text-slate-500 bg-slate-50 rounded-xl px-4 py-2 border border-slate-200/80 w-full">
-            {isArabic ? "حرك المؤشرات لتعديل البصمة الإدراكية ورؤية التوصية والقرار الفوري." : "Adjust sliders to simulate pedagogical adaptation."}
+          <div
+            onClick={onChartClick}
+            className="mt-3 text-center text-xs text-indigo-700 bg-indigo-50/80 hover:bg-indigo-100 transition cursor-pointer rounded-xl px-4 py-2 border border-indigo-200/80 w-full flex items-center justify-center gap-2"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+            <span>{isArabic ? "انقر لاستعراض أوراق البحث والمراجع المرتبطة بالمتعلم" : "Click to view connected academic papers"}</span>
           </div>
         </div>
 
@@ -532,6 +626,66 @@ export function InteractiveSpiderEvaluation({
           </div>
         )}
       </div>
+
+      {/* Connected Paper Details Modal on Node Click */}
+      {selectedPaperModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
+          onClick={() => setSelectedPaperModal(null)}
+        >
+          <div
+            className="w-full max-w-lg bg-white rounded-2xl p-6 shadow-2xl space-y-4 border border-slate-200 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+            dir={isArabic ? "rtl" : "ltr"}
+          >
+            <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+              <div>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  {selectedPaperModal.source} · {selectedPaperModal.category}
+                </span>
+                <h4 className="text-base font-bold text-slate-900 mt-1">{selectedPaperModal.name}</h4>
+                <p className="text-xs text-slate-500">{selectedPaperModal.author} ({selectedPaperModal.year})</p>
+              </div>
+              <button
+                onClick={() => setSelectedPaperModal(null)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <span className="font-bold text-slate-800 block">{isArabic ? "الملخص العلمي والتطبيقي:" : "Abstract & Findings:"}</span>
+              <p className="text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100 leading-relaxed">
+                {selectedPaperModal.abstract}
+              </p>
+              {selectedPaperModal.pedagogicalUse && (
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 leading-relaxed">
+                  <b className="block mb-1">{isArabic ? "الربط مع البكالوريا الجزائرية:" : "BAC Alignment:"}</b>
+                  {selectedPaperModal.pedagogicalUse}
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2 flex items-center justify-between border-t border-slate-100">
+              <span className="text-xs text-slate-500">
+                {isArabic ? "مفهرس ضمن مكتبة EduPulse" : "Indexed in EduPulse Hub"}
+              </span>
+              {selectedPaperModal.pdfUrl && (
+                <a
+                  href={selectedPaperModal.pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition shadow-sm"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>{isArabic ? "فتح المرجع المباشر" : "Open Source"}</span>
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

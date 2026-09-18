@@ -23,6 +23,8 @@ import {
   educatorRecords,
   learningAssessments,
   supportEvaluations,
+  studentProfiles,
+  lessonPlanEvaluations,
   passwordResetTokens,
   schoolSettings,
   users,
@@ -209,6 +211,41 @@ export async function updateUserPassword(userId: number, passwordHash: string) {
   const db = await getDb();
   if (!db) throw new Error("Database is unavailable.");
   await db.update(users).set({ passwordHash, passwordChangedAt: new Date(), mustChangePassword: false, updatedAt: new Date() }).where(eq(users.id, userId));
+}
+
+export async function updateUserProfile(userId: number, data: { name?: string; role?: "admin" | "teacher" | "guardian" | "student"; linkedStudentId?: string | null; profileCompleted?: boolean }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  const updateData: Record<string, any> = { updatedAt: new Date() };
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.role !== undefined) updateData.role = data.role;
+  if (data.linkedStudentId !== undefined) updateData.linkedStudentId = data.linkedStudentId;
+  if (data.profileCompleted !== undefined) updateData.profileCompleted = data.profileCompleted;
+  await db.update(users).set(updateData).where(eq(users.id, userId));
+  return getUserById(userId);
+}
+
+export async function listAllUsersWithRoles() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: users.id,
+    name: users.name,
+    email: users.email,
+    role: users.role,
+    linkedStudentId: users.linkedStudentId,
+    profileCompleted: users.profileCompleted,
+    status: users.status,
+    createdAt: users.createdAt,
+    lastSignedIn: users.lastSignedIn,
+  }).from(users).limit(100);
+}
+
+export async function updateUserRoleByAdmin(targetUserId: number, newRole: "admin" | "teacher" | "guardian" | "student") {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  await db.update(users).set({ role: newRole, updatedAt: new Date() }).where(eq(users.id, targetUserId));
+  return getUserById(targetUserId);
 }
 
 export async function createAuthSession(input: typeof authSessions.$inferInsert) {
@@ -667,3 +704,96 @@ export async function getStudentLearner(institutionId: string, studentUserId: nu
   const rows = await db.select({ learner: learners, link: learnerUsers }).from(learnerUsers).innerJoin(learners, eq(learners.id, learnerUsers.learnerId)).where(and(eq(learnerUsers.institutionId, institutionId), eq(learnerUsers.studentUserId, studentUserId), eq(learners.institutionId, institutionId))).limit(1);
   return rows[0];
 }
+
+/* =========================================================================
+   Centralized StudentProfile Operations
+   ========================================================================= */
+
+export async function getStudentProfile(studentId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(studentProfiles).where(eq(studentProfiles.id, studentId)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function listStudentProfiles(institutionId?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  if (institutionId) {
+    return db.select().from(studentProfiles).where(eq(studentProfiles.institutionId, institutionId)).orderBy(desc(studentProfiles.updatedAt));
+  }
+  return db.select().from(studentProfiles).orderBy(desc(studentProfiles.updatedAt));
+}
+
+export async function upsertStudentProfile(profile: Partial<typeof studentProfiles.$inferInsert> & { id: string; name: string; classLevel: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  const existing = await getStudentProfile(profile.id);
+  if (existing) {
+    await db.update(studentProfiles).set({ ...profile, updatedAt: new Date() }).where(eq(studentProfiles.id, profile.id));
+    return getStudentProfile(profile.id);
+  }
+  await db.insert(studentProfiles).values({
+    institutionId: profile.institutionId || "inst_algeria_main",
+    id: profile.id,
+    name: profile.name,
+    nameAr: profile.nameAr || profile.name,
+    dob: profile.dob || "2008-05-12",
+    guardianId: profile.guardianId || null,
+    classLevel: profile.classLevel,
+    status: profile.status || "active",
+    billingStatus: profile.billingStatus || "unpaid",
+    billingHistoryJson: profile.billingHistoryJson || JSON.stringify([]),
+    gradesJson: profile.gradesJson || JSON.stringify([]),
+    attendanceJson: profile.attendanceJson || JSON.stringify([]),
+    teacherRemarksJson: profile.teacherRemarksJson || JSON.stringify([]),
+    aiRecommendationsJson: profile.aiRecommendationsJson || JSON.stringify([]),
+  });
+  return getStudentProfile(profile.id);
+}
+
+export async function appendAiRecommendationToStudentProfile(studentId: string, recommendation: { date: string; summary: string; suggestedActions: string[] }) {
+  const db = await getDb();
+  if (!db) return null;
+  const profile = await getStudentProfile(studentId);
+  if (!profile) return null;
+  let existingRecs: Array<{ date: string; summary: string; suggestedActions: string[] }> = [];
+  try {
+    if (profile.aiRecommendationsJson) {
+      existingRecs = JSON.parse(profile.aiRecommendationsJson);
+    }
+  } catch {}
+  existingRecs.unshift(recommendation);
+  await db.update(studentProfiles).set({
+    aiRecommendationsJson: JSON.stringify(existingRecs.slice(0, 50)),
+    updatedAt: new Date(),
+  }).where(eq(studentProfiles.id, studentId));
+  return existingRecs;
+}
+
+/* =========================================================================
+   Lesson Plan Linked Evaluations
+   ========================================================================= */
+
+export async function createLessonPlanEvaluation(evalData: typeof lessonPlanEvaluations.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable.");
+  await db.insert(lessonPlanEvaluations).values(evalData);
+  return evalData;
+}
+
+export async function listLessonPlanEvaluations(studentId?: string, lessonPlanId?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  if (studentId && lessonPlanId) {
+    return db.select().from(lessonPlanEvaluations).where(and(eq(lessonPlanEvaluations.studentId, studentId), eq(lessonPlanEvaluations.lessonPlanId, lessonPlanId))).orderBy(desc(lessonPlanEvaluations.date));
+  }
+  if (studentId) {
+    return db.select().from(lessonPlanEvaluations).where(eq(lessonPlanEvaluations.studentId, studentId)).orderBy(desc(lessonPlanEvaluations.date));
+  }
+  if (lessonPlanId) {
+    return db.select().from(lessonPlanEvaluations).where(eq(lessonPlanEvaluations.lessonPlanId, lessonPlanId)).orderBy(desc(lessonPlanEvaluations.date));
+  }
+  return db.select().from(lessonPlanEvaluations).orderBy(desc(lessonPlanEvaluations.date));
+}
+

@@ -1,17 +1,97 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
 import {
-  getAuth,
   signInWithPopup,
   GoogleAuthProvider,
   onAuthStateChanged,
   signOut,
   type User,
 } from "firebase/auth";
-import firebaseConfig from "../../../firebase-applet-config.json";
+import { firebaseApp, firebaseAuth } from "./firebase";
+import { saveGoogleWorkspaceRecord } from "./googleWorkspaceStorage";
 
-// Initialize Firebase App singleton
-export const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
-export const firebaseAuth = getAuth(firebaseApp);
+export { firebaseApp, firebaseAuth };
+
+export interface GoogleWorkspaceFileOptions {
+  linkedRecord?: {
+    type: "student" | "lessonPlan" | "workspaceItem";
+    id: string;
+    name?: string;
+  };
+  userEmail?: string;
+}
+
+/**
+ * Build standard embed URLs matching exact requirements:
+ * - Sheets: https://docs.google.com/spreadsheets/d/{spreadsheetId}/edit?usp=sharing&embedded=true
+ * - Slides: https://docs.google.com/presentation/d/{presentationId}/embed
+ * - Forms: https://docs.google.com/forms/d/{formId}/viewform?embedded=true
+ */
+export function buildGoogleWorkspaceEmbedUrl(
+  type: "sheets" | "slides" | "forms" | "docs",
+  fileId: string
+): string {
+  switch (type) {
+    case "sheets":
+      return `https://docs.google.com/spreadsheets/d/${fileId}/edit?usp=sharing&embedded=true`;
+    case "slides":
+      return `https://docs.google.com/presentation/d/${fileId}/embed`;
+    case "forms":
+      return `https://docs.google.com/forms/d/${fileId}/viewform?embedded=true`;
+    case "docs":
+      return `https://docs.google.com/document/d/${fileId}/edit?usp=sharing&embedded=true`;
+    default:
+      return "";
+  }
+}
+
+/**
+ * Grant sharing permissions immediately after creation using Drive API permissions.create method.
+ * Grants the user's email "writer" access, and also ensures 'anyone' with link has writer access
+ * so the embedded iframe does not show blank or permission denied screens.
+ */
+export async function grantGoogleDrivePermission(
+  fileId: string,
+  userEmail?: string,
+  role: "writer" | "reader" = "writer"
+): Promise<{ success: boolean; error?: string }> {
+  const token = cachedAccessToken;
+  if (!token) return { success: false, error: "No Google token cached" };
+
+  try {
+    // 1. Grant user email writer access if provided
+    if (userEmail) {
+      await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          role,
+          type: "user",
+          emailAddress: userEmail,
+        }),
+      }).catch(() => null);
+    }
+
+    // 2. Also grant 'anyone' with writer access so iframe embedding renders directly
+    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        role: "writer",
+        type: "anyone",
+      }),
+    }).catch(() => null);
+
+    return { success: true };
+  } catch (error: any) {
+    console.warn("Drive permission grant warning:", error);
+    return { success: false, error: error?.message };
+  }
+}
 
 export const GOOGLE_WORKSPACE_SCOPES = [
   "https://www.googleapis.com/auth/drive",
@@ -28,6 +108,8 @@ export const GOOGLE_WORKSPACE_SCOPES = [
   "https://www.googleapis.com/auth/tasks.readonly",
   "https://www.googleapis.com/auth/presentations",
   "https://www.googleapis.com/auth/presentations.readonly",
+  "https://www.googleapis.com/auth/forms.body",
+  "https://www.googleapis.com/auth/forms.body.readonly",
 ];
 
 const provider = new GoogleAuthProvider();
@@ -91,12 +173,14 @@ export const signOutGoogleWorkspace = async () => {
 export interface GoogleSpreadsheetResult {
   spreadsheetId: string;
   spreadsheetUrl: string;
+  embedUrl: string;
   title: string;
 }
 
 export async function createGoogleSpreadsheet(
   title: string,
-  initialSheets?: { title: string; rows: (string | number)[][] }[]
+  initialSheets?: { title: string; rows: (string | number)[][] }[],
+  options?: GoogleWorkspaceFileOptions
 ): Promise<GoogleSpreadsheetResult> {
   const token = cachedAccessToken;
   if (!token) throw new Error("يرجى تسجيل الدخول بحساب جوجل أولاً.");
@@ -138,10 +222,37 @@ export async function createGoogleSpreadsheet(
   }
 
   const data = await res.json();
+  const spreadsheetId = data.spreadsheetId;
+  const sheetTitle = data.properties?.title || title;
+  const spreadsheetUrl = data.spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
+  const embedUrl = buildGoogleWorkspaceEmbedUrl("sheets", spreadsheetId);
+
+  // Step 2: Grant permissions via Drive API immediately after creation
+  const currentUserEmail = options?.userEmail || firebaseAuth.currentUser?.email || undefined;
+  await grantGoogleDrivePermission(spreadsheetId, currentUserEmail, "writer");
+
+  // Step 1: Save ID immediately to database linked to the relevant record
+  const linkedRecordType = options?.linkedRecord?.type || "workspaceItem";
+  const linkedRecordId = options?.linkedRecord?.id || `sheet-${Date.now()}`;
+  const linkedRecordName = options?.linkedRecord?.name || sheetTitle;
+
+  await saveGoogleWorkspaceRecord({
+    fileId: spreadsheetId,
+    type: "sheets",
+    title: sheetTitle,
+    embedUrl,
+    directUrl: spreadsheetUrl,
+    linkedRecordType,
+    linkedRecordId,
+    linkedRecordName,
+    userEmail: currentUserEmail,
+  });
+
   return {
-    spreadsheetId: data.spreadsheetId,
-    spreadsheetUrl: data.spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${data.spreadsheetId}/edit`,
-    title: data.properties?.title || title,
+    spreadsheetId,
+    spreadsheetUrl,
+    embedUrl,
+    title: sheetTitle,
   };
 }
 
@@ -473,10 +584,12 @@ export interface GooglePresentationResult {
   presentationId: string;
   title: string;
   presentationUrl: string;
+  embedUrl: string;
 }
 
 export async function createGooglePresentation(
-  title: string
+  title: string,
+  options?: GoogleWorkspaceFileOptions
 ): Promise<GooglePresentationResult> {
   const token = cachedAccessToken;
   if (!token) throw new Error("يرجى تسجيل الدخول بحساب جوجل أولاً.");
@@ -496,10 +609,37 @@ export async function createGooglePresentation(
   }
 
   const data = await res.json();
+  const presentationId = data.presentationId;
+  const presentationTitle = data.title || title;
+  const presentationUrl = `https://docs.google.com/presentation/d/${presentationId}/edit`;
+  const embedUrl = buildGoogleWorkspaceEmbedUrl("slides", presentationId);
+
+  // Step 2: Grant sharing permissions immediately
+  const currentUserEmail = options?.userEmail || firebaseAuth.currentUser?.email || undefined;
+  await grantGoogleDrivePermission(presentationId, currentUserEmail, "writer");
+
+  // Step 1: Save ID immediately to database linked to the record
+  const linkedRecordType = options?.linkedRecord?.type || "workspaceItem";
+  const linkedRecordId = options?.linkedRecord?.id || `slide-${Date.now()}`;
+  const linkedRecordName = options?.linkedRecord?.name || presentationTitle;
+
+  await saveGoogleWorkspaceRecord({
+    fileId: presentationId,
+    type: "slides",
+    title: presentationTitle,
+    embedUrl,
+    directUrl: presentationUrl,
+    linkedRecordType,
+    linkedRecordId,
+    linkedRecordName,
+    userEmail: currentUserEmail,
+  });
+
   return {
-    presentationId: data.presentationId,
-    title: data.title || title,
-    presentationUrl: `https://docs.google.com/presentation/d/${data.presentationId}/edit`,
+    presentationId,
+    title: presentationTitle,
+    presentationUrl,
+    embedUrl,
   };
 }
 
@@ -609,3 +749,134 @@ export async function addSlidesToPresentation(
     }
   }
 }
+
+// ==========================================
+// 6. GOOGLE FORMS API
+// ==========================================
+
+export interface GoogleFormQuestionInput {
+  title: string;
+  type?: "TEXT" | "CHOICE";
+  options?: string[];
+}
+
+export interface GoogleFormResult {
+  formId: string;
+  title: string;
+  responderUri: string;
+  publishedUrl: string;
+  editUrl: string;
+  embedUrl: string;
+}
+
+export async function createGoogleForm(
+  title: string,
+  description?: string,
+  questions?: GoogleFormQuestionInput[],
+  options?: GoogleWorkspaceFileOptions
+): Promise<GoogleFormResult> {
+  const token = cachedAccessToken;
+  if (!token) throw new Error("يرجى تسجيل الدخول بحساب جوجل أولاً.");
+
+  const res = await fetch("https://forms.googleapis.com/v1/forms", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      info: {
+        title,
+        documentTitle: title,
+        ...(description ? { description } : {}),
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || "Failed to create Google Form");
+  }
+
+  const data = await res.json();
+  const formId = data.formId;
+  const formTitle = data.info?.title || title;
+  const responderUri = data.responderUri || `https://docs.google.com/forms/d/${formId}/viewform`;
+  const editUrl = `https://docs.google.com/forms/d/${formId}/edit`;
+  const embedUrl = buildGoogleWorkspaceEmbedUrl("forms", formId);
+
+  // If questions are provided, add them via batchUpdate
+  if (questions && questions.length > 0) {
+    const requests = questions.map((q, idx) => ({
+      createItem: {
+        item: {
+          title: q.title,
+          questionItem: {
+            question: {
+              required: true,
+              ...(q.type === "CHOICE" && q.options && q.options.length > 0
+                ? {
+                    choiceQuestion: {
+                      type: "RADIO",
+                      options: q.options.map((opt) => ({ value: opt })),
+                    },
+                  }
+                : {
+                    textQuestion: {
+                      paragraph: false,
+                    },
+                  }),
+            },
+          },
+        },
+        location: {
+          index: idx,
+        },
+      },
+    }));
+
+    try {
+      await fetch(`https://forms.googleapis.com/v1/forms/${formId}:batchUpdate`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ requests }),
+      });
+    } catch (batchErr) {
+      console.warn("Could not batch update questions on Google Form:", batchErr);
+    }
+  }
+
+  // Step 2: Grant sharing permissions immediately
+  const currentUserEmail = options?.userEmail || firebaseAuth.currentUser?.email || undefined;
+  await grantGoogleDrivePermission(formId, currentUserEmail, "writer");
+
+  // Step 1: Save ID immediately to database linked to the record
+  const linkedRecordType = options?.linkedRecord?.type || "workspaceItem";
+  const linkedRecordId = options?.linkedRecord?.id || `form-${Date.now()}`;
+  const linkedRecordName = options?.linkedRecord?.name || formTitle;
+
+  await saveGoogleWorkspaceRecord({
+    fileId: formId,
+    type: "forms",
+    title: formTitle,
+    embedUrl,
+    directUrl: editUrl,
+    linkedRecordType,
+    linkedRecordId,
+    linkedRecordName,
+    userEmail: currentUserEmail,
+  });
+
+  return {
+    formId,
+    title: formTitle,
+    responderUri,
+    publishedUrl: responderUri,
+    editUrl,
+    embedUrl,
+  };
+}
+
