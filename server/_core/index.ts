@@ -70,6 +70,9 @@ async function startServer() {
   registerStorageProxy(app);
 
   // Direct Document & Research Paper Proxy Route (Scribd & Open Access Papers)
+  app.get("/api/health", (_req, res) => {
+    res.json({ status: "ok" });
+  });
   app.get("/api/academic/file-proxy", async (req, res) => {
     const { handleFileProxy } = await import("../knowledge/documentDownloader");
     await handleFileProxy(req, res);
