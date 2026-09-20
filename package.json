@@ -128,3 +128,13 @@
     "nanoid": "^5.1.5"
   }
 }
+{
+  "dependencies": {
+    "express": "^4.x.x",
+    "bun-types": "latest",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "axios": "^1.6.0",
+    "puppeteer": "^21.0.0"
+  }
+}
