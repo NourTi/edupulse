@@ -11,18 +11,53 @@ export function DocumentImporter() {
   const [fallbackUrl, setFallbackUrl] = useState<string | null>(null);
 
   const handleImport = async () => {
-    if (!SCRIBD_REGEX.test(url)) return alert('Paste a valid Scribd URL');
-    
-    setLoading(true);
-    setFallbackUrl(null);
-    
-    try {
-      const res = await fetch('/api/import-document', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url })
-      });
-      
+  if (!SCRIBD_REGEX.test(url)) return alert('Paste a valid Scribd URL');
+
+  setLoading(true);
+  setFallbackUrl(null);
+
+  try {
+    const res = await fetch('/api/import-document', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+
+    // If backend returns JSON (fallback / error)
+    const contentType = res.headers.get('content-type') || '';
+
+    if (contentType.includes('application/json')) {
+      const data = await res.json();
+
+      if (data.fallback && data.externalUrl) {
+        setFallbackUrl(data.externalUrl);
+        return;
+      }
+
+      throw new Error(data.error || 'Download failed');
+    }
+
+    // Otherwise, treat it as a file (PDF or binary)
+    if (!res.ok) throw new Error('Failed');
+
+    const blob = await res.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = 'document.pdf';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+
+    setUrl('');
+  } catch (err) {
+    console.error(err);
+    alert('Download failed');
+  } finally {
+    setLoading(false);
+  }
+};
       const data = await res.json();
       
       if (data.fallback) {
