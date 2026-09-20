@@ -1,0 +1,87 @@
+import { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Loader2, Download, ExternalLink } from 'lucide-react';
+
+const SCRIBD_REGEX = /^https?:\/\/(www\.)?scribd\.com\/(doc|document|book|read)\//i;
+
+interface FallbackData {
+  fallback: boolean;
+  message: string;
+  externalUrl: string;
+}
+
+export function DocumentImporter() {
+  const [url, setUrl] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [fallback, setFallback] = useState<FallbackData | null>(null);
+
+  const handleImport = async () => {
+    if (!SCRIBD_REGEX.test(url)) return alert('Paste a valid URL');
+    
+    setLoading(true);
+    setFallback(null);
+    
+    try {
+      const res = await fetch('/api/import-document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      
+      const data = await res.json();
+      
+      // Check if fallback response
+      if (data.fallback && data.externalUrl) {
+        setFallback(data);
+        setLoading(false);
+        return;
+      }
+      
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      
+      // Direct download
+      const blob = await res.blob();
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = 'document.pdf';
+      link.click();
+      setUrl('');
+      
+    } catch {
+      alert('Download failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <Input
+          placeholder="Paste Scribd book/document URL..."
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          disabled={loading}
+        />
+        <Button onClick={handleImport} disabled={loading || !url}>
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+        </Button>
+      </div>
+      
+      {fallback && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="text-sm text-amber-800 mb-2">{fallback.message}</p>
+          <a 
+            href={fallback.externalUrl} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-blue-600 hover:underline"
+          >
+            Download manually <ExternalLink className="h-3 w-3" />
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
