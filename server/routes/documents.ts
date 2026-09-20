@@ -124,3 +124,9 @@ router.post('/import-document', async (req, res) => {
 });
 
 export default router;
+// In catch block, as last resort:
+res.status(200).json({ 
+  fallback: true, 
+  message: 'Auto-download blocked. Click below to download manually.',
+  externalUrl: downloadUrl // if you captured it before error
+});
