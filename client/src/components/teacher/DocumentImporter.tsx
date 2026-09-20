@@ -5,22 +5,16 @@ import { Loader2, Download, ExternalLink } from 'lucide-react';
 
 const SCRIBD_REGEX = /^https?:\/\/(www\.)?scribd\.com\/(doc|document|book|read)\//i;
 
-interface FallbackData {
-  fallback: boolean;
-  message: string;
-  externalUrl: string;
-}
-
 export function DocumentImporter() {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
-  const [fallback, setFallback] = useState<FallbackData | null>(null);
+  const [fallbackUrl, setFallbackUrl] = useState<string | null>(null);
 
   const handleImport = async () => {
-    if (!SCRIBD_REGEX.test(url)) return alert('Paste a valid URL');
+    if (!SCRIBD_REGEX.test(url)) return alert('Paste a valid Scribd URL');
     
     setLoading(true);
-    setFallback(null);
+    setFallbackUrl(null);
     
     try {
       const res = await fetch('/api/import-document', {
@@ -31,16 +25,14 @@ export function DocumentImporter() {
       
       const data = await res.json();
       
-      // Check if fallback response
-      if (data.fallback && data.externalUrl) {
-        setFallback(data);
+      if (data.fallback) {
+        setFallbackUrl(data.externalUrl);
         setLoading(false);
         return;
       }
       
-      if (!res.ok) throw new Error(data.error || 'Failed');
+      if (!res.ok) throw new Error('Failed');
       
-      // Direct download
       const blob = await res.blob();
       const link = document.createElement('a');
       link.href = window.URL.createObjectURL(blob);
@@ -56,7 +48,7 @@ export function DocumentImporter() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-xl">
       <div className="flex gap-2">
         <Input
           placeholder="Paste Scribd book/document URL..."
@@ -69,15 +61,10 @@ export function DocumentImporter() {
         </Button>
       </div>
       
-      {fallback && (
+      {fallbackUrl && (
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <p className="text-sm text-amber-800 mb-2">{fallback.message}</p>
-          <a 
-            href={fallback.externalUrl} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-blue-600 hover:underline"
-          >
+          <p className="text-sm text-amber-800 mb-2">Auto-download blocked. Click below:</p>
+          <a href={fallbackUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:underline">
             Download manually <ExternalLink className="h-3 w-3" />
           </a>
         </div>
