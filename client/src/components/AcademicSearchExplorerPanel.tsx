@@ -17,6 +17,9 @@ import {
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
+const SCRIBD_REGEX =
+  /^https?:\/\/(www\.)?scribd\.com\/(doc|document|book|read)\//i;
+
 interface AcademicSearchExplorerProps {
   isArabic: boolean;
   onSelectForGraph?: (identifier: string) => void;
@@ -126,11 +129,79 @@ export function AcademicSearchExplorerPanel({ isArabic, onSelectForGraph }: Acad
 
   const isLoading = source === "osf" ? osfQuery.isLoading : searchQuery.isLoading;
 
-  const handleSearch = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!queryInput.trim()) return;
-    setActiveQuery(queryInput.trim());
-  };
+const handleSearch = async (e?: React.FormEvent) => {
+  if (e) e.preventDefault();
+  const trimmed = queryInput.trim();
+  if (!trimmed) return;
+
+  // If the user pasted a Scribd URL, trigger secure document import instead of normal search
+  if (SCRIBD_REGEX.test(trimmed)) {
+    try {
+      toast.info(
+        isArabic
+          ? "جارٍ تأمين ملف Scribd وتحضيره للتحميل..."
+          : "Securing Scribd document and preparing download..."
+      );
+
+      const res = await fetch("/api/import-document", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: trimmed }),
+      });
+
+      const contentType = res.headers.get("content-type") || "";
+
+      // If backend returns JSON (fallback / error)
+      if (contentType.includes("application/json")) {
+        const data = await res.json();
+
+        if (data.fallback && data.externalUrl) {
+          toast.warning(
+            isArabic
+              ? "تم حظر التحميل التلقائي. سيتم فتح رابط التحميل الخارجي."
+              : "Auto-download was blocked. Opening external download link."
+          );
+          window.open(data.externalUrl, "_blank", "noopener,noreferrer");
+          return;
+        }
+
+        throw new Error(data.error || "Download failed");
+      }
+
+      // Otherwise, treat as file (PDF)
+      if (!res.ok) throw new Error("Failed");
+
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = "document.pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      toast.success(
+        isArabic
+          ? "تم تنزيل ملف  بنجاح."
+          : " document downloaded successfully."
+      );
+    } catch (err) {
+      console.error(err);
+      toast.error(
+        isArabic
+          ? "فشل تنزيل ملف Scribd. حاول مرة أخرى."
+          : "Failed to download Scribd document. Please try again."
+      );
+    }
+
+    // Important: do NOT run the normal academic search in this case
+    return;
+  }
+
+  // Normal academic search behavior
+  setActiveQuery(trimmed);
+};
 
   const handleDownload = (paper: any) => {
     if (paper.pdfUrl && paper.pdfUrl.endsWith(".pdf")) {
