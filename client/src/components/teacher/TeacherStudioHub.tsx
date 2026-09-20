@@ -17,7 +17,17 @@ import { SupportSheetsScreen } from "./SupportSheetsScreen";
 import { SummaryFlashcardsScreen } from "./SummaryFlashcardsScreen";
 import { HomeworkScreen } from "./HomeworkScreen";
 import { ContentLibraryScreen } from "./ContentLibraryScreen";
+import { DocumentImporter } from '@/components/teacher/DocumentImporter';
 
+export default function TeacherResources() {
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold mb-4">Import Documents</h1>
+      <p className="text-gray-600 mb-6">Paste a Scribd URL to download books, papers, or articles.</p>
+      <DocumentImporter />
+    </div>
+  );
+}
 interface TeacherStudioHubProps {
   isArabic?: boolean;
 }
