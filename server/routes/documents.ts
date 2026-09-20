@@ -13,6 +13,8 @@ router.post('/import-document', async (req, res) => {
   if (!SCRIBD_REGEX.test(url)) return res.status(400).json({ error: 'Invalid Scribd URL' });
 
   let browser;
+  let downloadUrl: string | null = null; // Declare here for catch block access
+
   try {
     browser = await puppeteer.launch({
       headless: true,
@@ -29,12 +31,10 @@ router.post('/import-document', async (req, res) => {
 
     const page = await browser.newPage();
     
-    // Use a real Chrome User-Agent (this is for the SERVER's headless browser, not user's browser)
     await page.setUserAgent(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     );
     
-    // Extra stealth: remove webdriver property
     await page.evaluateOnNewDocument(() => {
       Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
       Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
@@ -45,7 +45,6 @@ router.post('/import-document', async (req, res) => {
       timeout: 30000 
     });
 
-    // Fill and submit
     await page.waitForSelector('input[name="url"]', { timeout: 10000 });
     await page.type('input[name="url"]', url);
     
@@ -54,20 +53,15 @@ router.post('/import-document', async (req, res) => {
       page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 })
     ]);
 
-    // Wait for Cloudflare challenge to complete (auto-verification)
-    // The "Succès !" message indicates success
     await page.waitForFunction(
       () => document.body.innerText.includes('Succès') || 
             document.querySelector('.download-section, .btn-download, a[href*="download"]'),
       { timeout: 20000 }
     );
 
-    // Extra wait for Cloudflare to fully clear
     await setTimeout(3000);
 
-    // Try multiple selectors for the download link
-    const downloadUrl = await page.evaluate(() => {
-      // Priority: blue "Download PDF" button
+    downloadUrl = await page.evaluate(() => {
       const btnSelectors = [
         'a.btn-download[href]',
         '.download-section a[href]',
@@ -81,7 +75,6 @@ router.post('/import-document', async (req, res) => {
         if (el?.href) return el.href;
       }
       
-      // Fallback: any link containing "download"
       const links = Array.from(document.querySelectorAll('a'));
       const dl = links.find(a => a.textContent?.toLowerCase().includes('download'));
       return dl?.href || null;
@@ -94,7 +87,6 @@ router.post('/import-document', async (req, res) => {
     await browser.close();
     browser = null;
 
-    // Download file server-side
     const file = await axios.get(downloadUrl, {
       responseType: 'arraybuffer',
       timeout: 60000,
@@ -109,11 +101,19 @@ router.post('/import-document', async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename="document.pdf"');
     res.send(Buffer.from(file.data));
 
-  } catch (err: any) {
+  } catch (err) {
     if (browser) await browser.close();
     
-    // Check if it's a CAPTCHA issue
-    if (err.message?.includes('CAPTCHA') || err.message?.includes('timeout')) {
+    // Fallback: if we have downloadUrl, send it to user
+    if (downloadUrl) {
+      return res.status(200).json({ 
+        fallback: true, 
+        message: 'Auto-download blocked. Click below to download manually.',
+        externalUrl: downloadUrl
+      });
+    }
+    
+    if ((err as Error).message?.includes('CAPTCHA') || (err as Error).message?.includes('timeout')) {
       return res.status(503).json({ 
         error: 'Service temporarily blocked by verification. Please try again in a few minutes.' 
       });
@@ -124,9 +124,3 @@ router.post('/import-document', async (req, res) => {
 });
 
 export default router;
-// In catch block, as last resort:
-res.status(200).json({ 
-  fallback: true, 
-  message: 'Auto-download blocked. Click below to download manually.',
-  externalUrl: downloadUrl // if you captured it before error
-});
