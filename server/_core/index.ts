@@ -173,9 +173,10 @@ async function startServer() {
 
   // In this environment, nginx listens on 8080 and proxies traffic to 3000.
   // We must bind to port 3000 (never attempt to bind to 8080 which causes EADDRINUSE).
-  const port = 3000;
-  server.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}/`);
+  
+  const port = Number(process.env.PORT) || 3000;
+  server.listen(port, "0.0.0.0", () => {
+  console.log(`Server running on port ${port}`);
 });
 }
 
