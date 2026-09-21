@@ -8,7 +8,7 @@ export function normalizeEmail(email: string) {
 }
 
 export function validatePassword(password: string) {
-  if (password.length < 10) throw new Error("Password must be at least 10 characters.");
+  if (password.length < 6) throw new Error("Password must be at least 6 characters.");
   if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) {
     throw new Error("Password must include uppercase, lowercase, and a number.");
   }
