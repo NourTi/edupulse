@@ -12,47 +12,37 @@ export function DocumentImporter() {
 
   const handleImport = async () => {
     if (!SCRIBD_REGEX.test(url)) return alert('Paste a valid Scribd URL');
-
+    
     setLoading(true);
     setFallbackUrl(null);
-
+    
     try {
       const res = await fetch('/api/import-document', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url })
       });
-
-      // If backend returns JSON (fallback / error)
-      const contentType = res.headers.get('content-type') || '';
-
-      if (contentType.includes('application/json')) {
+      
+      const contentType = res.headers.get('content-type');
+      
+      if (contentType?.includes('application/json')) {
         const data = await res.json();
-
-        if (data.fallback && data.externalUrl) {
+        if (data.fallback) {
           setFallbackUrl(data.externalUrl);
+          setLoading(false);
           return;
         }
-
-        throw new Error(data.error || 'Download failed');
+        throw new Error(data.error);
       }
-
-      // Otherwise, treat it as a file (PDF or binary)
-      if (!res.ok) throw new Error('Failed');
-
+      
       const blob = await res.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = downloadUrl;
+      link.href = window.URL.createObjectURL(blob);
       link.download = 'document.pdf';
-      document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
-
       setUrl('');
-    } catch (err) {
-      console.error(err);
+      
+    } catch {
       alert('Download failed');
     } finally {
       setLoading(false);
@@ -69,25 +59,14 @@ export function DocumentImporter() {
           disabled={loading}
         />
         <Button onClick={handleImport} disabled={loading || !url}>
-          {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Download className="h-4 w-4" />
-          )}
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
         </Button>
       </div>
-
+      
       {fallbackUrl && (
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <p className="text-sm text-amber-800 mb-2">
-            Auto-download blocked. Click below:
-          </p>
-          <a
-            href={fallbackUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-blue-600 hover:underline"
-          >
+          <p className="text-sm text-amber-800 mb-2">Auto-download blocked. Click below:</p>
+          <a href={fallbackUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:underline">
             Download manually <ExternalLink className="h-3 w-3" />
           </a>
         </div>
