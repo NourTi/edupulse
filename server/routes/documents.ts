@@ -13,7 +13,7 @@ router.post('/import-document', async (req, res) => {
   if (!SCRIBD_REGEX.test(url)) return res.status(400).json({ error: 'Invalid Scribd URL' });
 
   let browser;
-  let downloadUrl: string | null = null; // Declare here for catch block access
+  let downloadUrl: string | null = null;
 
   try {
     browser = await puppeteer.launch({
@@ -22,7 +22,6 @@ router.post('/import-document', async (req, res) => {
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
         '--disable-gpu',
         '--window-size=1920,1080',
         '--disable-blink-features=AutomationControlled'
@@ -30,20 +29,14 @@ router.post('/import-document', async (req, res) => {
     });
 
     const page = await browser.newPage();
-    
-    await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    );
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     
     await page.evaluateOnNewDocument(() => {
       Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
     });
 
-    await page.goto('https://scribd.vdownloaders.com/', { 
-      waitUntil: 'networkidle2',
-      timeout: 30000 
-    });
+    // THIS IS WHERE IT GOES TO vdownloaders.com:
+    await page.goto('https://scribd.vdownloaders.com/', { waitUntil: 'networkidle2', timeout: 30000 });
 
     await page.waitForSelector('input[name="url"]', { timeout: 10000 });
     await page.type('input[name="url"]', url);
@@ -54,35 +47,24 @@ router.post('/import-document', async (req, res) => {
     ]);
 
     await page.waitForFunction(
-      () => document.body.innerText.includes('Succès') || 
-            document.querySelector('.download-section, .btn-download, a[href*="download"]'),
+      () => document.body.innerText.includes('Succès') || document.querySelector('.download-section, .btn-download, a[href*="download"]'),
       { timeout: 20000 }
     );
 
     await setTimeout(3000);
 
     downloadUrl = await page.evaluate(() => {
-      const btnSelectors = [
-        'a.btn-download[href]',
-        '.download-section a[href]',
-        'a[download][href]',
-        'a[href*=".pdf"]',
-        '.btn-primary[href]'
-      ];
-      
-      for (const sel of btnSelectors) {
+      const selectors = ['a.btn-download[href]', '.download-section a[href]', 'a[download][href]', 'a[href*=".pdf"]', '.btn-primary[href]'];
+      for (const sel of selectors) {
         const el = document.querySelector(sel);
         if (el?.href) return el.href;
       }
-      
       const links = Array.from(document.querySelectorAll('a'));
       const dl = links.find(a => a.textContent?.toLowerCase().includes('download'));
       return dl?.href || null;
     });
 
-    if (!downloadUrl) {
-      throw new Error('Download link not found - CAPTCHA may be required');
-    }
+    if (!downloadUrl) throw new Error('Download link not found');
 
     await browser.close();
     browser = null;
@@ -90,10 +72,7 @@ router.post('/import-document', async (req, res) => {
     const file = await axios.get(downloadUrl, {
       responseType: 'arraybuffer',
       timeout: 60000,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.0',
-        'Accept': 'application/pdf,*/*'
-      },
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.0', 'Accept': 'application/pdf,*/*' },
       maxContentLength: 50 * 1024 * 1024
     });
 
@@ -103,22 +82,9 @@ router.post('/import-document', async (req, res) => {
 
   } catch (err) {
     if (browser) await browser.close();
-    
-    // Fallback: if we have downloadUrl, send it to user
     if (downloadUrl) {
-      return res.status(200).json({ 
-        fallback: true, 
-        message: 'Auto-download blocked. Click below to download manually.',
-        externalUrl: downloadUrl
-      });
+      return res.status(200).json({ fallback: true, message: 'Auto-download blocked. Click below.', externalUrl: downloadUrl });
     }
-    
-    if ((err as Error).message?.includes('CAPTCHA') || (err as Error).message?.includes('timeout')) {
-      return res.status(503).json({ 
-        error: 'Service temporarily blocked by verification. Please try again in a few minutes.' 
-      });
-    }
-    
     res.status(500).json({ error: 'Import failed' });
   }
 });
