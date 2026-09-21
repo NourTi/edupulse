@@ -5,6 +5,8 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import TeacherDashboard from '@/pages/TeacherDashboard';
+
 
 /**
  * EduPulse design reminder: the app uses the supplied deep-navy, cinematic,
@@ -19,6 +21,7 @@ function Router() {
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
+      <Route path="/teacher" element={<TeacherDashboard />} />
     </Switch>
   );
 }
