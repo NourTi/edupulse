@@ -1,4 +1,12 @@
 import EduPulseApp from "@/components/EduPulseApp";
+import { DocumentImporter } from '@/components/teacher/DocumentImporter';
+
+// In your return:
+<div>
+  <h1>Welcome</h1>
+  <DocumentImporter />
+</div>
+
 // import { FloatingAIWidget } from "@/components/FloatingAIWidget";
 
 /**
