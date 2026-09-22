@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import type { Express, Request } from "express";
 import { nanoid } from "nanoid";
 import { parse } from "cookie";
+import mysql from "mysql2/promise";
 import {
   createExternalUser,
   createUserAuthAccount,
@@ -88,10 +89,6 @@ function constantTimeEqual(left: string, right: string) {
   return crypto.timingSafeEqual(Buffer.from(left), Buffer.from(right));
 }
 
-/**
- * Google can leave several login tabs open. Store a bounded list rather than
- * one state so a second tab cannot invalidate the first tab's callback.
- */
 export function addGoogleState(cookieValue: string | undefined, state: string) {
   const states = (cookieValue || "")
     .split(".")
@@ -100,7 +97,6 @@ export function addGoogleState(cookieValue: string | undefined, state: string) {
   return [...states, state].slice(-MAX_PENDING_STATES);
 }
 
-/** Remove only the state that was actually presented by Google. */
 export function consumeGoogleState(
   cookieValue: string | undefined,
   state: string
@@ -121,7 +117,7 @@ function errorText(error: unknown) {
 }
 
 function isDatabaseMigrationError(error: unknown) {
-  return /ER_NO_SUCH_TABLE|unknown table|doesn't exist|does not exist/i.test(
+  return /ER_NO_SUCH_TABLE|unknown column|unknown table|doesn't exist|does not exist|ER_BAD_FIELD_ERROR/i.test(
     errorText(error)
   );
 }
@@ -130,9 +126,71 @@ function restartMessage(message: string, reference: string) {
   return `${message}\n\nStart again: /api/auth/google\nReference: ${reference}`;
 }
 
+/**
+ * Runs at startup. Adds any columns your schema expects but the live
+ * database is missing. Safe to run every boot — checks information_schema
+ * before each ALTER, so nothing is duplicated.
+ */
+async function runBootstrapMigrations() {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    console.warn("[Bootstrap] DATABASE_URL not set, skipping migrations.");
+    return;
+  }
+
+  let connection: mysql.Connection | null = null;
+  try {
+    connection = await mysql.createConnection({
+      uri: url,
+      ssl: { rejectUnauthorized: false },
+    });
+
+    const columnsToEnsure: Array<[string, string, string]> = [
+      ["users", "linked_student_id", "VARCHAR(191) NULL"],
+      ["users", "must_change_password", "TINYINT(1) NOT NULL DEFAULT 0"],
+      ["users", "password_changed_at", "TIMESTAMP NULL"],
+      ["users", "profile_completed", "TINYINT(1) NOT NULL DEFAULT 0"],
+      ["users", "login_method", "VARCHAR(64) NULL"],
+      ["users", "status", "VARCHAR(32) NOT NULL DEFAULT 'active'"],
+      ["users", "password_hash", "VARCHAR(255) NULL"],
+      ["users", "open_id", "VARCHAR(191) NULL"],
+      ["users", "role", "VARCHAR(32) NOT NULL DEFAULT 'student'"],
+      ["users", "last_signed_in", "TIMESTAMP NULL"],
+    ];
+
+    for (const [table, column, definition] of columnsToEnsure) {
+      const [rows] = await connection.query<mysql.RowDataPacket[]>(
+        `SELECT COUNT(*) AS count FROM information_schema.columns
+         WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?`,
+        [table, column]
+      );
+      const exists = (rows[0]?.count ?? 0) > 0;
+      if (!exists) {
+        await connection.query(
+          `ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`
+        );
+        console.log(`[Bootstrap] Added ${table}.${column}`);
+      }
+    }
+
+    console.log("[Bootstrap] Schema check complete.");
+  } catch (error) {
+    console.error(
+      "[Bootstrap] Migration failed:",
+      error instanceof Error ? error.message : error
+    );
+  } finally {
+    if (connection) await connection.end().catch(() => {});
+  }
+}
+
 export function registerGoogleRoutes(app: Express) {
-  // 👇 NEW ROUTE — this is the fix. It lets the client detect whether
-  // Google sign-in is configured before redirecting the user.
+  // Run schema bootstrap once at startup — fire and forget, does not
+  // block server boot.
+  runBootstrapMigrations().catch((err) =>
+    console.error("[Bootstrap] Unexpected error:", err)
+  );
+
   app.get("/api/auth/providers", (_req, res) => {
     res.json({
       google: configured(),
@@ -314,7 +372,7 @@ export function registerGoogleRoutes(app: Express) {
           .status(503)
           .send(
             restartMessage(
-              "Google sign-in needs the latest EduPulse database migration. Ask the administrator to apply the current database migrations, then try again.",
+              "Google sign-in is applying a database update. Wait 30 seconds and try again.",
               reference
             )
           );
