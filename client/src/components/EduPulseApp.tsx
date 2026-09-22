@@ -96,7 +96,6 @@ import { OsfResearchGateway } from "./academic/OsfResearchGateway";
 import { CambridgeEnglishStudio } from "./academic/CambridgeEnglishStudio";
 import { TeacherDocumentStudio } from "./TeacherDocumentStudio";
 import { TeacherStudioHub } from "./teacher/TeacherStudioHub";
-import { PhoneVerificationModal } from "./auth/PhoneVerificationModal";
 import { AlgerianOfficialRegistrationForm, type AlgerianStudentRegistrationData } from "./academic/AlgerianOfficialRegistrationForm";
 
 type Screen = "landing" | "access" | "workspace";
