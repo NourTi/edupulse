@@ -1,18 +1,90 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AddStudentModal } from "./AddStudentModal";
-import { Download, Filter, MoreHorizontal, Plus, Search, UsersRound, Compass, X } from "lucide-react";
+import { Download, Filter, Mail, MoreHorizontal, Plus, Search, UsersRound, Compass, X, Copy, Check } from "lucide-react";
 import { StudentRadarProfile } from "./StudentRadarProfile";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 type StudentRecord = { id: string; name: string; nameAr: string; grade: string; guardian: string; phone: string; level: string; attendance: number; subjects: string[]; status: string; avatarUrl?: string };
 
-type Props = { 
-  students: StudentRecord[]; 
-  onAdd?: () => void; 
+type TeamRole = "admin" | "registrar" | "finance_admin" | "teacher" | "counsellor" | "student" | "guardian";
+
+type Props = {
+  students: StudentRecord[];
+  onAdd?: () => void;
   isArabic: boolean;
   onStudentCreated?: (student: StudentRecord) => void;
 };
 
 const statusLabel = (status: string, isArabic: boolean) => isArabic ? (status === "Review" ? "مراجعة" : status === "New" ? "جديد" : "نشط") : (status === "Review" ? "Review" : status === "New" ? "New" : "Active");
+
+const roleOptions: Array<{ value: TeamRole; ar: string; en: string }> = [
+  { value: "admin", ar: "مدير مساعد", en: "Administrator" },
+  { value: "registrar", ar: "مسجل المؤسسة", en: "Registrar" },
+  { value: "finance_admin", ar: "مسؤول المالية", en: "Finance administrator" },
+  { value: "teacher", ar: "معلم", en: "Teacher" },
+  { value: "counsellor", ar: "مرشد", en: "Counsellor" },
+  { value: "guardian", ar: "ولي أمر", en: "Guardian" },
+];
+
+const roleLabel = (role: string, isArabic: boolean) =>
+  roleOptions.find(option => option.value === role)?.[isArabic ? "ar" : "en"] ?? role;
+
+const tabRoleFilters: Record<string, TeamRole[]> = {
+  teachers: ["teacher"],
+  staff: ["admin", "registrar", "finance_admin"],
+  contacts: ["guardian"],
+  prospects: ["counsellor"],
+};
+
+const tabDefaultRole: Record<string, TeamRole> = {
+  teachers: "teacher",
+  staff: "admin",
+  contacts: "guardian",
+  prospects: "counsellor",
+};
+
+const tabTitleAr: Record<string, string> = {
+  teachers: "سجل المعلمين",
+  staff: "سجل الموظفين",
+  contacts: "جهات الاتصال",
+  prospects: "المرشدون",
+};
+
+const tabTitleEn: Record<string, string> = {
+  teachers: "Teachers",
+  staff: "Staff",
+  contacts: "Related contacts",
+  prospects: "Counsellors",
+};
+
+const tabAddAr: Record<string, string> = {
+  teachers: "إضافة معلم",
+  staff: "إضافة موظف",
+  contacts: "إضافة جهة اتصال",
+  prospects: "إضافة مرشد",
+};
+
+const tabAddEn: Record<string, string> = {
+  teachers: "Add teacher",
+  staff: "Add staff",
+  contacts: "Add contact",
+  prospects: "Add counsellor",
+};
+
+const tabSearchAr: Record<string, string> = {
+  teachers: "البحث في المعلمين",
+  staff: "البحث في الموظفين",
+  contacts: "البحث في جهات الاتصال",
+  prospects: "البحث في المرشدين",
+};
+
+const tabSearchEn: Record<string, string> = {
+  teachers: "Search teachers",
+  staff: "Search staff",
+  contacts: "Search contacts",
+  prospects: "Search counsellors",
+};
 
 export function StudentInformationPanel({ students, isArabic, onStudentCreated }: Props) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -20,9 +92,65 @@ export function StudentInformationPanel({ students, isArabic, onStudentCreated }
   const [activeTab, setActiveTab] = useState<"students" | "teachers" | "staff" | "contacts" | "prospects">("students");
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Invite panel state
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
+  const [inviteRole, setInviteRole] = useState<TeamRole>("teacher");
+  const [inviteToken, setInviteToken] = useState("");
+
+  // Get the current user's institution
+  const membershipsQuery = trpc.auth.myMemberships.useQuery(undefined, { retry: false });
+  const institutionId = membershipsQuery.data?.[0]?.membership?.institutionId ?? "";
+
+  // Get all members of the institution
+  const membersQuery = trpc.institution.members.useQuery(
+    { institutionId },
+    { enabled: Boolean(institutionId), retry: false }
+  );
+
+  // Invite mutation (uses existing auth.invite endpoint)
+  const inviteMutation = trpc.auth.invite.useMutation({
+    onSuccess: result => {
+      setInviteToken(result.inviteToken);
+      setInviteEmail("");
+      setInviteName("");
+      membersQuery.refetch();
+      toast.success(
+        isArabic
+          ? "تم إنشاء الدعوة. شارك الرمز مع المستخدم."
+          : "Invitation created. Share the code with the user."
+      );
+    },
+    onError: error => toast.error(error.message),
+  });
+
+  const allMembers = membersQuery.data ?? [];
+
+  const membersForTab = useMemo(() => {
+    if (activeTab === "students") return [];
+    const allowed = tabRoleFilters[activeTab] ?? [];
+    return allMembers.filter(item => allowed.includes(item.membership.role as TeamRole));
+  }, [allMembers, activeTab]);
+
+  const filteredMembers = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return membersForTab;
+    return membersForTab.filter(item => {
+      const name = (item.user.name ?? "").toLowerCase();
+      const email = (item.user.email ?? "").toLowerCase();
+      return name.includes(q) || email.includes(q);
+    });
+  }, [membersForTab, searchQuery]);
+
+  const countFor = (tabId: string) => {
+    const allowed = tabRoleFilters[tabId] ?? [];
+    return allMembers.filter(item => allowed.includes(item.membership.role as TeamRole)).length;
+  };
+
   // Filter students based on search query
-  const filteredStudents = students.filter(student => 
-    student.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+  const filteredStudents = students.filter(student =>
+    student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     student.phone.includes(searchQuery) ||
     student.nameAr.includes(searchQuery)
   );
@@ -34,7 +162,7 @@ export function StudentInformationPanel({ students, isArabic, onStudentCreated }
       headers.join(","),
       ...filteredStudents.map(s => [s.id, s.name, s.phone, s.grade, s.status].join(","))
     ].join("\n");
-    
+
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -46,13 +174,61 @@ export function StudentInformationPanel({ students, isArabic, onStudentCreated }
     document.body.removeChild(link);
   };
 
+  const handleOpenAdd = () => {
+    if (activeTab === "students") {
+      setIsModalOpen(true);
+      return;
+    }
+    if (!institutionId) {
+      toast.error(isArabic ? "لا توجد مؤسسة مرتبطة بحسابك بعد." : "No institution linked to your account yet.");
+      return;
+    }
+    setInviteRole(tabDefaultRole[activeTab] ?? "teacher");
+    setInviteToken("");
+    setIsInviteOpen(true);
+  };
+
+  const handleSubmitInvite = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!institutionId) return;
+    if (!inviteEmail.trim()) return;
+    inviteMutation.mutate({
+      institutionId,
+      email: inviteEmail.trim(),
+      name: inviteName.trim() || undefined,
+      role: inviteRole,
+    });
+  };
+
+  const copyInviteToken = async () => {
+    if (!inviteToken) return;
+    try {
+      await navigator.clipboard.writeText(inviteToken);
+      toast.success(isArabic ? "تم نسخ رمز الدعوة." : "Invitation code copied.");
+    } catch {
+      toast.error(isArabic ? "تعذر النسخ." : "Could not copy.");
+    }
+  };
+
   const tabs = [
-    { id: "students", label: isArabic ? `الطلاب ${students.length}` : `Students ${students.length}` },
-    { id: "teachers", label: isArabic ? "المعلمون" : "Teachers" },
-    { id: "staff", label: isArabic ? "الموظفون" : "Staff" },
-    { id: "contacts", label: isArabic ? "جهات الاتصال" : "Related contacts" },
-    { id: "prospects", label: isArabic ? "المرشحون" : "Prospects" },
-  ] as const;
+    { id: "students" as const, label: isArabic ? `الطلاب ${students.length}` : `Students ${students.length}` },
+    { id: "teachers" as const, label: isArabic ? `المعلمون ${countFor("teachers")}` : `Teachers ${countFor("teachers")}` },
+    { id: "staff" as const, label: isArabic ? `الموظفون ${countFor("staff")}` : `Staff ${countFor("staff")}` },
+    { id: "contacts" as const, label: isArabic ? `جهات الاتصال ${countFor("contacts")}` : `Contacts ${countFor("contacts")}` },
+    { id: "prospects" as const, label: isArabic ? `المرشدون ${countFor("prospects")}` : `Counsellors ${countFor("prospects")}` },
+  ];
+
+  const addButtonLabel = activeTab === "students"
+    ? (isArabic ? "إضافة طالب" : "Add student")
+    : (isArabic ? tabAddAr[activeTab] : tabAddEn[activeTab]);
+
+  const searchPlaceholder = activeTab === "students"
+    ? (isArabic ? "البحث في الطلاب" : "Search students")
+    : (isArabic ? tabSearchAr[activeTab] : tabSearchEn[activeTab]);
+
+  const headerTitle = activeTab === "students"
+    ? (isArabic ? "سجل الطلاب" : "Students")
+    : (isArabic ? tabTitleAr[activeTab] : tabTitleEn[activeTab]);
 
   return (
     <div dir={isArabic ? "rtl" : "ltr"} className="-mx-5 -my-5 min-h-[calc(100vh-7rem)] bg-[#f4f7fc] px-4 py-5 text-slate-900 sm:px-6 lg:-mx-8 lg:-my-7 lg:px-8 lg:py-7">
@@ -60,40 +236,42 @@ export function StudentInformationPanel({ students, isArabic, onStudentCreated }
         <header className="mb-5 flex flex-col gap-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_8px_28px_rgba(35,49,82,0.06)] lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-indigo-600">{isArabic ? "قاعدة المؤسسة" : "School database"}</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{isArabic ? "سجل الطلاب" : "Students"}</h1>
-            <p className="mt-2 text-sm text-slate-500">{isArabic ? "هوية الطالب، ولي الأمر، التسجيل، والتقدم في سجل واحد." : "Learner identity, guardian, registration, and progress in one record."}</p>
+            <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{headerTitle}</h1>
+            <p className="mt-2 text-sm text-slate-500">
+              {activeTab === "students"
+                ? (isArabic ? "هوية الطالب، ولي الأمر، التسجيل، والتقدم في سجل واحد." : "Learner identity, guardian, registration, and progress in one record.")
+                : (isArabic ? "أعضاء المؤسسة بدعوات محمية بالأدوار. أنشئ دعوة وشارك رمزها مع المستخدم." : "Institution members with role-scoped invitations. Create an invite and share its code.")}
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button onClick={handleExport} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50">
               <Download className="h-4 w-4" />{isArabic ? "تصدير" : "Export"}
             </button>
-            <button onClick={() => setIsModalOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700">
-              <Plus className="h-4 w-4" />{isArabic ? "إضافة طالب" : "Add student"}
+            <button onClick={handleOpenAdd} className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700">
+              <Plus className="h-4 w-4" />{addButtonLabel}
             </button>
           </div>
         </header>
-        
+
         <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_28px_rgba(35,49,82,0.06)]">
-          {/* Functional Tabs */}
           <div className="flex flex-wrap items-center gap-5 border-b border-slate-100 px-5 pt-4 text-xs font-bold text-slate-400">
             {tabs.map(tab => (
-              <button 
-                key={tab.id} 
-                onClick={() => setActiveTab(tab.id)}
+              <button
+                key={tab.id}
+                onClick={() => { setActiveTab(tab.id); setSearchQuery(""); setIsInviteOpen(false); setInviteToken(""); }}
                 className={`pb-4 transition-colors ${activeTab === tab.id ? "border-b-2 border-indigo-500 text-indigo-600" : "hover:text-slate-700"}`}
               >
                 {tab.label}
               </button>
             ))}
           </div>
-          
-          {/* Functional Search Bar */}
+
           <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 sm:w-64">
               <Search className="h-4 w-4 shrink-0 text-slate-400" />
-              <input 
-                type="text" 
-                placeholder={isArabic ? "البحث في الطلاب" : "Search students"}
+              <input
+                type="text"
+                placeholder={searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
@@ -105,7 +283,88 @@ export function StudentInformationPanel({ students, isArabic, onStudentCreated }
               <button className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 text-slate-500"><Filter className="h-4 w-4" /></button>
             </div>
           </div>
-          
+
+          {/* Inline invite panel for non-student tabs */}
+          {isInviteOpen && activeTab !== "students" && (
+            <div className="border-b border-slate-100 bg-indigo-50/40 p-5">
+              <form onSubmit={handleSubmitInvite} className="grid gap-3 md:grid-cols-[1fr_1fr_190px_auto]">
+                <label className="block">
+                  <span className="mb-2 block text-xs font-bold text-slate-500">{isArabic ? "البريد الإلكتروني" : "Email address"}</span>
+                  <div className="relative">
+                    <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      required
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(event) => setInviteEmail(event.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400"
+                    />
+                  </div>
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-xs font-bold text-slate-500">{isArabic ? "الاسم (اختياري)" : "Name (optional)"}</span>
+                  <input
+                    value={inviteName}
+                    onChange={(event) => setInviteName(event.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-xs font-bold text-slate-500">{isArabic ? "الدور" : "Role"}</span>
+                  <select
+                    value={inviteRole}
+                    onChange={(event) => setInviteRole(event.target.value as TeamRole)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400"
+                  >
+                    {(activeTab === "staff"
+                      ? roleOptions.filter(o => ["admin", "registrar", "finance_admin"].includes(o.value))
+                      : roleOptions.filter(o => tabRoleFilters[activeTab]?.includes(o.value))
+                    ).map(option => (
+                      <option key={option.value} value={option.value}>{isArabic ? option.ar : option.en}</option>
+                    ))}
+                  </select>
+                </label>
+                <div className="flex items-end gap-2">
+                  <button
+                    disabled={inviteMutation.isPending}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white shadow-[0_8px_18px_rgba(79,70,229,0.2)] transition hover:bg-indigo-700 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {inviteMutation.isPending ? "…" : <><Mail className="h-4 w-4" />{isArabic ? "إنشاء الدعوة" : "Create invite"}</>}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setIsInviteOpen(false); setInviteToken(""); }}
+                    className="inline-flex h-[46px] w-[46px] items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+                    aria-label={isArabic ? "إغلاق" : "Close"}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </form>
+
+              {inviteToken && (
+                <div className="mt-4 flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="flex items-center gap-2 text-sm font-black text-emerald-900">
+                      <Check className="h-4 w-4" />{isArabic ? "رمز الدعوة جاهز" : "Invitation code ready"}
+                    </p>
+                    <p className="mt-1 text-xs leading-6 text-emerald-800">
+                      {isArabic ? "أرسله للمستخدم عبر القناة المعتمدة. الرمز صالح سبعة أيام." : "Send it to the user through the approved channel. The code is valid for seven days."}
+                    </p>
+                    <code className="mt-2 block break-all rounded-lg bg-white px-3 py-2 text-xs text-emerald-950">{inviteToken}</code>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={copyInviteToken}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-300 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-white"
+                  >
+                    <Copy className="h-3.5 w-3.5" />{isArabic ? "نسخ" : "Copy"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="overflow-x-auto">
             {activeTab === "students" ? (
               <table className="w-full min-w-[980px] text-right text-xs">
@@ -161,15 +420,59 @@ export function StudentInformationPanel({ students, isArabic, onStudentCreated }
                   ))}
                 </tbody>
               </table>
-            ) : (
+            ) : membersQuery.isLoading ? (
+              <div className="px-5 py-16 text-center text-sm text-slate-400">{isArabic ? "جارٍ التحميل…" : "Loading…"}</div>
+            ) : membersQuery.error ? (
+              <div className="px-5 py-16 text-center text-sm text-rose-600">{membersQuery.error.message}</div>
+            ) : filteredMembers.length === 0 ? (
               <div className="flex flex-col items-center gap-3 px-5 py-16 text-center text-slate-400">
                 <UsersRound className="h-8 w-8" />
-                <p className="text-sm font-semibold">{isArabic ? "هذه الوحدة جاهزة للربط، لا توجد بيانات بعد." : "This module is ready for data. No records yet."}</p>
-                <p className="text-xs text-slate-300">{isArabic ? "استخدم زر الإضافة لإضافة سجلات لهذا القسم." : "Use the add button to create records for this section."}</p>
+                <p className="text-sm font-semibold">
+                  {isArabic
+                    ? `لا يوجد ${tabTitleAr[activeTab]} بعد.`
+                    : `No ${tabTitleEn[activeTab].toLowerCase()} yet.`}
+                </p>
+                <p className="text-xs text-slate-300">
+                  {isArabic ? "استخدم زر الإضافة لإرسال دعوة." : "Use the add button to send an invite."}
+                </p>
               </div>
+            ) : (
+              <table className="w-full min-w-[720px] text-right text-xs">
+                <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-[0.08em] text-slate-400">
+                  <tr>
+                    <th className="px-5 py-4">{isArabic ? "العضو" : "Member"}</th>
+                    <th className="px-4 py-4">{isArabic ? "البريد" : "Email"}</th>
+                    <th className="px-4 py-4">{isArabic ? "الدور" : "Role"}</th>
+                    <th className="px-5 py-4">{isArabic ? "الحالة" : "Status"}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredMembers.map(item => (
+                    <tr key={item.membership.id} className="border-t border-slate-100 transition hover:bg-indigo-50/30">
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <span className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-cyan-400 font-black text-white">
+                            {(item.user.name ?? item.user.email ?? "?").slice(0, 1).toUpperCase()}
+                          </span>
+                          <p className="font-black text-slate-800">{item.user.name ?? "—"}</p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 font-semibold text-indigo-600">{item.user.email ?? "—"}</td>
+                      <td className="px-4 py-4">
+                        <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700">{roleLabel(item.membership.role, isArabic)}</span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className={`rounded-full px-2.5 py-1 font-black ${item.membership.status === "active" ? "bg-emerald-50 text-emerald-700" : item.membership.status === "invited" ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700"}`}>
+                          {item.membership.status === "active" ? (isArabic ? "نشط" : "Active") : item.membership.status === "invited" ? (isArabic ? "بانتظار التفعيل" : "Invited") : (isArabic ? "موقوف" : "Suspended")}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </div>
-          
+
           {activeTab === "students" && filteredStudents.length === 0 && (
             <div className="flex flex-col items-center gap-3 px-5 py-16 text-center text-slate-400">
               <UsersRound className="h-8 w-8" />
@@ -178,15 +481,14 @@ export function StudentInformationPanel({ students, isArabic, onStudentCreated }
           )}
         </section>
       </div>
-      
-      <AddStudentModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+
+      <AddStudentModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         isArabic={isArabic}
         onStudentCreated={onStudentCreated}
       />
 
-      {/* Interactive Radar Profile Dialog */}
       {selectedStudentRadar && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
           <div className="relative max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl">
@@ -221,7 +523,6 @@ export function StudentInformationPanel({ students, isArabic, onStudentCreated }
           </div>
         </div>
       )}
-      
     </div>
   );
 }
