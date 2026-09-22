@@ -34,7 +34,6 @@ import {
   MessageCircleQuestion,
   PackageOpen,
   Palette,
-  Phone,
   LayoutDashboard,
   LibraryBig,
   Loader2,
@@ -267,7 +266,6 @@ export default function EduPulseApp() {
   const [registrationOpen, setRegistrationOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [phoneModalOpen, setPhoneModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileMenu, setMobileMenu] = useState(false);
   const [registration, setRegistration] = useState({ nameAr: "", name: "", guardian: "", phone: "", grade: "primary", subjects: ["arabic", "english", "mathematics"] });
@@ -275,30 +273,6 @@ export default function EduPulseApp() {
   const [message, setMessage] = useState("ولي الأمر الكريم، نشارككم ملخص تقدم الطالب هذا الأسبوع. الحضور جيد، ونوصي بمراجعة مهام القراءة قبل الحصة القادمة.");
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [isActualizing, setIsActualizing] = useState(false);
-
-  const handleActualize = async () => {
-    setIsActualizing(true);
-    try {
-      const res = await fetch("/api/workspace/actualize", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          role,
-          activeView,
-          updatedAt: new Date().toISOString(),
-        }),
-      });
-      if (res.ok) {
-        toast.success(isArabic ? "تم تحيين ومزامنة مساحة العمل بنجاح دون إعادة تحميل (AJAX PATCH)" : "Workspace actualized without reload (AJAX PATCH)");
-      } else {
-        toast.info(isArabic ? "تم تحيين السجل محلياً." : "Workspace updated locally.");
-      }
-    } catch (err) {
-      toast.success(isArabic ? "تم تحيين مساحة العمل بنجاح." : "Workspace actualized.");
-    } finally {
-      setIsActualizing(false);
-    }
-  };
 
   const isArabic = language === "ar";
   const direction = isArabic ? "rtl" : "ltr";
@@ -338,6 +312,31 @@ export default function EduPulseApp() {
     const receipts = data.payments.filter(payment => `${payment.id} ${payment.learner} ${payment.method} ${payment.amount}`.toLocaleLowerCase().includes(query)).map(payment => ({ type: "payment" as const, id: payment.id, title: payment.learner, meta: `${payment.amount.toLocaleString("ar-DZ")} د.ج · ${payment.paidAt}`, destination: "payments" }));
     return [...learners, ...receipts].slice(0, 8);
   }, [data.payments, data.students, role, searchQuery]);
+
+  // Refresh the current workspace data without navigating away.
+  const handleActualize = async () => {
+    setIsActualizing(true);
+    try {
+      await Promise.allSettled([
+        membershipsQuery.refetch(),
+        serverLearnersQuery.refetch(),
+        serverPaymentsQuery.refetch(),
+        serverAttendanceQuery.refetch(),
+        serverCefrQuery.refetch(),
+      ]);
+      try {
+        const fresh = await loadData();
+        setData(fresh);
+      } catch {
+        /* local store is optional on this runtime */
+      }
+      toast.success(isArabic ? "تم تحيين البيانات دون مغادرة الصفحة." : "Data refreshed. You stayed on this page.");
+    } catch {
+      toast.error(isArabic ? "تعذر التحيين." : "Could not refresh data.");
+    } finally {
+      setIsActualizing(false);
+    }
+  };
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -613,19 +612,17 @@ export default function EduPulseApp() {
   if (screen === "landing") {
     return <main className="bg-[hsl(201_100%_13%)] text-white" dir={direction}>
       <section className="relative min-h-screen overflow-hidden" id="top">
-        {/* Cinematic Background Video - Clearly Visible */}
-        <video 
-          className="absolute inset-0 z-0 h-full w-full object-cover brightness-[0.92] contrast-[1.04]" 
-          autoPlay 
-          loop 
-          muted 
-          playsInline 
+        <video
+          className="absolute inset-0 z-0 h-full w-full object-cover brightness-[0.92] contrast-[1.04]"
+          autoPlay
+          loop
+          muted
+          playsInline
           poster="/storage/edupulse-cinematic-school-fallback_a69e1a92.jpg"
         >
           <source src={VIDEO_URL} type="video/mp4" />
         </video>
-        
-        {/* Clear Cinematic Scrim - Video remains fully visible and bright */}
+
         <div className="absolute inset-0 z-0 bg-gradient-to-b from-black/25 via-transparent to-[#001724]/90 pointer-events-none" />
 
         <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-6 sm:px-8">
@@ -662,7 +659,6 @@ export default function EduPulseApp() {
               <span>{isArabic ? "البيض · وهران · الجزائر" : "El-Bayadh · Oran · Algiers"}</span>
             </div>
 
-            {/* Direct Hero Typography rendered cleanly on the video without any bounding square */}
             <div className="max-w-3xl">
               <h1 className="animate-fade-rise text-display text-2xl sm:text-4xl md:text-5xl font-extrabold leading-tight tracking-tight text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)]">
                 {isArabic ? (
@@ -677,16 +673,16 @@ export default function EduPulseApp() {
             </div>
 
             <div className="animate-fade-rise-delay-2 mt-6 flex flex-wrap justify-center gap-3">
-              <button 
-                onClick={() => { setInitialAuthTab("login"); setScreen("access"); }} 
+              <button
+                onClick={() => { setInitialAuthTab("login"); setScreen("access"); }}
                 className="inline-flex items-center justify-center gap-1.5 rounded-full bg-emerald-400 px-5 py-2.5 text-xs sm:text-sm font-semibold text-slate-950 shadow-[0_8px_24px_rgba(52,211,153,0.3)] transition duration-200 hover:scale-102 hover:bg-emerald-300 active:scale-98"
               >
                 {isArabic ? "اختيار دورك ودخول المساحة" : "Choose your role & enter"}
                 <ArrowUpRight className="h-3.5 w-3.5" />
               </button>
 
-              <button 
-                onClick={() => scrollTo("admissions-pipeline")} 
+              <button
+                onClick={() => scrollTo("admissions-pipeline")}
                 className="inline-flex items-center justify-center gap-1.5 rounded-full border border-white/40 bg-white/10 px-4.5 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-[0_4px_16px_rgba(0,0,0,0.25)] backdrop-blur-md transition duration-200 hover:scale-102 hover:bg-white hover:text-slate-950 active:scale-98"
               >
                 {isArabic ? "استكشاف المنصة والشعب" : "Explore the platform"}
@@ -881,19 +877,11 @@ export default function EduPulseApp() {
             <button
               onClick={handleActualize}
               disabled={isActualizing}
-              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/20 transition"
-              title={isArabic ? "تحيين ومزامنة مساحة العمل دون إعادة تحميل (AJAX PATCH)" : "Actualize / sync without reload"}
+              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/20 transition disabled:opacity-60"
+              title={isArabic ? "تحيين ومزامنة البيانات دون مغادرة الصفحة" : "Refresh data without leaving the page"}
             >
               <RefreshCw className={`h-3.5 w-3.5 ${isActualizing ? "animate-spin" : ""}`} />
               <span className="hidden sm:inline">{isArabic ? "تحيين (Actualize)" : "Actualize"}</span>
-            </button>
-            <button
-              onClick={() => setPhoneModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-white/85 hover:bg-white/10 hover:text-white transition"
-              title={isArabic ? "التحقق برقم الهاتف" : "Phone Verification"}
-            >
-              <Phone className="h-3.5 w-3.5 text-blue-300" />
-              <span className="hidden md:inline">{isArabic ? "التحقق بالهاتف" : "Phone Verification"}</span>
             </button>
             <button onClick={() => setLanguage(isArabic ? "en" : "ar")} className="rounded-full px-3 py-2 text-xs text-white/60 hover:text-white">{isArabic ? "EN" : "العربية"}</button>
             <button onClick={() => toast.info("التنبيهات ستظهر عند تفعيل قائمة المهام في نسخة سطح المكتب.")} className="relative rounded-full p-2.5 text-white/70 hover:bg-white/6 hover:text-white"><Bell className="h-5 w-5" /><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-amber-200" /></button>
@@ -905,7 +893,6 @@ export default function EduPulseApp() {
     </div>
     {registrationOpen && <Modal title="استمارة تسجيل تلميذ جديد (الرقمنة)" onClose={() => setRegistrationOpen(false)}><AlgerianOfficialRegistrationForm isArabic={isArabic} compact onSuccess={handleOfficialRegistrationSuccess} onCancel={() => setRegistrationOpen(false)} /></Modal>}
     {paymentOpen && <Modal title="تسجيل دفعة" onClose={() => setPaymentOpen(false)}><form onSubmit={savePayment} className="space-y-5"><label className="block text-xs text-white/50">الطالب<select value={paymentForm.studentId} onChange={(event) => setPaymentForm({ ...paymentForm, studentId: event.target.value })} className="mt-2 w-full control-light px-4 py-3 text-sm">{data.students.map((student) => <option key={student.id} value={student.id}>{student.nameAr}</option>)}</select></label><label className="block text-xs text-white/50">المبلغ (د.ج)<input value={paymentForm.amount} inputMode="numeric" onChange={(event) => setPaymentForm({ ...paymentForm, amount: event.target.value })} className="mt-2 w-full control-light px-4 py-3 text-sm" placeholder="مثال: 6000" /></label><label className="block text-xs text-white/50">طريقة الدفع<select value={paymentForm.method} onChange={(event) => setPaymentForm({ ...paymentForm, method: event.target.value })} className="mt-2 w-full control-light px-4 py-3 text-sm"><option>Cash</option><option>Bank transfer</option><option>Cheque</option></select></label><button className="liquid-glass w-full rounded-full px-5 py-3 text-sm">حفظ الدفعة وإنشاء إيصال</button></form></Modal>}
-    <PhoneVerificationModal isOpen={phoneModalOpen} onClose={() => setPhoneModalOpen(false)} isArabic={isArabic} />
   </main>;
 }
 
