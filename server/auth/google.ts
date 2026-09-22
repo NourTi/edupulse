@@ -128,8 +128,13 @@ function restartMessage(message: string, reference: string) {
 
 /**
  * Runs at startup. Adds any columns your schema expects but the live
- * database is missing. Safe to run every boot — checks information_schema
- * before each ALTER, so nothing is duplicated.
+ * database is missing.
+ *
+ * IMPORTANT: the column names here must EXACTLY match the identifiers
+ * that Drizzle ORM emits in its SQL. Your schema uses camelCase for
+ * most columns (`profileCompleted`, `mustChangePassword`, etc.) and
+ * snake_case only for `linked_student_id`. Copy that pattern exactly,
+ * or the query will fail with "Unknown column".
  */
 async function runBootstrapMigrations() {
   const url = process.env.DATABASE_URL;
@@ -146,16 +151,17 @@ async function runBootstrapMigrations() {
     });
 
     const columnsToEnsure: Array<[string, string, string]> = [
+      // snake_case — matches your Drizzle schema
       ["users", "linked_student_id", "VARCHAR(191) NULL"],
-      ["users", "must_change_password", "TINYINT(1) NOT NULL DEFAULT 0"],
-      ["users", "password_changed_at", "TIMESTAMP NULL"],
-      ["users", "profile_completed", "TINYINT(1) NOT NULL DEFAULT 0"],
-      ["users", "login_method", "VARCHAR(64) NULL"],
-      ["users", "status", "VARCHAR(32) NOT NULL DEFAULT 'active'"],
-      ["users", "password_hash", "VARCHAR(255) NULL"],
-      ["users", "open_id", "VARCHAR(191) NULL"],
-      ["users", "role", "VARCHAR(32) NOT NULL DEFAULT 'student'"],
-      ["users", "last_signed_in", "TIMESTAMP NULL"],
+
+      // camelCase — matches your Drizzle schema
+      ["users", "profileCompleted", "TINYINT(1) NOT NULL DEFAULT 0"],
+      ["users", "mustChangePassword", "TINYINT(1) NOT NULL DEFAULT 0"],
+      ["users", "passwordChangedAt", "TIMESTAMP NULL"],
+      ["users", "loginMethod", "VARCHAR(64) NULL"],
+      ["users", "passwordHash", "VARCHAR(255) NULL"],
+      ["users", "openId", "VARCHAR(191) NULL"],
+      ["users", "lastSignedIn", "TIMESTAMP NULL"],
     ];
 
     for (const [table, column, definition] of columnsToEnsure) {
@@ -185,8 +191,7 @@ async function runBootstrapMigrations() {
 }
 
 export function registerGoogleRoutes(app: Express) {
-  // Run schema bootstrap once at startup — fire and forget, does not
-  // block server boot.
+  // Run schema bootstrap once at startup — fire and forget.
   runBootstrapMigrations().catch((err) =>
     console.error("[Bootstrap] Unexpected error:", err)
   );
