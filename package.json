@@ -99,8 +99,6 @@
     "wouter": "^3.3.5",
     "zod": "^4.1.12",
     "bun-types": "latest",
-    "puppeteer-extra": "^3.3.6",
-    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "puppeteer": "^21.0.0"
   },
   "devDependencies": {
