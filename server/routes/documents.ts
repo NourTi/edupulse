@@ -3,7 +3,6 @@ import axios from 'axios';
 
 const router = Router();
 
-// Validation check to ensure only genuine Scribd links are processed
 const SCRIBD_REGEX = /^https?:\/\/(www\.)?scribd\.com\/(doc|document|book|read|presentation)\//i;
 
 router.post('/import-document', async (req, res) => {
@@ -16,79 +15,73 @@ router.post('/import-document', async (req, res) => {
     try {
         const targetHost = 'scribd.vpdfs.com';
         
-        // 1. EXTRACT DOCUMENT PATH MAPPING:
-        // Converts 'https://scribd.com' to '/doc/12345/Title'
-        const urlObj = new URL(url);
-        const documentPath = urlObj.pathname + urlObj.search;
+        // 1. Extract the unique numeric identifier of the document
+        const numericMatch = url.match(/\/(?:doc|document|book|read|presentation)\/(\d+)/i);
+        if (!numericMatch) {
+            return res.status(400).json({ error: 'Could not extract valid document ID from URL' });
+        }
+        const documentId = numericMatch[1];
 
-        // 2. CONSTRUCT DIRECT MIRROR LINK:
-        // Points natively to 'https://vpdfs.com'
-        const directMirrorUrl = `https://${targetHost}${documentPath}`;
-
-        const browserHeaders = {
+        // 2. Build explicit application headers to spoof a native AJAX connection
+        const apiHeaders = {
             'Host': targetHost,
-            'Referer': `https://${targetHost}/`,
+            'Origin': `https://${targetHost}`,
+            'Referer': `https://${targetHost}/document/${documentId}`,
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5'
+            'Accept': 'application/json, text/javascript, */*; q=0.01',
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'X-Requested-With': 'XMLHttpRequest'
         };
 
-        // --- PASS 1: FETCH LANDING PAGE HTML ---
-        console.log(`[Proxy] Handshaking with mirror endpoint: ${directMirrorUrl}`);
-        const landingPageResponse = await axios.get(directMirrorUrl, {
-            timeout: 25000,
-            headers: browserHeaders,
-            responseType: 'text' // Extract the raw webpage markup source text string
+        // 3. TARGET THE DOWNSTREAM PROCESSING ENGINE DIRECTLY
+        // We construct the form payload that their client-side application utilizes
+        const postData = `id=${documentId}&url=${encodeURIComponent(url)}&type=pdf`;
+
+        console.log(`[API Proxy] Submitting direct payload to download engine for ID: ${documentId}`);
+        
+        const apiResponse = await axios.post(`https://${targetHost}/api/download`, postData, {
+            timeout: 30000,
+            headers: apiHeaders,
+            validateStatus: (status) => status < 500
         });
 
-        const htmlMarkup = landingPageResponse.data;
-        let extractionUrl = '';
+        let binaryDownloadUrl = `https://${targetHost}/download/${documentId}`;
 
-        // --- REGEX EXTRACTION ENGINE ---
-        // Dynamically looks for HTML elements containing direct file download paths
-        const fileRouteMatch = htmlMarkup.match(/href=["'](\/download\/[^"']+)["']/i) || 
-                               htmlMarkup.match(/href=["'](https?:\/\/scribd\.vpdfs\.com\/download\/[^"']+)["']/i);
-
-        if (fileRouteMatch && fileRouteMatch[1]) {
-            const rawPath = fileRouteMatch[1];
-            // Normalize path string whether it's absolute or relative
-            extractionUrl = rawPath.startsWith('http') ? rawPath : `https://${targetHost}${rawPath}`;
-            console.log(`[Proxy] Successfully extracted dynamic download path: ${extractionUrl}`);
-        } else {
-            // Fallback: If no direct download button route is found in the HTML strings,
-            // fall back to the mirror entry URL to keep the streaming connection active
-            extractionUrl = directMirrorUrl;
-            console.warn('[Proxy] Regex did not find a explicit download route. Falling back to base mirror.');
+        // If their API responds with a JSON object containing the direct secure link, extract it
+        if (apiResponse.data && typeof apiResponse.data === 'object' && apiResponse.data.url) {
+            binaryDownloadUrl = apiResponse.data.url;
+            console.log(`[API Proxy] Extracted explicit stream target from JSON: ${binaryDownloadUrl}`);
         }
 
-        // --- PASS 2: STREAMING BINARY TRANSMISSION ---
-        console.log(`[Proxy] Commencing binary stream transmission from source...`);
-        const documentStreamResponse = await axios.get(extractionUrl, {
+        // 4. ESTABLISH THE BINARY PIPE FROM THE RESOLVED SOURCE
+        console.log(`[API Proxy] Executing streaming transfer from: ${binaryDownloadUrl}`);
+        const fileStreamResponse = await axios.get(binaryDownloadUrl, {
             responseType: 'stream',
-            timeout: 60000, // Allow up to 60 seconds for heavy documents
+            timeout: 60000,
             headers: {
-                ...browserHeaders,
+                'Host': targetHost,
+                'User-Agent': apiHeaders['User-Agent'],
+                'Referer': apiHeaders['Referer'],
                 'Accept': 'application/pdf,application/octet-stream,*/*'
             }
         });
 
-        // Configure the browser to treat incoming bytes as a forced PDF file save action
+        // Set attachment directives to trigger an automated file download window for the user
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', 'attachment; filename="downloaded-document.pdf"');
+        res.setHeader('Content-Disposition', `attachment; filename="document-${documentId}.pdf"`);
 
-        // Pipe the live chunk buffer data cleanly through Render's network card straight to the client
-        documentStreamResponse.data.pipe(res);
+        // Stream raw byte chunks smoothly through Render to the client
+        fileStreamResponse.data.pipe(res);
 
-        // Catch streaming drops gracefully mid-flight to isolate and protect the main Express daemon process
-        documentStreamResponse.data.on('error', (streamError: any) => {
-            console.error('[Stream Error] Connection dropped during data relay:', streamError.message);
+        fileStreamResponse.data.on('error', (streamError: any) => {
+            console.error('[API Stream Error] Network dropped mid-transfer:', streamError.message);
             if (!res.headersSent) {
-                res.status(500).json({ error: 'Data stream was interrupted mid-transmission' });
+                res.status(500).json({ error: 'Download stream broken during transmission.' });
             }
         });
 
     } catch (error: any) {
-        console.error('[Proxy Error] Exception encountered within pipeline:', error.message);
+        console.error('[API Proxy Error] Execution exception occurred:', error.message);
         if (!res.headersSent) {
             return res.status(500).json({ error: 'Internal backend proxy pipeline failed.' });
         }
