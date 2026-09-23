@@ -1,90 +1,78 @@
 import { Router } from 'express';
-import axios from 'axios';
+import fs from 'fs';
+import { createDownloadJob, getJobStatus } from '../services/queue';
 
 const router = Router();
+const SCRIBD_REGEX = /^https?:\/\/(www\.)?scribd\.com\/(doc|document|book|read)\//i;
 
-const SCRIBD_REGEX = /^https?:\/\/(www\.)?scribd\.com\/(doc|document|book|read|presentation)\//i;
-
+/**
+ * Endpoint 1: Triggers asynchronous background parsing tasks
+ */
 router.post('/import-document', async (req, res) => {
     const { url } = req.body;
 
     if (!url || !SCRIBD_REGEX.test(url)) {
-        return res.status(400).json({ error: 'Invalid or missing Scribd URL' });
+        return res.status(400).json({ error: 'Invalid or missing Scribd URL parameter.' });
     }
 
     try {
-        const targetHost = 'scribd.vpdfs.com';
+        // Enqueue tracking context record into TiDB
+        const jobId = await createDownloadJob(url);
         
-        // 1. Extract the unique numeric identifier of the document
-        const numericMatch = url.match(/\/(?:doc|document|book|read|presentation)\/(\d+)/i);
-        if (!numericMatch) {
-            return res.status(400).json({ error: 'Could not extract valid document ID from URL' });
-        }
-        const documentId = numericMatch[1];
+        // Return success instantly so your frontend can start displaying a loading spinner
+        return res.status(202).json({ success: true, jobId, status: 'pending' });
+    } catch (error: any) {
+        console.error('[Route Error] Failed to submit tracking task:', error.message);
+        return res.status(500).json({ error: 'Could not schedule download transaction.' });
+    }
+});
 
-        // 2. Build explicit application headers to spoof a native AJAX connection
-        const apiHeaders = {
-            'Host': targetHost,
-            'Origin': `https://${targetHost}`,
-            'Referer': `https://${targetHost}/document/${documentId}`,
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'application/json, text/javascript, */*; q=0.01',
-            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'X-Requested-With': 'XMLHttpRequest'
-        };
+/**
+ * Endpoint 2: Status Polling & Dynamic File Delivery Channel
+ */
+router.get('/import-status/:jobId', async (req, res) => {
+    const { jobId } = req.params;
 
-        // 3. TARGET THE DOWNSTREAM PROCESSING ENGINE DIRECTLY
-        // We construct the form payload that their client-side application utilizes
-        const postData = `id=${documentId}&url=${encodeURIComponent(url)}&type=pdf`;
-
-        console.log(`[API Proxy] Submitting direct payload to download engine for ID: ${documentId}`);
-        
-        const apiResponse = await axios.post(`https://${targetHost}/api/download`, postData, {
-            timeout: 30000,
-            headers: apiHeaders,
-            validateStatus: (status) => status < 500
-        });
-
-        let binaryDownloadUrl = `https://${targetHost}/download/${documentId}`;
-
-        // If their API responds with a JSON object containing the direct secure link, extract it
-        if (apiResponse.data && typeof apiResponse.data === 'object' && apiResponse.data.url) {
-            binaryDownloadUrl = apiResponse.data.url;
-            console.log(`[API Proxy] Extracted explicit stream target from JSON: ${binaryDownloadUrl}`);
+    try {
+        const job = await getJobStatus(jobId);
+        if (!job) {
+            return res.status(404).json({ error: 'Target tracking record not found.' });
         }
 
-        // 4. ESTABLISH THE BINARY PIPE FROM THE RESOLVED SOURCE
-        console.log(`[API Proxy] Executing streaming transfer from: ${binaryDownloadUrl}`);
-        const fileStreamResponse = await axios.get(binaryDownloadUrl, {
-            responseType: 'stream',
-            timeout: 60000,
-            headers: {
-                'Host': targetHost,
-                'User-Agent': apiHeaders['User-Agent'],
-                'Referer': apiHeaders['Referer'],
-                'Accept': 'application/pdf,application/octet-stream,*/*'
+        // Handle active processing states
+        if (job.status === 'pending' || job.status === 'processing') {
+            return res.status(200).json({ status: job.status });
+        }
+
+        if (job.status === 'failed') {
+            return res.status(500).json({ status: 'failed', error: job.errorMessage });
+        }
+
+        // Handle completed processing execution: Stream local file target
+        if (job.status === 'completed' && job.filePath) {
+            if (!fs.existsSync(job.filePath)) {
+                return res.status(410).json({ error: 'Target document cache has expired.' });
             }
-        });
 
-        // Set attachment directives to trigger an automated file download window for the user
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="document-${documentId}.pdf"`);
+            // Expose native attachment metadata overrides to user browser window
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', 'attachment; filename="research-document.pdf"');
 
-        // Stream raw byte chunks smoothly through Render to the client
-        fileStreamResponse.data.pipe(res);
+            const fileStream = fs.createReadStream(job.filePath);
+            fileStream.pipe(res);
 
-        fileStreamResponse.data.on('error', (streamError: any) => {
-            console.error('[API Stream Error] Network dropped mid-transfer:', streamError.message);
-            if (!res.headersSent) {
-                res.status(500).json({ error: 'Download stream broken during transmission.' });
-            }
-        });
+            // Housekeeping: Garbage collect local space upon transmission closeout
+            fileStream.on('end', () => {
+                fs.unlink(job.filePath!, (unlinkErr) => {
+                    if (unlinkErr) console.error('[Clean Error] Failed to purge storage:', unlinkErr);
+                });
+            });
+            return;
+        }
 
     } catch (error: any) {
-        console.error('[API Proxy Error] Execution exception occurred:', error.message);
-        if (!res.headersSent) {
-            return res.status(500).json({ error: 'Internal backend proxy pipeline failed.' });
-        }
+        console.error('[Status Route Error] Failed execution matrix:', error.message);
+        return res.status(500).json({ error: 'Internal pipeline validation failed.' });
     }
 });
 
