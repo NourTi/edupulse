@@ -16,13 +16,13 @@ export function DocumentImporter() {
     setStatusMessage('Initializing tracking transaction...');
 
     try {
-      // 1. Dispatch payload to your updated Express backend router
+      // 1. Dispatch payload to the task processor route
       const initResponse = await axios.post('/import-document', { url: scribdUrl });
       const { jobId } = initResponse.data;
 
       setStatusMessage('Processing document through background pipelines...');
 
-      // 2. Poll the TiDB state table every 2 seconds
+      // 2. Poll the state matrix array inside your TiDB storage definitions
       const pollInterval = setInterval(async () => {
         try {
           const statusResponse = await axios.get(`/import-status/${jobId}`);
@@ -37,7 +37,8 @@ export function DocumentImporter() {
             setStatusMessage('Download ready!');
             setIsLoading(false);
 
-            // 3. Trigger immediate native browser download
+            // 3. FORCE DOWNLOAD DIALOG ATTACHMENT ACTION
+            // This forces a clean browser window location rewrite execution profile
             window.location.href = `/import-status/${jobId}`;
           } 
           
