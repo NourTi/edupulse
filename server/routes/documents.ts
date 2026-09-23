@@ -3,6 +3,7 @@ import axios from 'axios';
 
 const router = Router();
 
+// Validation regex ensuring only genuine Scribd document URLs are processed
 const SCRIBD_REGEX = /^https?:\/\/(www\.)?scribd\.com\/(doc|document|book|read)\//i;
 
 router.post('/import-document', async (req, res) => {
@@ -16,6 +17,8 @@ router.post('/import-document', async (req, res) => {
         const targetHost = 'scribd.vdownloaders.com';
         const urlObj = new URL(url);
         const documentPath = urlObj.pathname + urlObj.search;
+        
+        // This targets the specific proxy destination (e.g., https://vdownloaders.com)
         const directDownloadMirrorUrl = `https://${targetHost}${documentPath}`;
 
         const commonHeaders = {
@@ -26,66 +29,67 @@ router.post('/import-document', async (req, res) => {
             'Accept-Language': 'en-US,en;q=0.5'
         };
 
-        // 1. Fetch the plain page source text instead of an unmanaged data stream
-        const htmlResponse = await axios.get(directDownloadMirrorUrl, {
+        // PASS 1: Fetch the processing web page HTML content text
+        const initialResponse = await axios.get(directDownloadMirrorUrl, {
             timeout: 30000,
             headers: commonHeaders,
-            responseType: 'text' // Read the exact HTML code strings
+            responseType: 'text' // We need to read the raw HTML text
         });
 
-        const htmlContent = htmlResponse.data;
+        const htmlContent = initialResponse.data;
+        let finalDownloadUrl = '';
 
-        // 2. PARSE STRATEGY: Locate the hidden backend query URL within the page source code.
-        // We look for typical patterns like download forms, window.location updates, or direct file buffers.
-        let finalAssetUrl = '';
-
-        // Match common patterns where the real download processing file link or parameter is declared
-        const urlDownloadMatch = htmlContent.match(/href=["'](https:\/\/scribd\.vdownloaders\.com\/download\/[^"']+)["']/i) ||
+        // Search the HTML text for common direct binary file patterns or redirect markers
+        // Look for buttons, anchors, or script definitions pushing to an asset stream
+        const downloadUrlMatch = htmlContent.match(/href=["'](https?:\/\/[^"']+\.(?:pdf|download|stream)[^"']*)["']/i) ||
                                  htmlContent.match(/id=["']download-btn["'][^>]*href=["']([^"']+)["']/i) ||
                                  htmlContent.match(/window\.location\.href\s*=\s*["']([^"']+)["']/i);
 
-        if (urlDownloadMatch && urlDownloadMatch[1]) {
-            finalAssetUrl = urlDownloadMatch[1];
-            console.log('Target proxy isolated hidden extraction link:', finalAssetUrl);
+        if (downloadUrlMatch && downloadUrlMatch[1]) {
+            finalDownloadUrl = downloadUrlMatch[1];
         } else {
-            // Fallback: If no nested path asset match is found within the markup text,
-            // attempt a direct download call to their standard download processor pipeline
-            const docIdMatch = documentPath.match(/\/(doc|document)\/(\d+)/);
-            if (docIdMatch && docIdMatch[2]) {
-                finalAssetUrl = `https://${targetHost}/download/${docIdMatch[2]}`;
-            } else {
-                finalAssetUrl = directDownloadMirrorUrl;
+            // Fallback: If no nested asset URL is explicitly extracted from the scripts,
+            // check if the page itself contains a direct relative file source pathway
+            const structuralMatch = htmlContent.match(/href=["'](\/download\/[^"']+)["']/i);
+            if (structuralMatch && structuralMatch[1]) {
+                finalDownloadUrl = `https://${targetHost}${structuralMatch[1]}`;
             }
         }
 
-        // 3. Request the binary document file stream directly from the isolated endpoint location
-        const fileStreamResponse = await axios.get(finalAssetUrl, {
+        // If the parser completely strikes out looking for a dynamic sub-url, 
+        // fall back to the main mirror entry to maintain streaming continuity
+        if (!finalDownloadUrl) {
+            finalDownloadUrl = directDownloadMirrorUrl;
+        }
+
+        // PASS 2: Request the actual binary asset data stream from the resolved path
+        const fileStreamResponse = await axios.get(finalDownloadUrl, {
             responseType: 'stream',
             timeout: 60000,
             headers: {
                 ...commonHeaders,
-                'Accept': 'application/pdf,application/octet-stream,video/*;q=0.8,image/*;q=0.5,*/*;q=0.1'
+                'Accept': 'application/pdf,application/octet-stream,video/*,image/*,*/*'
             }
         });
 
-        // 4. Enforce clear client-side attachment headers
+        // Force browser binary execution mechanics to push a clean PDF download
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', 'attachment; filename="document.pdf"');
 
-        // 5. Transfer the stream payload out to the user's browser device
+        // Pipe the isolated file chunks straight to the browser
         fileStreamResponse.data.pipe(res);
 
         fileStreamResponse.data.on('error', (streamError: any) => {
-            console.error('Core proxy routing stream transport error:', streamError.message);
+            console.error('Data stream interrupted mid-transmission:', streamError.message);
             if (!res.headersSent) {
-                res.status(500).json({ error: 'Stream payload transfer was interrupted.' });
+                res.status(500).json({ error: 'Stream interrupted during transmission' });
             }
         });
 
     } catch (error: any) {
-        console.error('Proxy routing execution failure:', error.message);
+        console.error('Proxy routing exception occurred:', error.message);
         if (!res.headersSent) {
-            return res.status(500).json({ error: 'Internal backend proxy framework failure.' });
+            return res.status(500).json({ error: 'Internal backend proxy pipeline failed.' });
         }
     }
 });
