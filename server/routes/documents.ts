@@ -15,34 +15,50 @@ router.post('/import-document', async (req, res) => {
     }
 
     try {
-        // --- PROXY NETWORKING LAYER ---
-        // 1. Establish the domain destination targets
         const targetHost = 'scribd.vdownloaders.com';
-        const targetEndpoint = 'https://scribd.vdownloaders.com/vdoc/';
+        
+        // 1. EXTRACT PATH MAPPING:
+        // Convert 'https://scribd.com' to '/doc/12345/Title'
+        const urlObj = new URL(url);
+        const documentPath = urlObj.pathname + urlObj.search;
 
-        // 2. Set up headers to replicate a genuine web browser connection
-        const requestHeaders = {
-            'Host': targetHost,
-            'Origin': `https://${targetHost}`,
-            'Referer': `https://${targetHost}/`,
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Content-Type': 'application/x-www-form-urlencoded'
-        };
+        // 2. CONSTRUCT DIRECT TARGET DOMAIN LINK:
+        // This maps the request cleanly to 'https://vdownloaders.com'
+        const directDownloadMirrorUrl = `https://${targetHost}${documentPath}`;
 
-        // 3. Construct standard Form Data payload
-        // Most open tools process requests using a standard 'url=' form parameter
-        const payload = new URLSearchParams();
-        payload.append('url', url);
+        // 3. RETRIEVE FILE CHUNKS VIA AXIOS RESPONSE STREAM
+        const targetResponse = await axios.get(directDownloadMirrorUrl, {
+            responseType: 'stream',
+            timeout: 60000, // 60 seconds max timeout
+            headers: {
+                'Host': targetHost,
+                'Referer': `https://${targetHost}/`,
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/pdf,application/octet-stream,text/html,*/*'
+            }
+        });
 
-        // TODO: Map the response to a stream pipeline in Step 2
+        // 4. PREPARE THE OUTBOUND CLIENT DOWNLOAD HEADERS
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename="document.pdf"');
 
-        // Temporary placeholders for development verification
-        return res.status(200).json({ status: 'Proxy scaffolding initialized successfully.' });
+        // 5. PIPE THE INCOMING DATA DIRECTLY TO THE CLIENT BROWSER
+        targetResponse.data.pipe(res);
+
+        // 6. PREVENT CRASHES IF CONNECTION DROP OCCURS DURING STREAMING
+        targetResponse.data.on('error', (streamError: any) => {
+            console.error('Data stream interrupted:', streamError.message);
+            if (!res.headersSent) {
+                res.status(500).json({ error: 'Stream interrupted during transmission' });
+            }
+        });
 
     } catch (error: any) {
         console.error('Proxy routing exception occurred:', error.message);
-        return res.status(500).json({ error: 'Internal backend proxy pipeline failed.' });
+        
+        if (!res.headersSent) {
+            return res.status(500).json({ error: 'Internal backend proxy pipeline failed.' });
+        }
     }
 });
 
