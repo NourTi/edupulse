@@ -204,6 +204,8 @@ const authInput = z.object({ email: z.string().email().max(320), password: z.str
 export const appRouter = router({
   system: systemRouter,
   creator: creatorRouter,
+   library: libgenRouter,
+  
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     register: publicProcedure.input(z.object({
