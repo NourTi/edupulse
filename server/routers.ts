@@ -1,3 +1,4 @@
+import { libgenRouter } from "./routers/libgenRouter";
 import { COOKIE_NAME } from "@shared/const";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
