@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import { BookOpen, LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -30,6 +30,7 @@ import { Button } from "./ui/button";
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: Users, label: "Students", path: "/some-path" },
+  { icon: BookOpen, label: "Library", path: "/library" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -37,11 +38,7 @@ const DEFAULT_WIDTH = 280;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
@@ -52,27 +49,17 @@ export default function DashboardLayout({
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
   }, [sidebarWidth]);
 
-  if (loading) {
-    return <DashboardLayoutSkeleton />
-  }
+  if (loading) return <DashboardLayoutSkeleton />;
 
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="flex flex-col items-center gap-6">
-            <h1 className="text-2xl font-semibold tracking-tight text-center text-slate-800">
-              Sign in to continue
-            </h1>
-            <p className="text-sm text-slate-500 text-center max-w-sm">
-              Access to this dashboard requires authentication. Continue to launch the login flow.
-            </p>
+            <h1 className="text-2xl font-semibold tracking-tight text-center text-slate-800">Sign in to continue</h1>
+            <p className="text-sm text-slate-500 text-center max-w-sm">Access to this dashboard requires authentication.</p>
           </div>
-          <Button
-            onClick={() => startLogin()}
-            size="lg"
-            className="w-full shadow-lg hover:shadow-xl transition-all bg-blue-600 hover:bg-blue-700"
-          >
+          <Button onClick={() => startLogin()} size="lg" className="w-full shadow-lg hover:shadow-xl transition-all bg-blue-600 hover:bg-blue-700">
             Sign in
           </Button>
         </div>
@@ -81,29 +68,13 @@ export default function DashboardLayout({
   }
 
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": `${sidebarWidth}px`,
-        } as CSSProperties
-      }
-    >
-      <DashboardLayoutContent setSidebarWidth={setSidebarWidth}>
-        {children}
-      </DashboardLayoutContent>
+    <SidebarProvider style={{ "--sidebar-width": `${sidebarWidth}px` } as CSSProperties}>
+      <DashboardLayoutContent setSidebarWidth={setSidebarWidth}>{children}</DashboardLayoutContent>
     </SidebarProvider>
   );
 }
 
-type DashboardLayoutContentProps = {
-  children: React.ReactNode;
-  setSidebarWidth: (width: number) => void;
-};
-
-function DashboardLayoutContent({
-  children,
-  setSidebarWidth,
-}: DashboardLayoutContentProps) {
+function DashboardLayoutContent({ children, setSidebarWidth }: { children: React.ReactNode; setSidebarWidth: (w: number) => void }) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
@@ -113,34 +84,22 @@ function DashboardLayoutContent({
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
 
-  useEffect(() => {
-    if (isCollapsed) {
-      setIsResizing(false);
-    }
-  }, [isCollapsed]);
+  useEffect(() => { if (isCollapsed) setIsResizing(false); }, [isCollapsed]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
-
       const sidebarLeft = sidebarRef.current?.getBoundingClientRect().left ?? 0;
       const newWidth = e.clientX - sidebarLeft;
-      if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
-        setSidebarWidth(newWidth);
-      }
+      if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) setSidebarWidth(newWidth);
     };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
-
+    const handleMouseUp = () => setIsResizing(false);
     if (isResizing) {
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
     }
-
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
@@ -152,28 +111,17 @@ function DashboardLayoutContent({
   return (
     <>
       <div className="relative" ref={sidebarRef}>
-        {/* Gentelella Dark Sidebar */}
-        <Sidebar
-          collapsible="icon"
-          className="border-r-0 bg-slate-800 text-slate-300"
-          disableTransition={isResizing}
-        >
+        <Sidebar collapsible="icon" className="border-r-0 bg-slate-800 text-slate-300" disableTransition={isResizing}>
           <SidebarHeader className="h-16 justify-center border-b border-slate-700">
             <div className="flex items-center gap-3 px-2 transition-all w-full">
-              <button
-                onClick={toggleSidebar}
-                className="h-8 w-8 flex items-center justify-center hover:bg-slate-700 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 shrink-0"
-                aria-label="Toggle navigation"
-              >
+              <button onClick={toggleSidebar} className="h-8 w-8 flex items-center justify-center hover:bg-slate-700 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 shrink-0" aria-label="Toggle navigation">
                 <PanelLeft className="h-4 w-4 text-slate-400" />
               </button>
-              {!isCollapsed ? (
+              {!isCollapsed && (
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-semibold tracking-tight truncate text-white">
-                    EduPulse
-                  </span>
+                  <span className="font-semibold tracking-tight truncate text-white">EduPulse</span>
                 </div>
-              ) : null}
+              )}
             </div>
           </SidebarHeader>
 
@@ -189,9 +137,7 @@ function DashboardLayoutContent({
                       tooltip={item.label}
                       className={`h-10 transition-all font-normal ${isActive ? "bg-blue-600 text-white shadow-sm" : "text-slate-400 hover:bg-slate-700 hover:text-white"}`}
                     >
-                      <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-white" : "text-slate-400"}`}
-                      />
+                      <item.icon className={`h-4 w-4 ${isActive ? "text-white" : "text-slate-400"}`} />
                       <span>{item.label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -205,25 +151,16 @@ function DashboardLayoutContent({
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-slate-700 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
                   <Avatar className="h-9 w-9 border border-slate-600 shrink-0">
-                    <AvatarFallback className="text-xs font-medium bg-slate-600 text-white">
-                      {user?.name?.charAt(0).toUpperCase()}
-                    </AvatarFallback>
+                    <AvatarFallback className="text-xs font-medium bg-slate-600 text-white">{user?.name?.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-                    <p className="text-sm font-medium truncate leading-none text-white">
-                      {user?.name || "-"}
-                    </p>
-                    <p className="text-xs text-slate-400 truncate mt-1.5">
-                      {user?.email || "-"}
-                    </p>
+                    <p className="text-sm font-medium truncate leading-none text-white">{user?.name || "-"}</p>
+                    <p className="text-xs text-slate-400 truncate mt-1.5">{user?.email || "-"}</p>
                   </div>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 bg-white border border-gray-200">
-                <DropdownMenuItem
-                  onClick={logout}
-                  className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
-                >
+                <DropdownMenuItem onClick={logout} className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Sign out</span>
                 </DropdownMenuItem>
@@ -231,27 +168,20 @@ function DashboardLayoutContent({
             </DropdownMenu>
           </SidebarFooter>
         </Sidebar>
+
         <div
           className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500/50 transition-colors ${isCollapsed ? "hidden" : ""}`}
-          onMouseDown={() => {
-            if (isCollapsed) return;
-            setIsResizing(true);
-          }}
+          onMouseDown={() => { if (!isCollapsed) setIsResizing(true); }}
           style={{ zIndex: 50 }}
         />
       </div>
 
-      {/* Gentelella Main Content Area */}
       <SidebarInset className="bg-gray-100">
-        {/* White Top Bar */}
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-200 bg-white px-6 shadow-sm">
           <div className="flex items-center gap-4">
             {isMobile && <SidebarTrigger className="h-9 w-9 rounded-lg bg-gray-100" />}
-            <h2 className="text-lg font-semibold text-slate-800 tracking-tight">
-              {activeMenuItem?.label ?? "Dashboard"}
-            </h2>
+            <h2 className="text-lg font-semibold text-slate-800 tracking-tight">{activeMenuItem?.label ?? "Dashboard"}</h2>
           </div>
-          
           <div className="flex items-center gap-4">
             <div className="hidden sm:flex items-center gap-2 text-sm text-slate-500">
               <span>EN</span>
@@ -260,7 +190,6 @@ function DashboardLayoutContent({
             </div>
           </div>
         </header>
-
         <main className="flex-1 p-8">{children}</main>
       </SidebarInset>
     </>
