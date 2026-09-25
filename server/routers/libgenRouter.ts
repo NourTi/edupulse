@@ -1,15 +1,36 @@
-import { router, publicProcedure, protectedProcedure } from '../_core/trpc'; // Aligned to your folder structure
-import { z } from 'zod';
+/**
+ * LibGen tRPC Router
+ * All dependencies come from the same places routers.ts uses.
+ */
+
+import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
-import { getUserMemberships, getInstitution, createInstitution, createMembership, getMembership, getUserById } from '../db';
-import { searchLibgen, getDownloadLink } from '../integrations/libgen';
+import { protectedProcedure, router } from "../_core/trpc";
+import {
+  getMembership,
+  getUserById,
+  getUserMemberships,
+  getInstitution,
+  createInstitution,
+  createMembership,
+  writeAuditLog,
+} from "../db";
+import {
+  searchLibgen,
+  getLibgenDetails,
+  getLibgenDownloadLink,
+} from "../integrations/libgen";
 
-const schoolRoles = ["owner", "admin", "registrar", "finance_admin", "teacher", "counsellor", "student", "guardian"] as const;
+// ─── Copied from routers.ts (local helpers) ───────────────────────────────────
+
+const schoolRoles = [
+  "owner", "admin", "registrar", "finance_admin",
+  "teacher", "counsellor", "student", "guardian",
+] as const;
 type SchoolRole = (typeof schoolRoles)[number];
 
-// --- INLINED SECURITY HELPERS TO GUARANTEE RENDER COMPILES ZERO-ERROR ---
-async function defaultInstitutionId(userId: number, requested?: string) {
+async function defaultInstitutionId(userId: number, requested?: string): Promise<string> {
   if (requested) return requested;
   try {
     const memberships = await getUserMemberships(userId);
@@ -18,6 +39,7 @@ async function defaultInstitutionId(userId: number, requested?: string) {
   } catch (error) {
     console.warn("[defaultInstitutionId] Failed to read memberships:", error);
   }
+
   const defaultInstId = "inst_edupulse_primary";
   try {
     const existing = await getInstitution(defaultInstId);
@@ -43,13 +65,19 @@ async function defaultInstitutionId(userId: number, requested?: string) {
   }
 }
 
-async function requireInstitutionRole(userId: number, institutionId: string, allowed: readonly SchoolRole[]) {
+async function requireInstitutionRole(
+  userId: number,
+  institutionId: string,
+  allowed: readonly SchoolRole[]
+) {
   try {
     let membership = await getMembership(userId, institutionId);
     if (!membership || membership.status !== "active") {
       const user = await getUserById(userId);
-      const isOwner = user?.role === "admin" || 
-        user?.email?.toLowerCase() === (process.env.OWNER_OPEN_ID?.toLowerCase() ?? "admin@edupulse.edu.dz");
+      const isOwner =
+        user?.role === "admin" ||
+        user?.email?.toLowerCase() ===
+          (process.env.OWNER_OPEN_ID?.toLowerCase() ?? "admin@edupulse.edu.dz");
       if (isOwner) {
         await createMembership({
           id: `mem_owner_${userId}_${nanoid(6)}`,
@@ -61,55 +89,152 @@ async function requireInstitutionRole(userId: number, institutionId: string, all
         membership = await getMembership(userId, institutionId);
       }
     }
-    if (membership && membership.status === "active" && (allowed.includes(membership.role as SchoolRole) || membership.role === "owner")) {
+    if (
+      membership &&
+      membership.status === "active" &&
+      (allowed.includes(membership.role as SchoolRole) || membership.role === "owner")
+    ) {
       return membership;
     }
   } catch (err) {
     console.warn("[requireInstitutionRole] Warning during check:", err);
   }
+
   const user = await getUserById(userId);
-  if (user?.role === "admin" || user?.email?.toLowerCase() === (process.env.OWNER_OPEN_ID?.toLowerCase() ?? "admin@edupulse.edu.dz")) {
-    return { id: `mem_virtual_${userId}`, institutionId, userId, role: "owner", status: "active" } as any;
+  if (
+    user?.role === "admin" ||
+    user?.email?.toLowerCase() ===
+      (process.env.OWNER_OPEN_ID?.toLowerCase() ?? "admin@edupulse.edu.dz")
+  ) {
+    return {
+      id: `mem_virtual_${userId}`,
+      institutionId,
+      userId,
+      role: "owner",
+      status: "active",
+    } as any;
   }
-  throw new TRPCError({ code: "FORBIDDEN", message: "You do not have access to this institution." });
+
+  throw new TRPCError({
+    code: "FORBIDDEN",
+    message: "You do not have access to this institution.",
+  });
 }
 
-// --- ACTIVE THE tRPC LIBRARY ROUTER ROUTING LOGIC ---
+// ─── Allowed roles for library access (everyone) ──────────────────────────────
+
+const LIBRARY_ROLES = [
+  "owner", "admin", "registrar", "finance_admin",
+  "teacher", "counsellor", "student", "guardian",
+] as const;
+
+// ─── Router ───────────────────────────────────────────────────────────────────
+
 export const libgenRouter = router({
+  /**
+   * Search books and papers.
+   * Accessible to all authenticated institution members.
+   */
   search: protectedProcedure
-    .input(z.object({
-      query: z.string().min(2),
-      topics: z.array(z.string()).optional(),
-      page: z.number().default(1)
-    }))
-    .query(async ({ input, ctx }) => {
-      // Secure check ensuring user belongs to the institution branch
-      const institutionId = await defaultInstitutionId(ctx.user.id);
-      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "teacher"]);
+    .input(
+      z.object({
+        institutionId: z.string().max(64).optional(),
+        query: z.string().trim().min(2).max(300),
+        topics: z
+          .array(
+            z.enum(["nonfiction", "fiction", "articles", "magazines", "comics", "standards"])
+          )
+          .optional(),
+        page: z.number().int().min(1).max(100).default(1),
+        resultsPerPage: z
+          .union([z.literal(25), z.literal(50), z.literal(100)])
+          .default(25),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, LIBRARY_ROLES);
 
-      return await searchLibgen(input.query, input.topics, input.page);
+      try {
+        return await searchLibgen(input.query, {
+          topics: input.topics,
+          page: input.page,
+          resultsPerPage: input.resultsPerPage,
+        });
+      } catch (err) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: err instanceof Error ? err.message : "Search failed.",
+        });
+      }
     }),
 
+  /**
+   * Get full metadata for a book by its MD5 hash.
+   */
+  details: protectedProcedure
+    .input(
+      z.object({
+        institutionId: z.string().max(64).optional(),
+        md5: z.string().trim().length(32),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, LIBRARY_ROLES);
+
+      try {
+        return await getLibgenDetails(input.md5);
+      } catch (err) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: err instanceof Error ? err.message : "Could not fetch book details.",
+        });
+      }
+    }),
+
+  /**
+   * Resolve a direct download link for a book.
+   * Uses resolve_only: true — no file is saved on the server.
+   * Every download request is audit-logged.
+   */
   downloadLink: protectedProcedure
-    .input(z.object({
-      md5: z.string(),
-      title: z.string().optional()
-    }))
-    .mutation(async ({ input, ctx }) => {
-      const institutionId = await defaultInstitutionId(ctx.user.id);
-      await requireInstitutionRole(ctx.user.id, institutionId, ["owner", "admin", "teacher"]);
+    .input(
+      z.object({
+        institutionId: z.string().max(64).optional(),
+        md5: z.string().trim().length(32),
+        title: z.string().trim().max(255).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
+      await requireInstitutionRole(ctx.user.id, institutionId, LIBRARY_ROLES);
 
-      const downloadUrl = await getDownloadLink(input.md5);
-      return { url: downloadUrl };
+      let link: Awaited<ReturnType<typeof getLibgenDownloadLink>>;
+      try {
+        link = await getLibgenDownloadLink(input.md5);
+      } catch (err) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: err instanceof Error ? err.message : "Could not resolve download link.",
+        });
+      }
+
+      await writeAuditLog({
+        id: `audit_${nanoid(16)}`,
+        institutionId,
+        actorUserId: ctx.user.id,
+        action: "library.book.downloaded",
+        entityType: "libgen_book",
+        entityId: input.md5,
+        metadata: JSON.stringify({
+          title: input.title ?? "unknown",
+          md5: input.md5,
+          filename: link.filename,
+          source: link.source,
+        }),
+      });
+
+      return link;
     }),
-
-  details: publicProcedure
-    .input(z.object({ md5: z.string() }))
-    .query(async () => {
-      return {
-        publisher: 'Library Genesis Open Catalog Reference',
-        isbn: 'Available upon direct extraction',
-        description: 'Metadata record synchronized via Model Context Protocol vectors.'
-      };
-    })
 });
