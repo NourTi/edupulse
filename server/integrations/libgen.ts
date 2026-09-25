@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const LIBGEN_MCP_URL = 'https://jmrp.io';
+const LIBGEN_MCP_URL = 'https://mcp.jmrp.io/libgen';
 
 export interface LibgenSearchResult {
   totalFiles: number;
