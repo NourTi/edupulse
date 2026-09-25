@@ -6,38 +6,25 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import TeacherDashboard from '@/pages/TeacherDashboard';
-
-
-/**
- * EduPulse design reminder: the app uses the supplied deep-navy, cinematic,
- * liquid-glass reference and keeps the global interface in dark mode.
- */
+import LibraryPage from "@/pages/library/index";
 
 function Router() {
-  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/404"} component={NotFound} />
+      <Route path={"/teacher"} component={TeacherDashboard} />
+      <Route path={"/library"} component={LibraryPage} />
       {/* Final fallback route */}
       <Route component={NotFound} />
-      <Route path="/teacher" element={<TeacherDashboard />} />
     </Switch>
   );
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="dark"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
           <Router />
