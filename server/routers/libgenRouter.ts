@@ -1,6 +1,6 @@
 /**
  * LibGen tRPC Router
- * All dependencies come from the same places routers.ts uses.
+ * Works with the existing server/integrations/libgen.ts
  */
 
 import { z } from "zod";
@@ -16,13 +16,9 @@ import {
   createMembership,
   writeAuditLog,
 } from "../db";
-import {
-  searchLibgen,
-  getLibgenDetails,
-  getLibgenDownloadLink,
-} from "../integrations/libgen";
+import { searchLibgen, getDownloadLink } from "../integrations/libgen";
 
-// ─── Copied from routers.ts (local helpers) ───────────────────────────────────
+// ─── Copied from routers.ts ───────────────────────────────────────────────────
 
 const schoolRoles = [
   "owner", "admin", "registrar", "finance_admin",
@@ -39,7 +35,6 @@ async function defaultInstitutionId(userId: number, requested?: string): Promise
   } catch (error) {
     console.warn("[defaultInstitutionId] Failed to read memberships:", error);
   }
-
   const defaultInstId = "inst_edupulse_primary";
   try {
     const existing = await getInstitution(defaultInstId);
@@ -99,29 +94,16 @@ async function requireInstitutionRole(
   } catch (err) {
     console.warn("[requireInstitutionRole] Warning during check:", err);
   }
-
   const user = await getUserById(userId);
   if (
     user?.role === "admin" ||
     user?.email?.toLowerCase() ===
       (process.env.OWNER_OPEN_ID?.toLowerCase() ?? "admin@edupulse.edu.dz")
   ) {
-    return {
-      id: `mem_virtual_${userId}`,
-      institutionId,
-      userId,
-      role: "owner",
-      status: "active",
-    } as any;
+    return { id: `mem_virtual_${userId}`, institutionId, userId, role: "owner", status: "active" } as any;
   }
-
-  throw new TRPCError({
-    code: "FORBIDDEN",
-    message: "You do not have access to this institution.",
-  });
+  throw new TRPCError({ code: "FORBIDDEN", message: "You do not have access to this institution." });
 }
-
-// ─── Allowed roles for library access (everyone) ──────────────────────────────
 
 const LIBRARY_ROLES = [
   "owner", "admin", "registrar", "finance_admin",
@@ -133,7 +115,6 @@ const LIBRARY_ROLES = [
 export const libgenRouter = router({
   /**
    * Search books and papers.
-   * Accessible to all authenticated institution members.
    */
   search: protectedProcedure
     .input(
@@ -141,26 +122,20 @@ export const libgenRouter = router({
         institutionId: z.string().max(64).optional(),
         query: z.string().trim().min(2).max(300),
         topics: z
-          .array(
-            z.enum(["nonfiction", "fiction", "articles", "magazines", "comics", "standards"])
-          )
+          .array(z.enum(["nonfiction", "fiction", "articles", "magazines", "comics", "standards"]))
           .optional(),
         page: z.number().int().min(1).max(100).default(1),
-        resultsPerPage: z
-          .union([z.literal(25), z.literal(50), z.literal(100)])
-          .default(25),
       })
     )
     .query(async ({ ctx, input }) => {
       const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
       await requireInstitutionRole(ctx.user.id, institutionId, LIBRARY_ROLES);
-
       try {
-        return await searchLibgen(input.query, {
-          topics: input.topics,
-          page: input.page,
-          resultsPerPage: input.resultsPerPage,
-        });
+        return await searchLibgen(
+          input.query,
+          input.topics ?? ["nonfiction", "fiction", "articles"],
+          input.page
+        );
       } catch (err) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -170,33 +145,8 @@ export const libgenRouter = router({
     }),
 
   /**
-   * Get full metadata for a book by its MD5 hash.
-   */
-  details: protectedProcedure
-    .input(
-      z.object({
-        institutionId: z.string().max(64).optional(),
-        md5: z.string().trim().length(32),
-      })
-    )
-    .query(async ({ ctx, input }) => {
-      const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
-      await requireInstitutionRole(ctx.user.id, institutionId, LIBRARY_ROLES);
-
-      try {
-        return await getLibgenDetails(input.md5);
-      } catch (err) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: err instanceof Error ? err.message : "Could not fetch book details.",
-        });
-      }
-    }),
-
-  /**
-   * Resolve a direct download link for a book.
-   * Uses resolve_only: true — no file is saved on the server.
-   * Every download request is audit-logged.
+   * Get a direct download link for a book by MD5.
+   * Audit-logged on every request.
    */
   downloadLink: protectedProcedure
     .input(
@@ -210,9 +160,9 @@ export const libgenRouter = router({
       const institutionId = await defaultInstitutionId(ctx.user.id, input.institutionId);
       await requireInstitutionRole(ctx.user.id, institutionId, LIBRARY_ROLES);
 
-      let link: Awaited<ReturnType<typeof getLibgenDownloadLink>>;
+      let url: string;
       try {
-        link = await getLibgenDownloadLink(input.md5);
+        url = await getDownloadLink(input.md5);
       } catch (err) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -227,14 +177,9 @@ export const libgenRouter = router({
         action: "library.book.downloaded",
         entityType: "libgen_book",
         entityId: input.md5,
-        metadata: JSON.stringify({
-          title: input.title ?? "unknown",
-          md5: input.md5,
-          filename: link.filename,
-          source: link.source,
-        }),
+        metadata: JSON.stringify({ title: input.title ?? "unknown", md5: input.md5 }),
       });
 
-      return link;
+      return { url, filename: `${input.md5}.pdf` };
     }),
 });
